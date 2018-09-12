@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: openshift-openshift-controller-manager
+  name: system:openshift:operator:openshift-controller-manager:public
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  resourceNames:
+  - public-info
