@@ -18,9 +18,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// syncKubeApiserver_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
+// syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
 // most of the time the sync method will be good for a large span of minor versions
-func syncKubeApiserver_v311_00_to_latest(c KubeApiserverOperator, operatorConfig *v1alpha1.KubeApiserverOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity) (operatorsv1alpha1.VersionAvailablity, []error) {
+func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManagerOperator, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity) (operatorsv1alpha1.VersionAvailablity, []error) {
 	versionAvailability := operatorsv1alpha1.VersionAvailablity{
 		Version: operatorConfig.Spec.Version,
 	}
@@ -58,31 +58,31 @@ func syncKubeApiserver_v311_00_to_latest(c KubeApiserverOperator, operatorConfig
 		errors = append(errors, fmt.Errorf("%q: %v", "sa", err))
 	}
 
-	apiserverConfig, configMapModified, err := manageKubeApiserverConfigMap_v311_00_to_latest(c.corev1Client, operatorConfig)
+	controllerManagerConfig, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.corev1Client, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
+	// the kube-apiserver is the source of truth for client CA bundles
+	clientCAModified, err := manageOpenShiftAPIServerClientCA_v311_00_to_latest(c.corev1Client)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "client-ca", err))
+	}
 
 	forceDeployment := operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
-	if saModified { // SA modification can cause new tokens
-		forceDeployment = true
-	}
-	if configMapModified {
-		forceDeployment = true
-	}
+	forceDeployment = forceDeployment || saModified || configMapModified || clientCAModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDeployment, _, err := manageKubeApiserverDeployment_v311_00_to_latest(c.appsv1Client, operatorConfig, previousAvailability, forceDeployment)
+	actualDeployment, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.appsv1Client, operatorConfig, previousAvailability, forceDeployment)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
 	}
 
 	configData := ""
-	if apiserverConfig != nil{
-		configData = apiserverConfig.Data["config.yaml"]
+	if controllerManagerConfig != nil {
+		configData = controllerManagerConfig.Data["config.yaml"]
 	}
-	_, _, err = manageKubeApiserverPublicConfigMap_v311_00_to_latest(c.corev1Client, configData, operatorConfig)
+	_, _, err = manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(c.corev1Client, configData, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/public-info", err))
 	}
@@ -90,17 +90,26 @@ func syncKubeApiserver_v311_00_to_latest(c KubeApiserverOperator, operatorConfig
 	return resourcemerge.ApplyGenerationAvailability(versionAvailability, actualDeployment, errors...), errors
 }
 
-func manageKubeApiserverConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, operatorConfig *v1alpha1.KubeApiserverOperatorConfig) (*corev1.ConfigMap, bool, error) {
+func manageOpenShiftAPIServerClientCA_v311_00_to_latest(client coreclientv1.CoreV1Interface) (bool, error) {
+	const apiserverClientCA = "client-ca"
+	_, caChanged, err := resourceapply.SyncConfigMap(client, kubeAPIServerNamespaceName, apiserverClientCA, targetNamespaceName, apiserverClientCA)
+	if err != nil {
+		return false, err
+	}
+	return caChanged, nil
+}
+
+func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
 	defaultConfig := v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/defaultconfig.yaml")
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.KubeApiserverConfig.Raw)
+	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.OpenShiftControllerManagerConfig.Raw)
 	if err != nil {
 		return nil, false, err
 	}
 	return resourceapply.ApplyConfigMap(client, requiredConfigMap)
 }
 
-func manageKubeApiserverDeployment_v311_00_to_latest(client appsclientv1.DeploymentsGetter, options *v1alpha1.KubeApiserverOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity, forceDeployment bool) (*appsv1.Deployment, bool, error) {
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DeploymentsGetter, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity, forceDeployment bool) (*appsv1.Deployment, bool, error) {
 	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/deployment.yaml"))
 	required.Spec.Template.Spec.Containers[0].Image = options.Spec.ImagePullSpec
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", options.Spec.Logging.Level))
@@ -108,30 +117,29 @@ func manageKubeApiserverDeployment_v311_00_to_latest(client appsclientv1.Deploym
 	return resourceapply.ApplyDeployment(client, required, resourcemerge.ExpectedDeploymentGeneration(required, previousAvailability), forceDeployment)
 }
 
-func manageKubeApiserverPublicConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, apiserverConfigString string, operatorConfig *v1alpha1.KubeApiserverOperatorConfig) (*corev1.ConfigMap, bool, error) {
+func manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, apiserverConfigString string, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
 	uncastUnstructured, err := runtime.Decode(unstructured.UnstructuredJSONScheme, []byte(apiserverConfigString))
-	if err != nil{
+	if err != nil {
 		return nil, false, err
 	}
 	apiserverConfig := uncastUnstructured.(runtime.Unstructured)
 
-
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/public-info.yaml"))
-	if operatorConfig.Status.CurrentAvailability != nil{
+	if operatorConfig.Status.CurrentAvailability != nil {
 		configMap.Data["version"] = operatorConfig.Status.CurrentAvailability.Version
-	} else{
+	} else {
 		configMap.Data["version"] = ""
 	}
 	configMap.Data["imagePolicyConfig.internalRegistryHostname"], _, err = unstructured.NestedString(apiserverConfig.UnstructuredContent(), "imagePolicyConfig", "internalRegistryHostname")
-	if err != nil{
+	if err != nil {
 		return nil, false, err
 	}
-	configMap.Data["imagePolicyConfig.externalRegistryHostname"], _, err  =  unstructured.NestedString(apiserverConfig.UnstructuredContent(), "imagePolicyConfig", "externalRegistryHostname")
-	if err != nil{
+	configMap.Data["imagePolicyConfig.externalRegistryHostname"], _, err = unstructured.NestedString(apiserverConfig.UnstructuredContent(), "imagePolicyConfig", "externalRegistryHostname")
+	if err != nil {
 		return nil, false, err
 	}
-	configMap.Data["projectConfig.defaultNodeSelector"] , _, err =  unstructured.NestedString(apiserverConfig.UnstructuredContent(), "projectConfig", "defaultNodeSelector")
-	if err != nil{
+	configMap.Data["projectConfig.defaultNodeSelector"], _, err = unstructured.NestedString(apiserverConfig.UnstructuredContent(), "projectConfig", "defaultNodeSelector")
+	if err != nil {
 		return nil, false, err
 	}
 

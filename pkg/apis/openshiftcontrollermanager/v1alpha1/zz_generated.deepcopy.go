@@ -98,7 +98,7 @@ func (in *OpenShiftControllerManagerOperatorConfigList) DeepCopyObject() runtime
 func (in *OpenShiftControllerManagerOperatorConfigSpec) DeepCopyInto(out *OpenShiftControllerManagerOperatorConfigSpec) {
 	*out = *in
 	out.OperatorSpec = in.OperatorSpec
-	in.KubeApiserverConfig.DeepCopyInto(&out.KubeApiserverConfig)
+	in.OpenShiftControllerManagerConfig.DeepCopyInto(&out.OpenShiftControllerManagerConfig)
 	return
 }
 

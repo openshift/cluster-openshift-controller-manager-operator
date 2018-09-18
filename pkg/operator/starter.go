@@ -25,8 +25,8 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
 	kubeInformersNamespaced := informers.NewFilteredSharedInformerFactory(kubeClient, 10*time.Minute, targetNamespaceName, nil)
 
-	operator := NewKubeApiserverOperator(
-		operatorConfigInformers.Openshiftcontrollermanager().V1alpha1().KubeApiserverOperatorConfigs(),
+	operator := NewOpenShiftControllerManagerOperator(
+		operatorConfigInformers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs(),
 		kubeInformersNamespaced,
 		operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
 		kubeClient.AppsV1(),

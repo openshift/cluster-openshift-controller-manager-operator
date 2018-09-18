@@ -56,7 +56,7 @@ var _v3110OpenshiftControllerManagerCmYaml = []byte(`apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: openshift-controller-manager
-  name: deployment-apiserver-config
+  name: deployment-controller-manager-config
 data:
   config.yaml:
 `)
@@ -99,27 +99,27 @@ var _v3110OpenshiftControllerManagerDeploymentYaml = []byte(`apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: openshift-controller-manager
-  name: apiserver
+  name: controller-manager
   labels:
     app: openshift-controller-manager
-    apiserver: "true"
+    controller-manager: "true"
 spec:
   strategy:
     type: RollingUpdate
   selector:
     matchLabels:
       app: openshift-controller-manager
-      apiserver: "true"
+      controller-manager: "true"
   template:
     metadata:
       name: openshift-controller-manager
       labels:
         app: openshift-controller-manager
-        apiserver: "true"
+        controller-manager: "true"
     spec:
       serviceAccountName: openshift-controller-manager-sa
       containers:
-      - name: apiserver
+      - name: controller-manager
         image: ${IMAGE}
         imagePullPolicy: IfNotPresent
         command: ["hypershift", "openshift-controller-manager"]
@@ -137,7 +137,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: deployment-apiserver-config
+          name: deployment-controller-manager-config
       - name: client-ca
         configMap:
           name: client-ca
@@ -299,14 +299,14 @@ var _v3110OpenshiftControllerManagerSvcYaml = []byte(`apiVersion: v1
 kind: Service
 metadata:
   namespace: openshift-controller-manager
-  name: apiserver
+  name: controller-manager
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: serving-cert
     prometheus.io/scrape: "true"
     prometheus.io/scheme: https
 spec:
   selector:
-    apiserver: "true"
+    controller-manager: "true"
   ports:
   - name: https
     port: 443
