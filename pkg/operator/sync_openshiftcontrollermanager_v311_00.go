@@ -34,16 +34,45 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		errors = append(errors, fmt.Errorf("%q: %v", "ns", err))
 	}
 
+	informerClusterRole := resourceread.ReadClusterRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/informer-clusterrole.yaml"))
+	_, _, err = resourceapply.ApplyClusterRole(c.rbacv1Client, informerClusterRole)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "informer-clusterrole", err))
+	}
+	informerClusterRoleBinding := resourceread.ReadClusterRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml"))
+	_, _, err = resourceapply.ApplyClusterRoleBinding(c.rbacv1Client, informerClusterRoleBinding)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "informer-clusterrolebinding", err))
+	}
 	requiredPublicRole := resourceread.ReadRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/public-info-role.yaml"))
 	_, _, err = resourceapply.ApplyRole(c.rbacv1Client, requiredPublicRole)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "svc", err))
+		errors = append(errors, fmt.Errorf("%q: %v", "public-role", err))
 	}
-
 	requiredPublicRoleBinding := resourceread.ReadRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml"))
 	_, _, err = resourceapply.ApplyRoleBinding(c.rbacv1Client, requiredPublicRoleBinding)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "svc", err))
+		errors = append(errors, fmt.Errorf("%q: %v", "public-role-binding", err))
+	}
+	leaderRole := resourceread.ReadRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/leader-role.yaml"))
+	_, _, err = resourceapply.ApplyRole(c.rbacv1Client, leaderRole)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "leader-role", err))
+	}
+	leaderRoleBinding := resourceread.ReadRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/leader-rolebinding.yaml"))
+	_, _, err = resourceapply.ApplyRoleBinding(c.rbacv1Client, leaderRoleBinding)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "leader-role-binding", err))
+	}
+	separateSARole := resourceread.ReadRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/separate-sa-role.yaml"))
+	_, _, err = resourceapply.ApplyRole(c.rbacv1Client, separateSARole)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "separate-sa-role", err))
+	}
+	separateSARoleBinding := resourceread.ReadRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml"))
+	_, _, err = resourceapply.ApplyRoleBinding(c.rbacv1Client, separateSARoleBinding)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "separate-sa-binding", err))
 	}
 
 	requiredService := resourceread.ReadServiceV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/svc.yaml"))

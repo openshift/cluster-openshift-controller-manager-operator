@@ -3,11 +3,17 @@
 // manifests/v3.11.0/openshift-controller-manager/cm.yaml
 // manifests/v3.11.0/openshift-controller-manager/defaultconfig.yaml
 // manifests/v3.11.0/openshift-controller-manager/deployment.yaml
+// manifests/v3.11.0/openshift-controller-manager/informer-clusterrole.yaml
+// manifests/v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml
+// manifests/v3.11.0/openshift-controller-manager/leader-role.yaml
+// manifests/v3.11.0/openshift-controller-manager/leader-rolebinding.yaml
 // manifests/v3.11.0/openshift-controller-manager/ns.yaml
 // manifests/v3.11.0/openshift-controller-manager/public-info-role.yaml
 // manifests/v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml
 // manifests/v3.11.0/openshift-controller-manager/public-info.yaml
 // manifests/v3.11.0/openshift-controller-manager/sa.yaml
+// manifests/v3.11.0/openshift-controller-manager/separate-sa-role.yaml
+// manifests/v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml
 // manifests/v3.11.0/openshift-controller-manager/svc.yaml
 // DO NOT EDIT!
 
@@ -164,6 +170,143 @@ func v3110OpenshiftControllerManagerDeploymentYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v3110OpenshiftControllerManagerInformerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:openshift-controller-manager
+rules:
+# we run cluster resource quota, so we have to be able to see all resources
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+`)
+
+func v3110OpenshiftControllerManagerInformerClusterroleYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerInformerClusterroleYaml, nil
+}
+
+func v3110OpenshiftControllerManagerInformerClusterroleYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerInformerClusterroleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/informer-clusterrole.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerInformerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:openshift:openshift-controller-manager
+roleRef:
+  kind: ClusterRole
+  name: system:openshift:openshift-controller-manager
+subjects:
+- kind: ServiceAccount
+  namespace: openshift-controller-manager
+  name: openshift-controller-manager-sa
+`)
+
+func v3110OpenshiftControllerManagerInformerClusterrolebindingYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, nil
+}
+
+func v3110OpenshiftControllerManagerInformerClusterrolebindingYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerInformerClusterrolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerLeaderRoleYaml = []byte(`# needed to get the legacy lock that we used to use
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: system:openshift:leader-locking-openshift-controller-manager
+  namespace: kube-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resourceNames:
+  - openshift-master-controllers
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - create
+  - update
+  - patch`)
+
+func v3110OpenshiftControllerManagerLeaderRoleYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerLeaderRoleYaml, nil
+}
+
+func v3110OpenshiftControllerManagerLeaderRoleYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerLeaderRoleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/leader-role.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerLeaderRolebindingYaml = []byte(`# needed to get the legacy lock that we used to use
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: kube-system
+  name: system:openshift:leader-locking-openshift-controller-manager
+roleRef:
+  kind: Role
+  name: system:openshift:leader-locking-openshift-controller-manager
+subjects:
+- kind: ServiceAccount
+  namespace: openshift-controller-manager
+  name: openshift-controller-manager-sa`)
+
+func v3110OpenshiftControllerManagerLeaderRolebindingYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerLeaderRolebindingYaml, nil
+}
+
+func v3110OpenshiftControllerManagerLeaderRolebindingYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerLeaderRolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/leader-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _v3110OpenshiftControllerManagerNsYaml = []byte(`apiVersion: v1
 kind: Namespace
 metadata:
@@ -295,6 +438,76 @@ func v3110OpenshiftControllerManagerSaYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v3110OpenshiftControllerManagerSeparateSaRoleYaml = []byte(`# needed to support the "use separate service accounts" feature.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: system:openshift:sa-creating-openshift-controller-manager
+  namespace: openshift-infra
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - create
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - create
+`)
+
+func v3110OpenshiftControllerManagerSeparateSaRoleYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerSeparateSaRoleYaml, nil
+}
+
+func v3110OpenshiftControllerManagerSeparateSaRoleYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerSeparateSaRoleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/separate-sa-role.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerSeparateSaRolebindingYaml = []byte(`# needed to support the "use separate service accounts" feature.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: openshift-infra
+  name: system:openshift:sa-creating-openshift-controller-manager
+roleRef:
+  kind: Role
+  name: system:openshift:sa-creating-openshift-controller-manager
+subjects:
+- kind: ServiceAccount
+  namespace: openshift-controller-manager
+  name: openshift-controller-manager-sa
+`)
+
+func v3110OpenshiftControllerManagerSeparateSaRolebindingYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerSeparateSaRolebindingYaml, nil
+}
+
+func v3110OpenshiftControllerManagerSeparateSaRolebindingYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerSeparateSaRolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _v3110OpenshiftControllerManagerSvcYaml = []byte(`apiVersion: v1
 kind: Service
 metadata:
@@ -383,11 +596,17 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/cm.yaml": v3110OpenshiftControllerManagerCmYaml,
 	"v3.11.0/openshift-controller-manager/defaultconfig.yaml": v3110OpenshiftControllerManagerDefaultconfigYaml,
 	"v3.11.0/openshift-controller-manager/deployment.yaml": v3110OpenshiftControllerManagerDeploymentYaml,
+	"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml": v3110OpenshiftControllerManagerInformerClusterroleYaml,
+	"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml": v3110OpenshiftControllerManagerInformerClusterrolebindingYaml,
+	"v3.11.0/openshift-controller-manager/leader-role.yaml": v3110OpenshiftControllerManagerLeaderRoleYaml,
+	"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml": v3110OpenshiftControllerManagerLeaderRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/ns.yaml": v3110OpenshiftControllerManagerNsYaml,
 	"v3.11.0/openshift-controller-manager/public-info-role.yaml": v3110OpenshiftControllerManagerPublicInfoRoleYaml,
 	"v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml": v3110OpenshiftControllerManagerPublicInfoRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/public-info.yaml": v3110OpenshiftControllerManagerPublicInfoYaml,
 	"v3.11.0/openshift-controller-manager/sa.yaml": v3110OpenshiftControllerManagerSaYaml,
+	"v3.11.0/openshift-controller-manager/separate-sa-role.yaml": v3110OpenshiftControllerManagerSeparateSaRoleYaml,
+	"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml": v3110OpenshiftControllerManagerSeparateSaRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/svc.yaml": v3110OpenshiftControllerManagerSvcYaml,
 }
 
@@ -436,11 +655,17 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"cm.yaml": &bintree{v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
 			"defaultconfig.yaml": &bintree{v3110OpenshiftControllerManagerDefaultconfigYaml, map[string]*bintree{}},
 			"deployment.yaml": &bintree{v3110OpenshiftControllerManagerDeploymentYaml, map[string]*bintree{}},
+			"informer-clusterrole.yaml": &bintree{v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
+			"informer-clusterrolebinding.yaml": &bintree{v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
+			"leader-role.yaml": &bintree{v3110OpenshiftControllerManagerLeaderRoleYaml, map[string]*bintree{}},
+			"leader-rolebinding.yaml": &bintree{v3110OpenshiftControllerManagerLeaderRolebindingYaml, map[string]*bintree{}},
 			"ns.yaml": &bintree{v3110OpenshiftControllerManagerNsYaml, map[string]*bintree{}},
 			"public-info-role.yaml": &bintree{v3110OpenshiftControllerManagerPublicInfoRoleYaml, map[string]*bintree{}},
 			"public-info-rolebinding.yaml": &bintree{v3110OpenshiftControllerManagerPublicInfoRolebindingYaml, map[string]*bintree{}},
 			"public-info.yaml": &bintree{v3110OpenshiftControllerManagerPublicInfoYaml, map[string]*bintree{}},
 			"sa.yaml": &bintree{v3110OpenshiftControllerManagerSaYaml, map[string]*bintree{}},
+			"separate-sa-role.yaml": &bintree{v3110OpenshiftControllerManagerSeparateSaRoleYaml, map[string]*bintree{}},
+			"separate-sa-rolebinding.yaml": &bintree{v3110OpenshiftControllerManagerSeparateSaRolebindingYaml, map[string]*bintree{}},
 			"svc.yaml": &bintree{v3110OpenshiftControllerManagerSvcYaml, map[string]*bintree{}},
 		}},
 	}},
