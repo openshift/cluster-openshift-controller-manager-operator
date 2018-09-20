@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: openshift-controller-manager
+  name: controller-manager
+  labels:
+    app: openshift-controller-manager
+    controller-manager: "true"
+spec:
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: openshift-controller-manager
+      controller-manager: "true"
+  template:
+    metadata:
+      name: openshift-controller-manager
+      labels:
+        app: openshift-controller-manager
+        controller-manager: "true"
+    spec:
+      serviceAccountName: openshift-controller-manager-sa
+      containers:
+      - name: controller-manager
+        image: ${IMAGE}
+        imagePullPolicy: IfNotPresent
+        command: ["hypershift", "openshift-controller-manager"]
+        args:
+        - "--config=/var/run/configmaps/config/config.yaml"
+        ports:
+        - containerPort: 8443
+        volumeMounts:
+        - mountPath: /var/run/configmaps/config
+          name: config
+        - mountPath: /var/run/configmaps/client-ca
+          name: client-ca
+        - mountPath: /var/run/secrets/serving-cert
+          name: serving-cert
+      volumes:
+      - name: config
+        configMap:
+          name: deployment-controller-manager-config
+      - name: client-ca
+        configMap:
+          name: client-ca
+      - name: serving-cert
+        secret:
+          secretName: serving-cert
+
+
+

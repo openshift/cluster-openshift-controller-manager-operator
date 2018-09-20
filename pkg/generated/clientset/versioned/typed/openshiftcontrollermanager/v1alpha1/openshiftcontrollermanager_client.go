@@ -11,7 +11,7 @@ import (
 
 type OpenshiftcontrollermanagerV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	KubeApiserverOperatorConfigsGetter
+	OpenShiftControllerManagerOperatorConfigsGetter
 }
 
 // OpenshiftcontrollermanagerV1alpha1Client is used to interact with features provided by the openshiftcontrollermanager.operator.openshift.io group.
@@ -19,8 +19,8 @@ type OpenshiftcontrollermanagerV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *OpenshiftcontrollermanagerV1alpha1Client) KubeApiserverOperatorConfigs() KubeApiserverOperatorConfigInterface {
-	return newKubeApiserverOperatorConfigs(c)
+func (c *OpenshiftcontrollermanagerV1alpha1Client) OpenShiftControllerManagerOperatorConfigs() OpenShiftControllerManagerOperatorConfigInterface {
+	return newOpenShiftControllerManagerOperatorConfigs(c)
 }
 
 // NewForConfig creates a new OpenshiftcontrollermanagerV1alpha1Client for the given config.

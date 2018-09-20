@@ -1,0 +1,13 @@
+# needed to support the "use separate service accounts" feature.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: openshift-infra
+  name: system:openshift:sa-creating-openshift-controller-manager
+roleRef:
+  kind: Role
+  name: system:openshift:sa-creating-openshift-controller-manager
+subjects:
+- kind: ServiceAccount
+  namespace: openshift-controller-manager
+  name: openshift-controller-manager-sa

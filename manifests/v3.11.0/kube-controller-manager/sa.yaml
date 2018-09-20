@@ -1,5 +1,0 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  namespace: openshift-openshift-controller-manager
-  name: openshift-openshift-controller-manager-sa

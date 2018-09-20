@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: openshift-controller-manager
+  name: public-info
+data:
+  # version is the current of the openshift-controller-manager.  It is updated *after* it is being served consistently.
+  version:

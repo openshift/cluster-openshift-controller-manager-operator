@@ -30,11 +30,12 @@ import (
 )
 
 const (
-	targetNamespaceName = "openshift-openshift-controller-manager"
-	workQueueKey        = "key"
+	kubeAPIServerNamespaceName = "openshift-kube-apiserver"
+	targetNamespaceName        = "openshift-controller-manager"
+	workQueueKey               = "key"
 )
 
-type KubeApiserverOperator struct {
+type OpenShiftControllerManagerOperator struct {
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
 
 	appsv1Client appsclientv1.AppsV1Interface
@@ -45,15 +46,15 @@ type KubeApiserverOperator struct {
 	queue workqueue.RateLimitingInterface
 }
 
-func NewKubeApiserverOperator(
-	operatorConfigInformer operatorconfiginformerv1alpha1.KubeApiserverOperatorConfigInformer,
+func NewOpenShiftControllerManagerOperator(
+	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
 	namespacedKubeInformers informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
 	appsv1Client appsclientv1.AppsV1Interface,
 	corev1Client coreclientv1.CoreV1Interface,
 	rbacv1Client rbacclientv1.RbacV1Interface,
-) *KubeApiserverOperator {
-	c := &KubeApiserverOperator{
+) *OpenShiftControllerManagerOperator {
+	c := &OpenShiftControllerManagerOperator{
 		operatorConfigClient: operatorConfigClient,
 		appsv1Client:         appsv1Client,
 		corev1Client:         corev1Client,
@@ -74,8 +75,8 @@ func NewKubeApiserverOperator(
 	return c
 }
 
-func (c KubeApiserverOperator) sync() error {
-	operatorConfig, err := c.operatorConfigClient.KubeApiserverOperatorConfigs().Get("instance", metav1.GetOptions{})
+func (c OpenShiftControllerManagerOperator) sync() error {
+	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().Get("instance", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ func (c KubeApiserverOperator) sync() error {
 				Status: operatorsv1alpha1.ConditionFalse,
 			},
 		}
-		if _, err := c.operatorConfigClient.KubeApiserverOperatorConfigs().Update(operatorConfig); err != nil {
+		if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().Update(operatorConfig); err != nil {
 			return err
 		}
 		return nil
@@ -127,12 +128,12 @@ func (c KubeApiserverOperator) sync() error {
 		var versionAvailability operatorsv1alpha1.VersionAvailablity
 		operatorConfig.Status.TaskSummary = "sync-[3.11.0,3.12.0)"
 		operatorConfig.Status.TargetAvailability = nil
-		versionAvailability, errors = syncKubeApiserver_v311_00_to_latest(c, operatorConfig, operatorConfig.Status.CurrentAvailability)
+		versionAvailability, errors = syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig, operatorConfig.Status.CurrentAvailability)
 		operatorConfig.Status.CurrentAvailability = &versionAvailability
 
 	default:
 		operatorConfig.Status.TaskSummary = "unrecognized"
-		if _, err := c.operatorConfigClient.KubeApiserverOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
+		if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
 			utilruntime.HandleError(err)
 		}
 
@@ -172,7 +173,7 @@ func (c KubeApiserverOperator) sync() error {
 		operatorConfig.Status.ObservedGeneration = operatorConfig.ObjectMeta.Generation
 	}
 
-	if _, err := c.operatorConfigClient.KubeApiserverOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
+	if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
 		errors = append(errors, err)
 	}
 
@@ -180,7 +181,7 @@ func (c KubeApiserverOperator) sync() error {
 }
 
 // Run starts the openshift-controller-manager and blocks until stopCh is closed.
-func (c *KubeApiserverOperator) Run(workers int, stopCh <-chan struct{}) {
+func (c *OpenShiftControllerManagerOperator) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
@@ -193,12 +194,12 @@ func (c *KubeApiserverOperator) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *KubeApiserverOperator) runWorker() {
+func (c *OpenShiftControllerManagerOperator) runWorker() {
 	for c.processNextWorkItem() {
 	}
 }
 
-func (c *KubeApiserverOperator) processNextWorkItem() bool {
+func (c *OpenShiftControllerManagerOperator) processNextWorkItem() bool {
 	dsKey, quit := c.queue.Get()
 	if quit {
 		return false
@@ -218,7 +219,7 @@ func (c *KubeApiserverOperator) processNextWorkItem() bool {
 }
 
 // eventHandler queues the operator to check spec and status
-func (c *KubeApiserverOperator) eventHandler() cache.ResourceEventHandler {
+func (c *OpenShiftControllerManagerOperator) eventHandler() cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { c.queue.Add(workQueueKey) },
 		UpdateFunc: func(old, new interface{}) { c.queue.Add(workQueueKey) },
@@ -229,7 +230,7 @@ func (c *KubeApiserverOperator) eventHandler() cache.ResourceEventHandler {
 // this set of namespaces will include things like logging and metrics which are used to drive
 var interestingNamespaces = sets.NewString(targetNamespaceName)
 
-func (c *KubeApiserverOperator) namespaceEventHandler() cache.ResourceEventHandler {
+func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ns, ok := obj.(*corev1.Namespace)
