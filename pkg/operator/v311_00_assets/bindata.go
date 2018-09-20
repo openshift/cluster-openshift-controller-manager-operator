@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 )
+
 type asset struct {
 	bytes []byte
 	info  os.FileInfo
@@ -593,21 +594,21 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"v3.11.0/openshift-controller-manager/cm.yaml": v3110OpenshiftControllerManagerCmYaml,
-	"v3.11.0/openshift-controller-manager/defaultconfig.yaml": v3110OpenshiftControllerManagerDefaultconfigYaml,
-	"v3.11.0/openshift-controller-manager/deployment.yaml": v3110OpenshiftControllerManagerDeploymentYaml,
-	"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml": v3110OpenshiftControllerManagerInformerClusterroleYaml,
+	"v3.11.0/openshift-controller-manager/cm.yaml":                          v3110OpenshiftControllerManagerCmYaml,
+	"v3.11.0/openshift-controller-manager/defaultconfig.yaml":               v3110OpenshiftControllerManagerDefaultconfigYaml,
+	"v3.11.0/openshift-controller-manager/deployment.yaml":                  v3110OpenshiftControllerManagerDeploymentYaml,
+	"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml":        v3110OpenshiftControllerManagerInformerClusterroleYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml": v3110OpenshiftControllerManagerInformerClusterrolebindingYaml,
-	"v3.11.0/openshift-controller-manager/leader-role.yaml": v3110OpenshiftControllerManagerLeaderRoleYaml,
-	"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml": v3110OpenshiftControllerManagerLeaderRolebindingYaml,
-	"v3.11.0/openshift-controller-manager/ns.yaml": v3110OpenshiftControllerManagerNsYaml,
-	"v3.11.0/openshift-controller-manager/public-info-role.yaml": v3110OpenshiftControllerManagerPublicInfoRoleYaml,
-	"v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml": v3110OpenshiftControllerManagerPublicInfoRolebindingYaml,
-	"v3.11.0/openshift-controller-manager/public-info.yaml": v3110OpenshiftControllerManagerPublicInfoYaml,
-	"v3.11.0/openshift-controller-manager/sa.yaml": v3110OpenshiftControllerManagerSaYaml,
-	"v3.11.0/openshift-controller-manager/separate-sa-role.yaml": v3110OpenshiftControllerManagerSeparateSaRoleYaml,
-	"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml": v3110OpenshiftControllerManagerSeparateSaRolebindingYaml,
-	"v3.11.0/openshift-controller-manager/svc.yaml": v3110OpenshiftControllerManagerSvcYaml,
+	"v3.11.0/openshift-controller-manager/leader-role.yaml":                 v3110OpenshiftControllerManagerLeaderRoleYaml,
+	"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml":          v3110OpenshiftControllerManagerLeaderRolebindingYaml,
+	"v3.11.0/openshift-controller-manager/ns.yaml":                          v3110OpenshiftControllerManagerNsYaml,
+	"v3.11.0/openshift-controller-manager/public-info-role.yaml":            v3110OpenshiftControllerManagerPublicInfoRoleYaml,
+	"v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml":     v3110OpenshiftControllerManagerPublicInfoRolebindingYaml,
+	"v3.11.0/openshift-controller-manager/public-info.yaml":                 v3110OpenshiftControllerManagerPublicInfoYaml,
+	"v3.11.0/openshift-controller-manager/sa.yaml":                          v3110OpenshiftControllerManagerSaYaml,
+	"v3.11.0/openshift-controller-manager/separate-sa-role.yaml":            v3110OpenshiftControllerManagerSeparateSaRoleYaml,
+	"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml":     v3110OpenshiftControllerManagerSeparateSaRolebindingYaml,
+	"v3.11.0/openshift-controller-manager/svc.yaml":                         v3110OpenshiftControllerManagerSvcYaml,
 }
 
 // AssetDir returns the file names below a certain
@@ -649,24 +650,25 @@ type bintree struct {
 	Func     func() (*asset, error)
 	Children map[string]*bintree
 }
+
 var _bintree = &bintree{nil, map[string]*bintree{
-	"v3.11.0": &bintree{nil, map[string]*bintree{
-		"openshift-controller-manager": &bintree{nil, map[string]*bintree{
-			"cm.yaml": &bintree{v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
-			"defaultconfig.yaml": &bintree{v3110OpenshiftControllerManagerDefaultconfigYaml, map[string]*bintree{}},
-			"deployment.yaml": &bintree{v3110OpenshiftControllerManagerDeploymentYaml, map[string]*bintree{}},
-			"informer-clusterrole.yaml": &bintree{v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
-			"informer-clusterrolebinding.yaml": &bintree{v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
-			"leader-role.yaml": &bintree{v3110OpenshiftControllerManagerLeaderRoleYaml, map[string]*bintree{}},
-			"leader-rolebinding.yaml": &bintree{v3110OpenshiftControllerManagerLeaderRolebindingYaml, map[string]*bintree{}},
-			"ns.yaml": &bintree{v3110OpenshiftControllerManagerNsYaml, map[string]*bintree{}},
-			"public-info-role.yaml": &bintree{v3110OpenshiftControllerManagerPublicInfoRoleYaml, map[string]*bintree{}},
-			"public-info-rolebinding.yaml": &bintree{v3110OpenshiftControllerManagerPublicInfoRolebindingYaml, map[string]*bintree{}},
-			"public-info.yaml": &bintree{v3110OpenshiftControllerManagerPublicInfoYaml, map[string]*bintree{}},
-			"sa.yaml": &bintree{v3110OpenshiftControllerManagerSaYaml, map[string]*bintree{}},
-			"separate-sa-role.yaml": &bintree{v3110OpenshiftControllerManagerSeparateSaRoleYaml, map[string]*bintree{}},
-			"separate-sa-rolebinding.yaml": &bintree{v3110OpenshiftControllerManagerSeparateSaRolebindingYaml, map[string]*bintree{}},
-			"svc.yaml": &bintree{v3110OpenshiftControllerManagerSvcYaml, map[string]*bintree{}},
+	"v3.11.0": {nil, map[string]*bintree{
+		"openshift-controller-manager": {nil, map[string]*bintree{
+			"cm.yaml":                          {v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
+			"defaultconfig.yaml":               {v3110OpenshiftControllerManagerDefaultconfigYaml, map[string]*bintree{}},
+			"deployment.yaml":                  {v3110OpenshiftControllerManagerDeploymentYaml, map[string]*bintree{}},
+			"informer-clusterrole.yaml":        {v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
+			"informer-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
+			"leader-role.yaml":                 {v3110OpenshiftControllerManagerLeaderRoleYaml, map[string]*bintree{}},
+			"leader-rolebinding.yaml":          {v3110OpenshiftControllerManagerLeaderRolebindingYaml, map[string]*bintree{}},
+			"ns.yaml":                          {v3110OpenshiftControllerManagerNsYaml, map[string]*bintree{}},
+			"public-info-role.yaml":            {v3110OpenshiftControllerManagerPublicInfoRoleYaml, map[string]*bintree{}},
+			"public-info-rolebinding.yaml":     {v3110OpenshiftControllerManagerPublicInfoRolebindingYaml, map[string]*bintree{}},
+			"public-info.yaml":                 {v3110OpenshiftControllerManagerPublicInfoYaml, map[string]*bintree{}},
+			"sa.yaml":                          {v3110OpenshiftControllerManagerSaYaml, map[string]*bintree{}},
+			"separate-sa-role.yaml":            {v3110OpenshiftControllerManagerSeparateSaRoleYaml, map[string]*bintree{}},
+			"separate-sa-rolebinding.yaml":     {v3110OpenshiftControllerManagerSeparateSaRolebindingYaml, map[string]*bintree{}},
+			"svc.yaml":                         {v3110OpenshiftControllerManagerSvcYaml, map[string]*bintree{}},
 		}},
 	}},
 }}
@@ -717,4 +719,3 @@ func _filePath(dir, name string) string {
 	cannonicalName := strings.Replace(name, "\\", "/", -1)
 	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }
-
