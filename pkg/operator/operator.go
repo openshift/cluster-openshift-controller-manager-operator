@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/blang/semver"
 	"github.com/golang/glog"
 
@@ -16,9 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
-	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
-	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	rbacclientv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -38,9 +37,7 @@ const (
 type OpenShiftControllerManagerOperator struct {
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
 
-	appsv1Client appsclientv1.AppsV1Interface
-	corev1Client coreclientv1.CoreV1Interface
-	rbacv1Client rbacclientv1.RbacV1Interface
+	kubeClient kubernetes.Interface
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -50,15 +47,11 @@ func NewOpenShiftControllerManagerOperator(
 	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
 	namespacedKubeInformers informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
-	appsv1Client appsclientv1.AppsV1Interface,
-	corev1Client coreclientv1.CoreV1Interface,
-	rbacv1Client rbacclientv1.RbacV1Interface,
+	kubeClient kubernetes.Interface,
 ) *OpenShiftControllerManagerOperator {
 	c := &OpenShiftControllerManagerOperator{
 		operatorConfigClient: operatorConfigClient,
-		appsv1Client:         appsv1Client,
-		corev1Client:         corev1Client,
-		rbacv1Client:         rbacv1Client,
+		kubeClient:           kubeClient,
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
 	}
@@ -86,7 +79,7 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 
 	case operatorsv1alpha1.Removed:
 		// TODO probably need to watch until the NS is really gone
-		if err := c.corev1Client.Namespaces().Delete(targetNamespaceName, nil); err != nil && !apierrors.IsNotFound(err) {
+		if err := c.kubeClient.CoreV1().Namespaces().Delete(targetNamespaceName, nil); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		operatorConfig.Status.TaskSummary = "Remove"

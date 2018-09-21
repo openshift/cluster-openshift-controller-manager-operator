@@ -29,9 +29,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		operatorConfigInformers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs(),
 		kubeInformersNamespaced,
 		operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
-		kubeClient.AppsV1(),
-		kubeClient.CoreV1(),
-		kubeClient.RbacV1(),
+		kubeClient,
 	)
 
 	operatorConfigInformers.Start(stopCh)

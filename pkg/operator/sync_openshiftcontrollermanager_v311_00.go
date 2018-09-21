@@ -16,6 +16,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
@@ -28,81 +29,49 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	errors := []error{}
 	var err error
 
-	requiredNamespace := resourceread.ReadNamespaceV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ns.yaml"))
-	_, _, err = resourceapply.ApplyNamespace(c.corev1Client, requiredNamespace)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "ns", err))
+	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, v311_00_assets.Asset,
+		"v3.11.0/openshift-controller-manager/ns.yaml",
+		"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
+		"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
+		"v3.11.0/openshift-controller-manager/public-info-role.yaml",
+		"v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml",
+		"v3.11.0/openshift-controller-manager/leader-role.yaml",
+		"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
+		"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
+		"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
+		"v3.11.0/openshift-controller-manager/sa.yaml",
+		"v3.11.0/openshift-controller-manager/svc.yaml",
+	)
+	resourcesThatForceRedeployment := sets.NewString("v3.11.0/openshift-controller-manager/sa.yaml")
+	forceDeployment := false
+
+	for _, currResult := range directResourceResults {
+		if currResult.Error != nil {
+			errors = append(errors, fmt.Errorf("%q (%T): %v", currResult.File, currResult.Type, currResult.Error))
+			continue
+		}
+
+		if currResult.Changed && resourcesThatForceRedeployment.Has(currResult.File) {
+			forceDeployment = true
+		}
 	}
 
-	informerClusterRole := resourceread.ReadClusterRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/informer-clusterrole.yaml"))
-	_, _, err = resourceapply.ApplyClusterRole(c.rbacv1Client, informerClusterRole)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "informer-clusterrole", err))
-	}
-	informerClusterRoleBinding := resourceread.ReadClusterRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml"))
-	_, _, err = resourceapply.ApplyClusterRoleBinding(c.rbacv1Client, informerClusterRoleBinding)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "informer-clusterrolebinding", err))
-	}
-	requiredPublicRole := resourceread.ReadRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/public-info-role.yaml"))
-	_, _, err = resourceapply.ApplyRole(c.rbacv1Client, requiredPublicRole)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "public-role", err))
-	}
-	requiredPublicRoleBinding := resourceread.ReadRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml"))
-	_, _, err = resourceapply.ApplyRoleBinding(c.rbacv1Client, requiredPublicRoleBinding)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "public-role-binding", err))
-	}
-	leaderRole := resourceread.ReadRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/leader-role.yaml"))
-	_, _, err = resourceapply.ApplyRole(c.rbacv1Client, leaderRole)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "leader-role", err))
-	}
-	leaderRoleBinding := resourceread.ReadRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/leader-rolebinding.yaml"))
-	_, _, err = resourceapply.ApplyRoleBinding(c.rbacv1Client, leaderRoleBinding)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "leader-role-binding", err))
-	}
-	separateSARole := resourceread.ReadRoleV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/separate-sa-role.yaml"))
-	_, _, err = resourceapply.ApplyRole(c.rbacv1Client, separateSARole)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "separate-sa-role", err))
-	}
-	separateSARoleBinding := resourceread.ReadRoleBindingV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml"))
-	_, _, err = resourceapply.ApplyRoleBinding(c.rbacv1Client, separateSARoleBinding)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "separate-sa-binding", err))
-	}
-
-	requiredService := resourceread.ReadServiceV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/svc.yaml"))
-	_, _, err = resourceapply.ApplyService(c.corev1Client, requiredService)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "svc", err))
-	}
-
-	requiredSA := resourceread.ReadServiceAccountV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/sa.yaml"))
-	_, saModified, err := resourceapply.ApplyServiceAccount(c.corev1Client, requiredSA)
-	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "sa", err))
-	}
-
-	controllerManagerConfig, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.corev1Client, operatorConfig)
+	controllerManagerConfig, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
 	// the kube-apiserver is the source of truth for client CA bundles
-	clientCAModified, err := manageOpenShiftAPIServerClientCA_v311_00_to_latest(c.corev1Client)
+	clientCAModified, err := manageOpenShiftAPIServerClientCA_v311_00_to_latest(c.kubeClient.CoreV1())
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "client-ca", err))
 	}
 
-	forceDeployment := operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
-	forceDeployment = forceDeployment || saModified || configMapModified || clientCAModified
+	forceDeployment = forceDeployment || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
+	forceDeployment = forceDeployment || configMapModified || clientCAModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDeployment, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.appsv1Client, operatorConfig, previousAvailability, forceDeployment)
+	actualDeployment, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), operatorConfig, previousAvailability, forceDeployment)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
 	}
@@ -111,7 +80,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	if controllerManagerConfig != nil {
 		configData = controllerManagerConfig.Data["config.yaml"]
 	}
-	_, _, err = manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(c.corev1Client, configData, operatorConfig)
+	_, _, err = manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), configData, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/public-info", err))
 	}
