@@ -26,7 +26,7 @@ endif
 .PHONY: test-unit
 
 images:
-	imagebuilder -f Dockerfile -t openshift/cluster-openshift-controller-manager-operator .
+	imagebuilder -f Dockerfile -t openshift/origin-cluster-openshift-controller-manager-operator .
 .PHONY: images
 
 clean:
