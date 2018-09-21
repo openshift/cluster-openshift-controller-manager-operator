@@ -6,3 +6,6 @@ RUN cd /go/src/github.com/openshift/cluster-openshift-controller-manager-operato
 
 FROM centos:7
 COPY --from=0 /go/src/github.com/openshift/cluster-openshift-controller-manager-operator/cluster-openshift-controller-manager-operator /usr/bin/cluster-openshift-controller-manager-operator
+
+COPY manifests /manifests
+LABEL io.openshift.release.operator true
