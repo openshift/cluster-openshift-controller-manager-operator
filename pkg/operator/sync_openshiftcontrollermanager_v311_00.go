@@ -43,7 +43,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		"v3.11.0/openshift-controller-manager/svc.yaml",
 	)
 	resourcesThatForceRedeployment := sets.NewString("v3.11.0/openshift-controller-manager/sa.yaml")
-	forceDeployment := false
+	forceRollout := false
 
 	for _, currResult := range directResourceResults {
 		if currResult.Error != nil {
@@ -52,7 +52,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		}
 
 		if currResult.Changed && resourcesThatForceRedeployment.Has(currResult.File) {
-			forceDeployment = true
+			forceRollout = true
 		}
 	}
 
@@ -66,12 +66,12 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		errors = append(errors, fmt.Errorf("%q: %v", "client-ca", err))
 	}
 
-	forceDeployment = forceDeployment || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
-	forceDeployment = forceDeployment || configMapModified || clientCAModified
+	forceRollout = forceRollout || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
+	forceRollout = forceRollout || configMapModified || clientCAModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDeployment, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), operatorConfig, previousAvailability, forceDeployment)
+	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), operatorConfig, previousAvailability, forceRollout)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
 	}
@@ -85,7 +85,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/public-info", err))
 	}
 
-	return resourcemerge.ApplyGenerationAvailability(versionAvailability, actualDeployment, errors...), errors
+	return resourcemerge.ApplyDaemonSetGenerationAvailability(versionAvailability, actualDaemonSet, errors...), errors
 }
 
 func manageOpenShiftAPIServerClientCA_v311_00_to_latest(client coreclientv1.CoreV1Interface) (bool, error) {
@@ -107,12 +107,12 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclie
 	return resourceapply.ApplyConfigMap(client, requiredConfigMap)
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DeploymentsGetter, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity, forceDeployment bool) (*appsv1.Deployment, bool, error) {
-	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/deployment.yaml"))
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
 	required.Spec.Template.Spec.Containers[0].Image = options.Spec.ImagePullSpec
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", options.Spec.Logging.Level))
 
-	return resourceapply.ApplyDeployment(client, required, resourcemerge.ExpectedDeploymentGeneration(required, previousAvailability), forceDeployment)
+	return resourceapply.ApplyDaemonSet(client, required, resourcemerge.ExpectedDaemonSetGeneration(required, previousAvailability), forceRollout)
 }
 
 func manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, apiserverConfigString string, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
