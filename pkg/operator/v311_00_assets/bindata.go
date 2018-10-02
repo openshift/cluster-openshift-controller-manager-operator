@@ -2,7 +2,7 @@
 // sources:
 // bindata/v3.11.0/openshift-controller-manager/cm.yaml
 // bindata/v3.11.0/openshift-controller-manager/defaultconfig.yaml
-// bindata/v3.11.0/openshift-controller-manager/deployment.yaml
+// bindata/v3.11.0/openshift-controller-manager/ds.yaml
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrole.yaml
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/leader-role.yaml
@@ -102,8 +102,8 @@ func v3110OpenshiftControllerManagerDefaultconfigYaml() (*asset, error) {
 	return a, nil
 }
 
-var _v3110OpenshiftControllerManagerDeploymentYaml = []byte(`apiVersion: apps/v1
-kind: Deployment
+var _v3110OpenshiftControllerManagerDsYaml = []byte(`apiVersion: apps/v1
+kind: DaemonSet
 metadata:
   namespace: openshift-controller-manager
   name: controller-manager
@@ -111,7 +111,7 @@ metadata:
     app: openshift-controller-manager
     controller-manager: "true"
 spec:
-  strategy:
+  updateStrategy:
     type: RollingUpdate
   selector:
     matchLabels:
@@ -156,17 +156,17 @@ spec:
 
 `)
 
-func v3110OpenshiftControllerManagerDeploymentYamlBytes() ([]byte, error) {
-	return _v3110OpenshiftControllerManagerDeploymentYaml, nil
+func v3110OpenshiftControllerManagerDsYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerDsYaml, nil
 }
 
-func v3110OpenshiftControllerManagerDeploymentYaml() (*asset, error) {
-	bytes, err := v3110OpenshiftControllerManagerDeploymentYamlBytes()
+func v3110OpenshiftControllerManagerDsYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerDsYamlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/deployment.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/ds.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -596,7 +596,7 @@ func AssetNames() []string {
 var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/cm.yaml":                          v3110OpenshiftControllerManagerCmYaml,
 	"v3.11.0/openshift-controller-manager/defaultconfig.yaml":               v3110OpenshiftControllerManagerDefaultconfigYaml,
-	"v3.11.0/openshift-controller-manager/deployment.yaml":                  v3110OpenshiftControllerManagerDeploymentYaml,
+	"v3.11.0/openshift-controller-manager/ds.yaml":                          v3110OpenshiftControllerManagerDsYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml":        v3110OpenshiftControllerManagerInformerClusterroleYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml": v3110OpenshiftControllerManagerInformerClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/leader-role.yaml":                 v3110OpenshiftControllerManagerLeaderRoleYaml,
@@ -656,7 +656,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"openshift-controller-manager": {nil, map[string]*bintree{
 			"cm.yaml":                          {v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
 			"defaultconfig.yaml":               {v3110OpenshiftControllerManagerDefaultconfigYaml, map[string]*bintree{}},
-			"deployment.yaml":                  {v3110OpenshiftControllerManagerDeploymentYaml, map[string]*bintree{}},
+			"ds.yaml":                          {v3110OpenshiftControllerManagerDsYaml, map[string]*bintree{}},
 			"informer-clusterrole.yaml":        {v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
 			"informer-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
 			"leader-role.yaml":                 {v3110OpenshiftControllerManagerLeaderRoleYaml, map[string]*bintree{}},

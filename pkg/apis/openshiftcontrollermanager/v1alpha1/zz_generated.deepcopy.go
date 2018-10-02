@@ -98,7 +98,8 @@ func (in *OpenShiftControllerManagerOperatorConfigList) DeepCopyObject() runtime
 func (in *OpenShiftControllerManagerOperatorConfigSpec) DeepCopyInto(out *OpenShiftControllerManagerOperatorConfigSpec) {
 	*out = *in
 	out.OperatorSpec = in.OperatorSpec
-	in.OpenShiftControllerManagerConfig.DeepCopyInto(&out.OpenShiftControllerManagerConfig)
+	in.UserConfig.DeepCopyInto(&out.UserConfig)
+	in.ObservedConfig.DeepCopyInto(&out.ObservedConfig)
 	return
 }
 
