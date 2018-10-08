@@ -2,7 +2,6 @@ package operator
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/blang/semver"
@@ -118,14 +117,13 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 
 	v311_00_to_unknown := versioning.NewRangeOrDie("3.11.0", "3.12.0")
 
+	var versionAvailability operatorsv1alpha1.VersionAvailability
 	errors := []error{}
 	switch {
 	case v311_00_to_unknown.BetweenOrEmpty(currentActualVerion) && v311_00_to_unknown.Between(&desiredVersion):
-		var versionAvailability operatorsv1alpha1.VersionAvailablity
 		operatorConfig.Status.TaskSummary = "sync-[3.11.0,3.12.0)"
 		operatorConfig.Status.TargetAvailability = nil
 		versionAvailability, errors = syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig, operatorConfig.Status.CurrentAvailability)
-		operatorConfig.Status.CurrentAvailability = &versionAvailability
 
 	default:
 		operatorConfig.Status.TaskSummary = "unrecognized"
@@ -136,39 +134,7 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 		return fmt.Errorf("unrecognized state")
 	}
 
-	// given the VersionAvailability and the status.Version, we can compute availability
-	availableCondition := operatorsv1alpha1.OperatorCondition{
-		Type:   operatorsv1alpha1.OperatorStatusTypeAvailable,
-		Status: operatorsv1alpha1.ConditionUnknown,
-	}
-	if operatorConfig.Status.CurrentAvailability != nil && operatorConfig.Status.CurrentAvailability.ReadyReplicas > 0 {
-		availableCondition.Status = operatorsv1alpha1.ConditionTrue
-	} else {
-		availableCondition.Status = operatorsv1alpha1.ConditionFalse
-	}
-	v1alpha1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, availableCondition)
-
-	syncSuccessfulCondition := operatorsv1alpha1.OperatorCondition{
-		Type:   operatorsv1alpha1.OperatorStatusTypeSyncSuccessful,
-		Status: operatorsv1alpha1.ConditionTrue,
-	}
-	if operatorConfig.Status.CurrentAvailability != nil && len(operatorConfig.Status.CurrentAvailability.Errors) > 0 {
-		syncSuccessfulCondition.Status = operatorsv1alpha1.ConditionFalse
-		syncSuccessfulCondition.Message = strings.Join(operatorConfig.Status.CurrentAvailability.Errors, "\n")
-	}
-	if operatorConfig.Status.TargetAvailability != nil && len(operatorConfig.Status.TargetAvailability.Errors) > 0 {
-		syncSuccessfulCondition.Status = operatorsv1alpha1.ConditionFalse
-		if len(syncSuccessfulCondition.Message) == 0 {
-			syncSuccessfulCondition.Message = strings.Join(operatorConfig.Status.TargetAvailability.Errors, "\n")
-		} else {
-			syncSuccessfulCondition.Message = availableCondition.Message + "\n" + strings.Join(operatorConfig.Status.TargetAvailability.Errors, "\n")
-		}
-	}
-	v1alpha1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, syncSuccessfulCondition)
-	if syncSuccessfulCondition.Status == operatorsv1alpha1.ConditionTrue {
-		operatorConfig.Status.ObservedGeneration = operatorConfig.ObjectMeta.Generation
-	}
-
+	v1alpha1helpers.SetStatusFromAvailability(&operatorConfig.Status.OperatorStatus, operatorConfig.ObjectMeta.Generation, &versionAvailability)
 	if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
 		errors = append(errors, err)
 	}
@@ -181,8 +147,8 @@ func (c *OpenShiftControllerManagerOperator) Run(workers int, stopCh <-chan stru
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting KubeApiserverOperator")
-	defer glog.Infof("Shutting down KubeApiserverOperator")
+	glog.Infof("Starting OpenShiftControllerManagerOperator")
+	defer glog.Infof("Shutting down OpenShiftControllerManagerOperator")
 
 	// doesn't matter what workers say, only start one.
 	go wait.Until(c.runWorker, time.Second, stopCh)
