@@ -21,8 +21,8 @@ import (
 
 // syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
 // most of the time the sync method will be good for a large span of minor versions
-func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManagerOperator, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity) (operatorsv1alpha1.VersionAvailablity, []error) {
-	versionAvailability := operatorsv1alpha1.VersionAvailablity{
+func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManagerOperator, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability) (operatorsv1alpha1.VersionAvailability, []error) {
+	versionAvailability := operatorsv1alpha1.VersionAvailability{
 		Version: operatorConfig.Spec.Version,
 	}
 
@@ -107,7 +107,7 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclie
 	return resourceapply.ApplyConfigMap(client, requiredConfigMap)
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailablity, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
 	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
 	required.Spec.Template.Spec.Containers[0].Image = options.Spec.ImagePullSpec
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", options.Spec.Logging.Level))
