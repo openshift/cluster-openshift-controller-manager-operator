@@ -50,6 +50,12 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		kubeClient,
 	)
 
+	configObserver := NewConfigObserver(
+		operatorConfigInformers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs(),
+		operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
+		kubeClient,
+	)
+
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"openshift-core-operators",
 		"openshift-controller-manager",
@@ -61,6 +67,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	kubeInformersNamespaced.Start(stopCh)
 
 	go operator.Run(1, stopCh)
+	go configObserver.Run(1, stopCh)
 	go clusterOperatorStatus.Run(1, stopCh)
 
 	<-stopCh
