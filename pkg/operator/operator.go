@@ -30,6 +30,7 @@ import (
 const (
 	kubeAPIServerNamespaceName = "openshift-kube-apiserver"
 	targetNamespaceName        = "openshift-controller-manager"
+	operatorNamespaceName      = "openshift-core-operators"
 	workQueueKey               = "key"
 )
 
@@ -46,7 +47,7 @@ type OpenShiftControllerManagerOperator struct {
 
 func NewOpenShiftControllerManagerOperator(
 	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
-	namespacedKubeInformers informers.SharedInformerFactory,
+	kubeInformersForOpenshiftControllerManager informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
 	kubeClient kubernetes.Interface,
 ) *OpenShiftControllerManagerOperator {
@@ -59,13 +60,13 @@ func NewOpenShiftControllerManagerOperator(
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
-	namespacedKubeInformers.Apps().V1().Deployments().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenshiftControllerManager.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenshiftControllerManager.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenshiftControllerManager.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenshiftControllerManager.Apps().V1().Deployments().Informer().AddEventHandler(c.eventHandler())
 
 	// we only watch some namespaces
-	namespacedKubeInformers.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
+	kubeInformersForOpenshiftControllerManager.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
 
 	return c
 }
