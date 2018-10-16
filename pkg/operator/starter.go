@@ -51,8 +51,8 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	)
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
-		"openshift-apiserver",
-		"openshift-apiserver",
+		"openshift-core-operators",
+		"openshift-controller-manager",
 		dynamicClient,
 		&operatorStatusProvider{informers: operatorConfigInformers},
 	)
