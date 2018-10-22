@@ -1,70 +1,88 @@
 package operator
 
 import (
-	"fmt"
-	"time"
-
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"reflect"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 
 	"github.com/golang/glog"
 
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1alpha1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/diff"
 )
+
+type observeConfigFunc func(kubernetes.Interface, *rest.Config, map[string]interface{}) (map[string]interface{}, error)
 
 type ConfigObserver struct {
 	operatorConfigClient operatorconfigclientv1alpha1.OpenShiftControllerManagerOperatorConfigInterface
 
-	kubeClient kubernetes.Interface
+	kubeClient   kubernetes.Interface
+	clientConfig *rest.Config
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
 
 	rateLimiter flowcontrol.RateLimiter
+	observers   []observeConfigFunc
 }
 
 func NewConfigObserver(
 	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
+	kubeInformersForOpenshiftCoreOperators informers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
+	clientConfig *rest.Config,
 ) *ConfigObserver {
 	c := &ConfigObserver{
 		operatorConfigClient: operatorConfigClient.OpenShiftControllerManagerOperatorConfigs(),
 		kubeClient:           kubeClient,
+		clientConfig:         clientConfig,
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ConfigObserver"),
 
 		rateLimiter: flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
+		observers:   []observeConfigFunc{observeControllerManagerImagesConfig},
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOpenshiftCoreOperators.Core().V1().Namespaces().Informer().AddEventHandler(c.eventHandler())
 
 	return c
 }
 
-// sync reacts to a change in prereqs by finding information that is required to match another value in the cluster. This
-// must be information that is logically "owned" by another component.
-// TODO(juanvallejo): update this to actually watch this operator's config
+// sync reacts to a change in controller manager images.
 func (c ConfigObserver) sync() error {
+	var err error
+	observedConfig := map[string]interface{}{}
+
+	for _, observer := range c.observers {
+		observedConfig, err = observer(c.kubeClient, c.clientConfig, observedConfig)
+		if err != nil {
+			return err
+		}
+	}
+
 	operatorConfig, err := c.operatorConfigClient.Get("instance", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	observedConfig := map[string]interface{}{}
 
 	// don't worry about errors
 	currentConfig := map[string]interface{}{}
@@ -73,13 +91,33 @@ func (c ConfigObserver) sync() error {
 		return nil
 	}
 
-	glog.Info("writing updated observedConfig: %v", diff.ObjectDiff(operatorConfig.Spec.ObservedConfig.Object, observedConfig))
+	glog.Infof("writing updated observedConfig: %v", diff.ObjectDiff(operatorConfig.Spec.ObservedConfig.Object, observedConfig))
 	operatorConfig.Spec.ObservedConfig = runtime.RawExtension{Object: &unstructured.Unstructured{Object: observedConfig}}
 	if _, err := c.operatorConfigClient.Update(operatorConfig); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// observeControllerManagerImagesConfig observes image paths from openshift-controller-manager-images in order to determine which deployer and builder images to use
+func observeControllerManagerImagesConfig(kubeClient kubernetes.Interface, config *rest.Config, observedConfig map[string]interface{}) (map[string]interface{}, error) {
+	controllerManagerImages, err := kubeClient.CoreV1().ConfigMaps(operatorNamespaceName).Get("openshift-controller-manager-images", metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if controllerManagerImages != nil {
+		// TODO(juanvallejo): reflect any issues in operator status
+		if val := controllerManagerImages.Data["builderImage"]; len(val) > 0 {
+			unstructured.SetNestedField(observedConfig, val, "build", "imageTemplateFormat", "format")
+		}
+		if val := controllerManagerImages.Data["deployerImage"]; len(val) > 0 {
+			unstructured.SetNestedField(observedConfig, val, "deployer", "imageTemplateFormat", "format")
+		}
+	}
+
+	return observedConfig, nil
 }
 
 func (c *ConfigObserver) Run(workers int, stopCh <-chan struct{}) {
