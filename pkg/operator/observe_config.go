@@ -10,8 +10,6 @@ import (
 	"github.com/golang/glog"
 
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
@@ -22,47 +20,68 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	corelistersv1 "k8s.io/client-go/listers/core/v1"
 
+	configinformers "github.com/openshift/client-go/config/informers/externalversions"
+	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/diff"
 )
 
-type observeConfigFunc func(kubernetes.Interface, *rest.Config, map[string]interface{}) (map[string]interface{}, error)
+type Listers struct {
+	imageConfigLister configlistersv1.ImageLister
+	configmapLister   corelistersv1.ConfigMapLister
+}
+
+type observeConfigFunc func(Listers, map[string]interface{}) (map[string]interface{}, error)
 
 type ConfigObserver struct {
 	operatorConfigClient operatorconfigclientv1alpha1.OpenShiftControllerManagerOperatorConfigInterface
-
-	kubeClient   kubernetes.Interface
-	clientConfig *rest.Config
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
 
 	rateLimiter flowcontrol.RateLimiter
 	observers   []observeConfigFunc
+
+	// listers are used by config observers to retrieve necessary resources
+	listers Listers
+
+	operatorConfigSynced cache.InformerSynced
+	configmapSynced      cache.InformerSynced
+	configSynced         cache.InformerSynced
 }
 
 func NewConfigObserver(
 	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
 	kubeInformersForOpenshiftCoreOperators informers.SharedInformerFactory,
-	kubeClient kubernetes.Interface,
-	clientConfig *rest.Config,
+	configInformer configinformers.SharedInformerFactory,
 ) *ConfigObserver {
 	c := &ConfigObserver{
 		operatorConfigClient: operatorConfigClient.OpenShiftControllerManagerOperatorConfigs(),
-		kubeClient:           kubeClient,
-		clientConfig:         clientConfig,
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ConfigObserver"),
 
 		rateLimiter: flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
-		observers:   []observeConfigFunc{observeControllerManagerImagesConfig},
+		observers: []observeConfigFunc{
+			observeControllerManagerImagesConfig,
+			observeInternalRegistryHostname,
+		},
+		listers: Listers{
+			imageConfigLister: configInformer.Config().V1().Images().Lister(),
+			configmapLister:   kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Lister(),
+		},
 	}
+
+	c.operatorConfigSynced = operatorConfigInformer.Informer().HasSynced
+	c.configmapSynced = kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Informer().HasSynced
+	c.configSynced = configInformer.Config().V1().Images().Informer().HasSynced
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForOpenshiftCoreOperators.Core().V1().Namespaces().Informer().AddEventHandler(c.eventHandler())
+	configInformer.Config().V1().Images().Informer().AddEventHandler(c.eventHandler())
 
 	return c
 }
@@ -73,7 +92,7 @@ func (c ConfigObserver) sync() error {
 	observedConfig := map[string]interface{}{}
 
 	for _, observer := range c.observers {
-		observedConfig, err = observer(c.kubeClient, c.clientConfig, observedConfig)
+		observedConfig, err = observer(c.listers, observedConfig)
 		if err != nil {
 			return err
 		}
@@ -101,8 +120,8 @@ func (c ConfigObserver) sync() error {
 }
 
 // observeControllerManagerImagesConfig observes image paths from openshift-controller-manager-images in order to determine which deployer and builder images to use
-func observeControllerManagerImagesConfig(kubeClient kubernetes.Interface, config *rest.Config, observedConfig map[string]interface{}) (map[string]interface{}, error) {
-	controllerManagerImages, err := kubeClient.CoreV1().ConfigMaps(operatorNamespaceName).Get("openshift-controller-manager-images", metav1.GetOptions{})
+func observeControllerManagerImagesConfig(listers Listers, observedConfig map[string]interface{}) (map[string]interface{}, error) {
+	controllerManagerImages, err := listers.configmapLister.ConfigMaps(operatorNamespaceName).Get("openshift-controller-manager-images")
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
@@ -120,12 +139,35 @@ func observeControllerManagerImagesConfig(kubeClient kubernetes.Interface, confi
 	return observedConfig, nil
 }
 
+// observeInternalRegistryHostname reads the internal registry hostname from the cluster configuration as provided by
+// the registry operator.
+func observeInternalRegistryHostname(listers Listers, observedConfig map[string]interface{}) (map[string]interface{}, error) {
+	configImage, err := listers.imageConfigLister.Get("cluster")
+	if errors.IsNotFound(err) {
+		return observedConfig, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	internalRegistryHostName := configImage.Status.InternalRegistryHostname
+	if len(internalRegistryHostName) > 0 {
+		unstructured.SetNestedField(observedConfig, internalRegistryHostName, "dockerPullSecret", "internalRegistryHostname")
+	}
+	return observedConfig, nil
+}
+
 func (c *ConfigObserver) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
 	glog.Infof("Starting ConfigObserver")
 	defer glog.Infof("Shutting down ConfigObserver")
+
+	cache.WaitForCacheSync(stopCh,
+		c.operatorConfigSynced,
+		c.configmapSynced,
+		c.configSynced,
+	)
 
 	// doesn't matter what workers say, only start one.
 	go wait.Until(c.runWorker, time.Second, stopCh)
