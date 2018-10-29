@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
@@ -30,6 +31,7 @@ import (
 )
 
 type Listers struct {
+	buildConfigLister configlistersv1.BuildLister
 	imageConfigLister configlistersv1.ImageLister
 	configmapLister   corelistersv1.ConfigMapLister
 }
@@ -50,7 +52,8 @@ type ConfigObserver struct {
 
 	operatorConfigSynced cache.InformerSynced
 	configmapSynced      cache.InformerSynced
-	configSynced         cache.InformerSynced
+	imageConfigSynced    cache.InformerSynced
+	buildConfigSynced    cache.InformerSynced
 }
 
 func NewConfigObserver(
@@ -68,16 +71,19 @@ func NewConfigObserver(
 		observers: []observeConfigFunc{
 			observeControllerManagerImagesConfig,
 			observeInternalRegistryHostname,
+			observeBuildControllerConfig,
 		},
 		listers: Listers{
 			imageConfigLister: configInformer.Config().V1().Images().Lister(),
 			configmapLister:   kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Lister(),
+			buildConfigLister: configInformer.Config().V1().Builds().Lister(),
 		},
 	}
 
 	c.operatorConfigSynced = operatorConfigInformer.Informer().HasSynced
 	c.configmapSynced = kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Informer().HasSynced
-	c.configSynced = configInformer.Config().V1().Images().Informer().HasSynced
+	c.imageConfigSynced = configInformer.Config().V1().Images().Informer().HasSynced
+	c.buildConfigSynced = configInformer.Config().V1().Builds().Informer().HasSynced
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForOpenshiftCoreOperators.Core().V1().Namespaces().Informer().AddEventHandler(c.eventHandler())
@@ -112,6 +118,7 @@ func (c ConfigObserver) sync() error {
 
 	glog.Infof("writing updated observedConfig: %v", diff.ObjectDiff(operatorConfig.Spec.ObservedConfig.Object, observedConfig))
 	operatorConfig.Spec.ObservedConfig = runtime.RawExtension{Object: &unstructured.Unstructured{Object: observedConfig}}
+
 	if _, err := c.operatorConfigClient.Update(operatorConfig); err != nil {
 		return err
 	}
@@ -128,11 +135,11 @@ func observeControllerManagerImagesConfig(listers Listers, observedConfig map[st
 
 	if controllerManagerImages != nil {
 		// TODO(juanvallejo): reflect any issues in operator status
-		if val := controllerManagerImages.Data["builderImage"]; len(val) > 0 {
-			unstructured.SetNestedField(observedConfig, val, "build", "imageTemplateFormat", "format")
+		if err = observeField(observedConfig, controllerManagerImages.Data["builderImage"], "build.imageTemplateFormat.format", true); err != nil {
+			return nil, err
 		}
-		if val := controllerManagerImages.Data["deployerImage"]; len(val) > 0 {
-			unstructured.SetNestedField(observedConfig, val, "deployer", "imageTemplateFormat", "format")
+		if err = observeField(observedConfig, controllerManagerImages.Data["deployerImage"], "deployer.imageTemplateFormat.format", true); err != nil {
+			return nil, err
 		}
 	}
 
@@ -149,11 +156,140 @@ func observeInternalRegistryHostname(listers Listers, observedConfig map[string]
 	if err != nil {
 		return nil, err
 	}
-	internalRegistryHostName := configImage.Status.InternalRegistryHostname
-	if len(internalRegistryHostName) > 0 {
-		unstructured.SetNestedField(observedConfig, internalRegistryHostName, "dockerPullSecret", "internalRegistryHostname")
+	if err = observeField(observedConfig, configImage.Status.InternalRegistryHostname, "dockerPullSecret.internalRegistryHostname", true); err != nil {
+		return nil, err
 	}
 	return observedConfig, nil
+}
+
+// observeBuildControllerConfig reads the cluster-wide build controller configuration as provided by the cluster admin.
+func observeBuildControllerConfig(listers Listers, observedConfig map[string]interface{}) (map[string]interface{}, error) {
+	build, err := listers.buildConfigLister.Get("cluster")
+	if errors.IsNotFound(err) {
+		return observedConfig, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	// set build defaults
+	if len(build.Spec.BuildDefaults.GitHTTPProxy) > 0 {
+		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitHTTPProxy, "build.buildDefaults.gitHTTPProxy", true); err != nil {
+			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitHTTPProxy", err)
+		}
+	}
+	if len(build.Spec.BuildDefaults.GitHTTPSProxy) > 0 {
+		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitHTTPSProxy, "build.buildDefaults.gitHTTPSProxy", true); err != nil {
+			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitHTTPSProxy", err)
+		}
+	}
+	if len(build.Spec.BuildDefaults.GitNoProxy) > 0 {
+		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitNoProxy, "build.buildDefaults.gitNoProxy", true); err != nil {
+			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitNoProxy", err)
+		}
+	}
+	if len(build.Spec.BuildDefaults.Env) > 0 {
+		if err = observeField(observedConfig, build.Spec.BuildDefaults.Env, "build.buildDefaults.env", true); err != nil {
+			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.env", err)
+		}
+	}
+	if len(build.Spec.BuildDefaults.ImageLabels) > 0 {
+		if err = observeField(observedConfig, build.Spec.BuildDefaults.ImageLabels, "build.buildDefaults.imageLabels", true); err != nil {
+			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.imageLabels", err)
+		}
+	}
+
+	// set build overrides
+	if len(build.Spec.BuildOverrides.ImageLabels) > 0 {
+		if err = observeField(observedConfig, build.Spec.BuildOverrides.ImageLabels, "build.buildOverrides.imageLabels", true); err != nil {
+			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildOverrides.imageLabels", err)
+		}
+	}
+	nodeSelector := build.Spec.BuildOverrides.NodeSelector
+	if len(build.Spec.BuildOverrides.NodeSelector.MatchLabels) > 0 {
+		if err = observeField(observedConfig, nodeSelector.MatchLabels, "build.buildOverrides.nodeSelector", true); err != nil {
+			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildOverrides.nodeSelector", err)
+		}
+	}
+	// Control plane config does not support MatchExpressions yet
+	if len(nodeSelector.MatchExpressions) > 0 {
+		glog.Warningf("config.Build: %s is not supported", "buildOverrides.nodeSelector.matchExpressions")
+	}
+	if len(build.Spec.BuildOverrides.Tolerations) > 0 {
+		if err = observeField(observedConfig, build.Spec.BuildOverrides.Tolerations, "build.buildOverrides.tolerations", true); err != nil {
+			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildOverrides.tolerations", err)
+		}
+	}
+
+	// TODO: 1) generate CA bundle from ConfigMapRef
+	//       2) write CA bundle to a ConfigMap in the controller-manager's namespace
+	//       3) wire in logic to force a rollout if CA bundle changes
+	// additionalCA := build.Spec.AdditionalTrustedCA
+	// if len(additionalCA.Name) > 0 {
+	// 	unstructured.SetNestedField(observedConfig, "/var/run/openshift.io/config/certs/additional-ca.crt", "build", "additionalTrustedCA")
+	// }
+	return observedConfig, nil
+}
+
+// observeField sets the nested fieldName's value in the provided observedConfig.
+// If the provided value is nil, no value is set.
+// If skipIfEmpty is true, the value
+func observeField(observedConfig map[string]interface{}, val interface{}, fieldName string, skipIfEmpty bool) error {
+	nestedFields := strings.Split(fieldName, ".")
+	if val == nil {
+		return nil
+	}
+	var err error
+	switch v := val.(type) {
+	case int64, bool:
+		err = unstructured.SetNestedField(observedConfig, v, nestedFields...)
+	case string:
+		if skipIfEmpty && len(v) == 0 {
+			return nil
+		}
+		err = unstructured.SetNestedField(observedConfig, v, nestedFields...)
+	case []interface{}:
+		if skipIfEmpty && len(v) == 0 {
+			return nil
+		}
+		err = unstructured.SetNestedSlice(observedConfig, v, nestedFields...)
+	case map[string]string:
+		if skipIfEmpty && len(v) == 0 {
+			return nil
+		}
+		err = unstructured.SetNestedStringMap(observedConfig, v, nestedFields...)
+	case map[string]interface{}:
+		if skipIfEmpty && len(v) == 0 {
+			return nil
+		}
+		err = unstructured.SetNestedMap(observedConfig, v, nestedFields...)
+	default:
+		data, err := ConvertJSON(v)
+		if err != nil {
+			return err
+		}
+		if skipIfEmpty && data == nil {
+			return nil
+		}
+		err = unstructured.SetNestedField(observedConfig, data, nestedFields...)
+	}
+	return err
+}
+
+// ConvertJSON returns the provided object's JSON-encoded representation. The object
+// must support JSON serialization and deserialization.
+func ConvertJSON(o interface{}) (interface{}, error) {
+	if o == nil {
+		return nil, nil
+	}
+	buf := &bytes.Buffer{}
+	if err := json.NewEncoder(buf).Encode(o); err != nil {
+		return nil, err
+	}
+	ret := []interface{}{}
+	if err := json.NewDecoder(buf).Decode(&ret); err != nil {
+		return nil, err
+	}
+	return ret, nil
 }
 
 func (c *ConfigObserver) Run(workers int, stopCh <-chan struct{}) {
@@ -166,7 +302,8 @@ func (c *ConfigObserver) Run(workers int, stopCh <-chan struct{}) {
 	cache.WaitForCacheSync(stopCh,
 		c.operatorConfigSynced,
 		c.configmapSynced,
-		c.configSynced,
+		c.imageConfigSynced,
+		c.buildConfigSynced,
 	)
 
 	// doesn't matter what workers say, only start one.
