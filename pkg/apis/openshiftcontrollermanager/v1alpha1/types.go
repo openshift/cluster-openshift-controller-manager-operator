@@ -39,10 +39,24 @@ type OpenShiftControllerManagerOperatorConfigSpec struct {
 	// observedConfig holds a sparse config that controller has observed from the cluster state.  It exists in spec because
 	// it causes action for the operator
 	ObservedConfig runtime.RawExtension `json:"observedConfig"`
+
+	// additionalTrustedCA references the additional trusted certificate authorities that operator should attempt to configure for the build controller.
+	AdditionalTrustedCA *AdditionalTrustedCA `json:"additionalTrustedCA,omitempty"`
+}
+
+type AdditionalTrustedCA struct {
+	// sha1Hash contains the sha1 hash of the CA bundle data
+	SHA1Hash string `json:"sha1Hash,omitempty" protobuf:"bytes,1,opt,name=sha1Hash"`
+
+	// configMapName is the name of the ConfigMap in the openshift-config namespace containing the additional trusted CAs for the build controller.
+	ConfigMapName string `json:"configMap,omitempty" protobuf:"bytes,2,opt,name=configMap"`
 }
 
 type OpenShiftControllerManagerOperatorConfigStatus struct {
 	operatorsv1alpha1api.OperatorStatus `json:",inline" protobuf:"bytes,1,opt,name=operatorStatus"`
+
+	// additionalTrustedCA references the additional trusted certificate authorities that operator configured for the build controller.
+	AdditionalTrustedCA *AdditionalTrustedCA `json:"additionalTrustedCA,omitempty" protobuf:"bytes,2,opt,name=additionalTrustedCAHash"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

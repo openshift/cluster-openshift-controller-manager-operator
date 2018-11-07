@@ -1,6 +1,9 @@
 package operator
 
 import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/pem"
 	"fmt"
 
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1alpha1"
@@ -14,9 +17,14 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	configv1 "github.com/openshift/api/config/v1"
+	configclientv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 )
 
 // syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
@@ -26,7 +34,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		Version: operatorConfig.Spec.Version,
 	}
 
-	errors := []error{}
+	syncErrors := []error{}
 	var err error
 
 	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, v311_00_assets.Asset,
@@ -47,7 +55,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 
 	for _, currResult := range directResourceResults {
 		if currResult.Error != nil {
-			errors = append(errors, fmt.Errorf("%q (%T): %v", currResult.File, currResult.Type, currResult.Error))
+			syncErrors = append(syncErrors, fmt.Errorf("%q (%T): %v", currResult.File, currResult.Type, currResult.Error))
 			continue
 		}
 
@@ -58,22 +66,26 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 
 	controllerManagerConfig, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
+		syncErrors = append(syncErrors, fmt.Errorf("%q: %v", "configmap", err))
 	}
 	// the kube-apiserver is the source of truth for client CA bundles
 	clientCAModified, err := manageOpenShiftAPIServerClientCA_v311_00_to_latest(c.kubeClient.CoreV1())
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "client-ca", err))
+		syncErrors = append(syncErrors, fmt.Errorf("%q: %v", "client-ca", err))
+	}
+	caHash, additionalCAModified, err := manageBuildAdditionalCAConfigMap(c.kubeClient.CoreV1(), c.configClient.ConfigV1(), operatorConfig)
+	if err != nil {
+		syncErrors = append(syncErrors, fmt.Errorf("%q: %v", "build-additional-ca", err))
 	}
 
 	forceRollout = forceRollout || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
-	forceRollout = forceRollout || configMapModified || clientCAModified
+	forceRollout = forceRollout || configMapModified || clientCAModified || additionalCAModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), operatorConfig, previousAvailability, forceRollout)
+	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), operatorConfig, previousAvailability, caHash, forceRollout)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
+		syncErrors = append(syncErrors, fmt.Errorf("%q: %v", "deployment", err))
 	}
 
 	configData := ""
@@ -82,10 +94,10 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	}
 	_, _, err = manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), configData, operatorConfig)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "configmap/public-info", err))
+		syncErrors = append(syncErrors, fmt.Errorf("%q: %v", "configmap/public-info", err))
 	}
 
-	return resourcemerge.ApplyDaemonSetGenerationAvailability(versionAvailability, actualDaemonSet, errors...), errors
+	return resourcemerge.ApplyDaemonSetGenerationAvailability(versionAvailability, actualDaemonSet, syncErrors...), syncErrors
 }
 
 func manageOpenShiftAPIServerClientCA_v311_00_to_latest(client coreclientv1.CoreV1Interface) (bool, error) {
@@ -107,10 +119,15 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclie
 	return resourceapply.ApplyConfigMap(client, requiredConfigMap)
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability, additionalCAHash string, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
 	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
 	required.Spec.Template.Spec.Containers[0].Image = options.Spec.ImagePullSpec
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", options.Spec.Logging.Level))
+
+	if required.Annotations == nil {
+		required.Annotations = make(map[string]string)
+	}
+	required.Annotations["config.openshift.io/build.additional-ca-hash"] = additionalCAHash
 
 	return resourceapply.ApplyDaemonSet(client, required, resourcemerge.ExpectedDaemonSetGeneration(required, previousAvailability), forceRollout)
 }
@@ -142,4 +159,79 @@ func manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(client co
 	}
 
 	return resourceapply.ApplyConfigMap(client, configMap)
+}
+
+func manageBuildAdditionalCAConfigMap(client coreclientv1.ConfigMapsGetter, configClient configclientv1.BuildsGetter, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig) (string, bool, error) {
+	caMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/build-additional-ca-cm.yaml"))
+	buildConfig, err := configClient.Builds().Get("cluster", metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return "", false, err
+	}
+	if buildConfig == nil {
+		caMap.Data = nil
+		_, modified, err := resourceapply.ApplyConfigMap(client, caMap)
+		operatorConfig.Status.AdditionalTrustedCA = nil
+		return "", modified, err
+	}
+
+	caData, err := mergeCAConfigMap(client, buildConfig.Spec.AdditionalTrustedCA)
+	if err != nil {
+		return "", false, err
+	}
+	if len(caData) == 0 && operatorConfig.Status.AdditionalTrustedCA != nil {
+		caMap.Data = nil
+		_, modified, err := resourceapply.ApplyConfigMap(client, caMap)
+		operatorConfig.Status.AdditionalTrustedCA = nil
+		return "", modified, err
+	}
+	h := sha1.New()
+	h.Write(caData)
+	caHash := fmt.Sprintf("%x", h.Sum(nil))
+	if operatorConfig.Status.AdditionalTrustedCA != nil &&
+		operatorConfig.Status.AdditionalTrustedCA.SHA1Hash == caHash {
+		return caHash, false, nil
+	}
+	operatorConfig.Status.AdditionalTrustedCA = &v1alpha1.AdditionalTrustedCA{
+		SHA1Hash:      caHash,
+		ConfigMapName: buildConfig.Spec.AdditionalTrustedCA.Name,
+	}
+	caMap.Data["additional-ca.crt"] = string(caData)
+	_, modified, err := resourceapply.ApplyConfigMap(client, caMap)
+	return caHash, modified, err
+}
+
+// mergeCAConfigMap merges the CA content within the provided ConfigMap. Returns the merged CA bundle bytes.
+//
+// If the ConfigMap contains invalid PEM-encoded data, an error is thrown.
+func mergeCAConfigMap(client coreclientv1.ConfigMapsGetter, cmRef configv1.ConfigMapReference) ([]byte, error) {
+	if len(cmRef.Name) == 0 || len(cmRef.Namespace) == 0 {
+		return nil, nil
+	}
+	configMap, err := client.ConfigMaps(cmRef.Namespace).Get(cmRef.Name, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return nil, err
+	}
+	if configMap == nil {
+		return nil, nil
+	}
+	return mergePEMData(configMap.Data)
+}
+
+func mergePEMData(data map[string]string) ([]byte, error) {
+	pemData := &bytes.Buffer{}
+	for key, certData := range data {
+		data := []byte(certData)
+		for len(data) > 0 {
+			block, rest := pem.Decode(data)
+			if block == nil && len(rest) > 0 {
+				return nil, fmt.Errorf("map key %s contains invalid PEM data: %s", key, string(rest))
+			}
+			err := pem.Encode(pemData, block)
+			if err != nil {
+				return nil, err
+			}
+			data = rest
+		}
+	}
+	return pemData.Bytes(), nil
 }

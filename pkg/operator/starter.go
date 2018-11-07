@@ -54,12 +54,14 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	kubeInformersForOpenshiftControllerManagerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(targetNamespaceName))
 	kubeInformersForOpenshiftCoreOperatorsNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(operatorNamespaceName))
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
+	openshiftConfigInformers := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(openshiftConfigNamespaceName))
 
 	operator := NewOpenShiftControllerManagerOperator(
 		operatorConfigInformers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs(),
 		kubeInformersForOpenshiftControllerManagerNamespace,
 		operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
 		kubeClient,
+		configClient,
 	)
 
 	configObserver := NewConfigObserver(
@@ -67,6 +69,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
 		kubeInformersForOpenshiftCoreOperatorsNamespace,
 		configInformers,
+		openshiftConfigInformers,
 	)
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
@@ -80,6 +83,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 	kubeInformersForOpenshiftControllerManagerNamespace.Start(stopCh)
 	kubeInformersForOpenshiftCoreOperatorsNamespace.Start(stopCh)
 	configInformers.Start(stopCh)
+	openshiftConfigInformers.Start(stopCh)
 
 	go operator.Run(1, stopCh)
 	go configObserver.Run(1, stopCh)

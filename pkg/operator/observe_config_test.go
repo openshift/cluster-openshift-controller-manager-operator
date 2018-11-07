@@ -15,6 +15,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
+	v1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1alpha1"
 )
 
 func TestObserveClusterConfig(t *testing.T) {
@@ -105,9 +106,9 @@ func TestObserveClusterConfig(t *testing.T) {
 			indexer.Add(tc.cm)
 
 			listers := Listers{
-				configmapLister: corelistersv1.NewConfigMapLister(indexer),
+				coreOperatorsConfigMapLister: corelistersv1.NewConfigMapLister(indexer),
 			}
-			result, err := observeControllerManagerImagesConfig(listers, map[string]interface{}{})
+			result, err := observeControllerManagerImagesConfig(listers, map[string]interface{}{}, &v1alpha1.OpenShiftControllerManagerOperatorConfig{})
 			if err != nil {
 				t.Fatalf("unexpected error %v", err)
 			}
@@ -139,7 +140,7 @@ func TestObserveRegistryConfig(t *testing.T) {
 		imageConfigLister: configlistersv1.NewImageLister(indexer),
 	}
 
-	result, err := observeInternalRegistryHostname(listers, map[string]interface{}{})
+	result, err := observeInternalRegistryHostname(listers, map[string]interface{}{}, &v1alpha1.OpenShiftControllerManagerOperatorConfig{})
 	if err != nil {
 		t.Error("expected err == nil")
 	}
@@ -250,7 +251,8 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				buildConfigLister: configlistersv1.NewBuildLister(indexer),
 			}
 			config := map[string]interface{}{}
-			observed, err := observeBuildControllerConfig(listers, config)
+			operatorConfig := &v1alpha1.OpenShiftControllerManagerOperatorConfig{}
+			observed, err := observeBuildControllerConfig(listers, config, operatorConfig)
 			if err != nil {
 				if !test.expectError {
 					t.Fatalf("unexpected error observing build controller config: %v", err)
@@ -384,5 +386,140 @@ func testNestedField(obj map[string]interface{}, expectedVal interface{}, field 
 		if existIfEmpty && !found {
 			t.Errorf("expected field %s to exist, even if empty", field)
 		}
+	}
+}
+
+func TestObserveBuildAdditionalCA(t *testing.T) {
+	const caMountPoint = "/var/run/configmaps/additional-ca/additional-ca.crt"
+	tests := []struct {
+		name        string
+		inputCA     *corev1.ConfigMap
+		currentCA   *corev1.ConfigMap
+		expectedCA  string
+		expectError bool
+	}{
+		{
+			name: "has certificate",
+			inputCA: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ca",
+					Namespace: openshiftConfigNamespaceName,
+				},
+				Data: map[string]string{
+					"ca.crt": dummyCA,
+				},
+			},
+			expectedCA: caMountPoint,
+		},
+		{
+			name: "no certificate",
+		},
+		{
+			name: "update certificate",
+			inputCA: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ca",
+					Namespace: openshiftConfigNamespaceName,
+				},
+				Data: map[string]string{
+					"ca.crt": dummyCA,
+				},
+			},
+			currentCA: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "other-ca",
+					Namespace: openshiftConfigNamespaceName,
+				},
+				Data: map[string]string{
+					"ca.crt": dummyCA + dummyCA,
+				},
+			},
+			expectedCA: caMountPoint,
+		},
+		{
+			name: "bad certificate",
+			inputCA: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "other-ca",
+					Namespace: openshiftConfigNamespaceName,
+				},
+				Data: map[string]string{
+					"ca.crt": "THIS IS A BAD CERT",
+				},
+			},
+			expectError: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			buildIndex := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+			cmIndex := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+			expectedHash := ""
+			opConfig := &v1alpha1.OpenShiftControllerManagerOperatorConfig{
+				Status: v1alpha1.OpenShiftControllerManagerOperatorConfigStatus{},
+			}
+			if tc.inputCA != nil {
+				expectedHash = hashCAMap(tc.inputCA)
+				cmIndex.Add(tc.inputCA)
+				bc := &configv1.Build{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+					Spec: configv1.BuildSpec{
+						AdditionalTrustedCA: configv1.ConfigMapReference{
+							Name:      tc.inputCA.Name,
+							Namespace: tc.inputCA.Namespace,
+						},
+					},
+				}
+				buildIndex.Add(bc)
+			}
+			if tc.currentCA != nil {
+				cmIndex.Add(tc.currentCA)
+				trustedCA := &v1alpha1.AdditionalTrustedCA{
+					SHA1Hash:      hashCAMap(tc.currentCA),
+					ConfigMapName: tc.currentCA.Name,
+				}
+				opConfig.Spec.AdditionalTrustedCA = trustedCA
+				opConfig.Status.AdditionalTrustedCA = trustedCA
+			}
+			listers := Listers{
+				buildConfigLister:            configlistersv1.NewBuildLister(buildIndex),
+				clusterConfigConfigMapLister: corelistersv1.NewConfigMapLister(cmIndex),
+			}
+			result, err := observeBuildAdditionalCA(listers, map[string]interface{}{}, opConfig)
+			if tc.expectError {
+				if err == nil {
+					t.Error("expected error to occur")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			additionalCA, _, err := unstructured.NestedString(result, "build", "additionalTrustedCA")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if additionalCA != tc.expectedCA {
+				t.Errorf("expected additional CA to be set to %s, got %s", tc.expectedCA, additionalCA)
+			}
+			if len(expectedHash) > 0 {
+				if opConfig.Spec.AdditionalTrustedCA == nil {
+					t.Error("expected operator config to have spec.additionalTrustedCA set, got nil")
+					return
+				}
+				if expectedHash != opConfig.Spec.AdditionalTrustedCA.SHA1Hash {
+					t.Errorf("expected CA hash %s, got %s", expectedHash, opConfig.Spec.AdditionalTrustedCA.SHA1Hash)
+				}
+				if tc.inputCA.Name != opConfig.Spec.AdditionalTrustedCA.ConfigMapName {
+					t.Errorf("expected operator config spec to reference %s/%s, got %s/%s",
+						tc.inputCA.Namespace,
+						tc.inputCA.Name,
+						openshiftConfigNamespaceName,
+						opConfig.Spec.AdditionalTrustedCA.ConfigMapName)
+				}
+			}
+		})
 	}
 }

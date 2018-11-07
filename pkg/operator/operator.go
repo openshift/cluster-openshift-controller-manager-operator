@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	operatorsv1alpha1 "github.com/openshift/api/operator/v1alpha1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1alpha1"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
@@ -28,16 +29,18 @@ import (
 )
 
 const (
-	kubeAPIServerNamespaceName = "openshift-kube-apiserver"
-	targetNamespaceName        = "openshift-controller-manager"
-	operatorNamespaceName      = "openshift-core-operators"
-	workQueueKey               = "key"
+	kubeAPIServerNamespaceName   = "openshift-kube-apiserver"
+	targetNamespaceName          = "openshift-controller-manager"
+	operatorNamespaceName        = "openshift-core-operators"
+	openshiftConfigNamespaceName = "openshift-config"
+	workQueueKey                 = "key"
 )
 
 type OpenShiftControllerManagerOperator struct {
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
 
-	kubeClient kubernetes.Interface
+	kubeClient   kubernetes.Interface
+	configClient configclient.Interface
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -50,13 +53,14 @@ func NewOpenShiftControllerManagerOperator(
 	kubeInformersForOpenshiftControllerManager informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
 	kubeClient kubernetes.Interface,
+	configClient configclient.Interface,
 ) *OpenShiftControllerManagerOperator {
 	c := &OpenShiftControllerManagerOperator{
 		operatorConfigClient: operatorConfigClient,
 		kubeClient:           kubeClient,
-
-		queue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
-		rateLimiter: flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
+		configClient:         configClient,
+		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
+		rateLimiter:          flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())

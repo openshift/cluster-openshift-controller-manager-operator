@@ -2,6 +2,7 @@ package operator
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -25,18 +26,20 @@ import (
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
+	operatorconfigv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1alpha1"
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/diff"
 )
 
 type Listers struct {
-	buildConfigLister configlistersv1.BuildLister
-	imageConfigLister configlistersv1.ImageLister
-	configmapLister   corelistersv1.ConfigMapLister
+	buildConfigLister            configlistersv1.BuildLister
+	imageConfigLister            configlistersv1.ImageLister
+	coreOperatorsConfigMapLister corelistersv1.ConfigMapLister
+	clusterConfigConfigMapLister corelistersv1.ConfigMapLister
 }
 
-type observeConfigFunc func(Listers, map[string]interface{}) (map[string]interface{}, error)
+type observeConfigFunc func(Listers, map[string]interface{}, *operatorconfigv1alpha1.OpenShiftControllerManagerOperatorConfig) (map[string]interface{}, error)
 
 type ConfigObserver struct {
 	operatorConfigClient operatorconfigclientv1alpha1.OpenShiftControllerManagerOperatorConfigInterface
@@ -50,10 +53,11 @@ type ConfigObserver struct {
 	// listers are used by config observers to retrieve necessary resources
 	listers Listers
 
-	operatorConfigSynced cache.InformerSynced
-	configmapSynced      cache.InformerSynced
-	imageConfigSynced    cache.InformerSynced
-	buildConfigSynced    cache.InformerSynced
+	operatorConfigSynced      cache.InformerSynced
+	coreOperatorsConfigSynced cache.InformerSynced
+	imageConfigSynced         cache.InformerSynced
+	buildConfigSynced         cache.InformerSynced
+	clusterConfigsSynced      cache.InformerSynced
 }
 
 func NewConfigObserver(
@@ -61,6 +65,7 @@ func NewConfigObserver(
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
 	kubeInformersForOpenshiftCoreOperators informers.SharedInformerFactory,
 	configInformer configinformers.SharedInformerFactory,
+	openshiftConfigInformer informers.SharedInformerFactory,
 ) *ConfigObserver {
 	c := &ConfigObserver{
 		operatorConfigClient: operatorConfigClient.OpenShiftControllerManagerOperatorConfigs(),
@@ -72,23 +77,27 @@ func NewConfigObserver(
 			observeControllerManagerImagesConfig,
 			observeInternalRegistryHostname,
 			observeBuildControllerConfig,
+			observeBuildAdditionalCA,
 		},
 		listers: Listers{
-			imageConfigLister: configInformer.Config().V1().Images().Lister(),
-			configmapLister:   kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Lister(),
-			buildConfigLister: configInformer.Config().V1().Builds().Lister(),
+			imageConfigLister:            configInformer.Config().V1().Images().Lister(),
+			coreOperatorsConfigMapLister: kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Lister(),
+			buildConfigLister:            configInformer.Config().V1().Builds().Lister(),
+			clusterConfigConfigMapLister: openshiftConfigInformer.Core().V1().ConfigMaps().Lister(),
 		},
 	}
 
 	c.operatorConfigSynced = operatorConfigInformer.Informer().HasSynced
-	c.configmapSynced = kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Informer().HasSynced
+	c.coreOperatorsConfigSynced = kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Informer().HasSynced
 	c.imageConfigSynced = configInformer.Config().V1().Images().Informer().HasSynced
 	c.buildConfigSynced = configInformer.Config().V1().Builds().Informer().HasSynced
+	c.clusterConfigsSynced = openshiftConfigInformer.Core().V1().ConfigMaps().Informer().HasSynced
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForOpenshiftCoreOperators.Core().V1().Namespaces().Informer().AddEventHandler(c.eventHandler())
 	configInformer.Config().V1().Images().Informer().AddEventHandler(c.eventHandler())
-
+	configInformer.Config().V1().Builds().Informer().AddEventHandler(c.eventHandler())
+	openshiftConfigInformer.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
 	return c
 }
 
@@ -97,28 +106,29 @@ func (c ConfigObserver) sync() error {
 	var err error
 	observedConfig := map[string]interface{}{}
 
+	operatorConfig, err := c.operatorConfigClient.Get("instance", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	currentCASpec := operatorConfig.Spec.AdditionalTrustedCA.DeepCopy()
+
 	for _, observer := range c.observers {
-		observedConfig, err = observer(c.listers, observedConfig)
+		observedConfig, err = observer(c.listers, observedConfig, operatorConfig)
 		if err != nil {
 			return err
 		}
 	}
 
-	operatorConfig, err := c.operatorConfigClient.Get("instance", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
 	// don't worry about errors
 	currentConfig := map[string]interface{}{}
 	json.NewDecoder(bytes.NewBuffer(operatorConfig.Spec.ObservedConfig.Raw)).Decode(&currentConfig)
-	if reflect.DeepEqual(currentConfig, observedConfig) {
+	if reflect.DeepEqual(currentConfig, observedConfig) && reflect.DeepEqual(currentCASpec, operatorConfig.Spec.AdditionalTrustedCA) {
 		return nil
 	}
 
 	glog.Infof("writing updated observedConfig: %v", diff.ObjectDiff(operatorConfig.Spec.ObservedConfig.Object, observedConfig))
 	operatorConfig.Spec.ObservedConfig = runtime.RawExtension{Object: &unstructured.Unstructured{Object: observedConfig}}
-
+	glog.Infof("writing updated additionalTrustedCA: %v", diff.ObjectDiff(currentCASpec, operatorConfig.Spec.AdditionalTrustedCA))
 	if _, err := c.operatorConfigClient.Update(operatorConfig); err != nil {
 		return err
 	}
@@ -127,8 +137,8 @@ func (c ConfigObserver) sync() error {
 }
 
 // observeControllerManagerImagesConfig observes image paths from openshift-controller-manager-images in order to determine which deployer and builder images to use
-func observeControllerManagerImagesConfig(listers Listers, observedConfig map[string]interface{}) (map[string]interface{}, error) {
-	controllerManagerImages, err := listers.configmapLister.ConfigMaps(operatorNamespaceName).Get("openshift-controller-manager-images")
+func observeControllerManagerImagesConfig(listers Listers, observedConfig map[string]interface{}, operatorConfig *operatorconfigv1alpha1.OpenShiftControllerManagerOperatorConfig) (map[string]interface{}, error) {
+	controllerManagerImages, err := listers.coreOperatorsConfigMapLister.ConfigMaps(operatorNamespaceName).Get("openshift-controller-manager-images")
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
@@ -148,7 +158,7 @@ func observeControllerManagerImagesConfig(listers Listers, observedConfig map[st
 
 // observeInternalRegistryHostname reads the internal registry hostname from the cluster configuration as provided by
 // the registry operator.
-func observeInternalRegistryHostname(listers Listers, observedConfig map[string]interface{}) (map[string]interface{}, error) {
+func observeInternalRegistryHostname(listers Listers, observedConfig map[string]interface{}, operatorConfig *operatorconfigv1alpha1.OpenShiftControllerManagerOperatorConfig) (map[string]interface{}, error) {
 	configImage, err := listers.imageConfigLister.Get("cluster")
 	if errors.IsNotFound(err) {
 		return observedConfig, nil
@@ -163,7 +173,7 @@ func observeInternalRegistryHostname(listers Listers, observedConfig map[string]
 }
 
 // observeBuildControllerConfig reads the cluster-wide build controller configuration as provided by the cluster admin.
-func observeBuildControllerConfig(listers Listers, observedConfig map[string]interface{}) (map[string]interface{}, error) {
+func observeBuildControllerConfig(listers Listers, observedConfig map[string]interface{}, config *operatorconfigv1alpha1.OpenShiftControllerManagerOperatorConfig) (map[string]interface{}, error) {
 	build, err := listers.buildConfigLister.Get("cluster")
 	if errors.IsNotFound(err) {
 		return observedConfig, nil
@@ -219,14 +229,6 @@ func observeBuildControllerConfig(listers Listers, observedConfig map[string]int
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildOverrides.tolerations", err)
 		}
 	}
-
-	// TODO: 1) generate CA bundle from ConfigMapRef
-	//       2) write CA bundle to a ConfigMap in the controller-manager's namespace
-	//       3) wire in logic to force a rollout if CA bundle changes
-	// additionalCA := build.Spec.AdditionalTrustedCA
-	// if len(additionalCA.Name) > 0 {
-	// 	unstructured.SetNestedField(observedConfig, "/var/run/openshift.io/config/certs/additional-ca.crt", "build", "additionalTrustedCA")
-	// }
 	return observedConfig, nil
 }
 
@@ -292,6 +294,50 @@ func ConvertJSON(o interface{}) (interface{}, error) {
 	return ret, nil
 }
 
+// observeBuildAdditionalCA observes if the additional trusted CA is available.
+func observeBuildAdditionalCA(listers Listers, observedConfig map[string]interface{}, operatorConfig *operatorconfigv1alpha1.OpenShiftControllerManagerOperatorConfig) (map[string]interface{}, error) {
+	build, err := listers.buildConfigLister.Get("cluster")
+	if errors.IsNotFound(err) {
+		operatorConfig.Spec.AdditionalTrustedCA = nil
+		return observedConfig, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(build.Spec.AdditionalTrustedCA.Name) == 0 {
+		operatorConfig.Spec.AdditionalTrustedCA = nil
+		return observedConfig, nil
+	}
+	cm, err := listers.clusterConfigConfigMapLister.ConfigMaps(openshiftConfigNamespaceName).Get(build.Spec.AdditionalTrustedCA.Name)
+	if errors.IsNotFound(err) {
+		operatorConfig.Spec.AdditionalTrustedCA = nil
+		glog.Warningf("referenced configMap %s/%s for additional trusted certificate authorities does not exist",
+			openshiftConfigNamespaceName,
+			build.Spec.AdditionalTrustedCA.Name)
+		return observedConfig, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	caData, err := mergePEMData(cm.Data)
+	if err != nil {
+		return nil, err
+	}
+	if len(caData) == 0 {
+		operatorConfig.Spec.AdditionalTrustedCA = nil
+		return observedConfig, nil
+	}
+	h := sha1.New()
+	h.Write(caData)
+	caHash := fmt.Sprintf("%x", h.Sum(nil))
+	operatorConfig.Spec.AdditionalTrustedCA = &operatorconfigv1alpha1.AdditionalTrustedCA{
+		SHA1Hash:      caHash,
+		ConfigMapName: cm.Name,
+	}
+	unstructured.SetNestedField(observedConfig, "/var/run/configmaps/additional-ca/additional-ca.crt", "build", "additionalTrustedCA")
+	return observedConfig, nil
+}
+
 func (c *ConfigObserver) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
@@ -301,9 +347,10 @@ func (c *ConfigObserver) Run(workers int, stopCh <-chan struct{}) {
 
 	cache.WaitForCacheSync(stopCh,
 		c.operatorConfigSynced,
-		c.configmapSynced,
+		c.coreOperatorsConfigSynced,
 		c.imageConfigSynced,
 		c.buildConfigSynced,
+		c.clusterConfigsSynced,
 	)
 
 	// doesn't matter what workers say, only start one.

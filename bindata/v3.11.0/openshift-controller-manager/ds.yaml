@@ -37,6 +37,8 @@ spec:
           name: client-ca
         - mountPath: /var/run/secrets/serving-cert
           name: serving-cert
+        - mountPath: /var/run/configmaps/additional-ca
+          name: additional-ca
       volumes:
       - name: config
         configMap:
@@ -47,6 +49,9 @@ spec:
       - name: serving-cert
         secret:
           secretName: serving-cert
+      - name: additional-ca
+        configMap:
+          name: build-additional-ca
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
