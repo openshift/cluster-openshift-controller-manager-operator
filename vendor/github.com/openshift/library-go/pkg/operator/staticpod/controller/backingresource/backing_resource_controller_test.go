@@ -14,7 +14,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
 
-	operatorv1alpha1 "github.com/openshift/api/operator/v1alpha1"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/common"
 )
 
@@ -42,17 +43,17 @@ func TestBackingResourceController(t *testing.T) {
 		startingObjects         []runtime.Object
 		staticPodOperatorClient common.OperatorClient
 		validateActions         func(t *testing.T, actions []clienttesting.Action)
-		validateStatus          func(t *testing.T, status *operatorv1alpha1.StaticPodOperatorStatus)
+		validateStatus          func(t *testing.T, status *operatorv1.StaticPodOperatorStatus)
 		expectSyncError         string
 	}{
 		{
 			targetNamespace: "successful-create",
 			staticPodOperatorClient: common.NewFakeStaticPodOperatorClient(
-				&operatorv1alpha1.OperatorSpec{
-					ManagementState: operatorv1alpha1.Managed,
+				&operatorv1.OperatorSpec{
+					ManagementState: operatorv1.Managed,
 				},
-				&operatorv1alpha1.OperatorStatus{},
-				&operatorv1alpha1.StaticPodOperatorStatus{},
+				&operatorv1.OperatorStatus{},
+				&operatorv1.StaticPodOperatorStatus{},
 				nil,
 			),
 			validateActions: func(t *testing.T, actions []clienttesting.Action) {
@@ -90,11 +91,11 @@ func TestBackingResourceController(t *testing.T) {
 		{
 			targetNamespace: "operator-unmanaged",
 			staticPodOperatorClient: common.NewFakeStaticPodOperatorClient(
-				&operatorv1alpha1.OperatorSpec{
-					ManagementState: operatorv1alpha1.Unmanaged,
+				&operatorv1.OperatorSpec{
+					ManagementState: operatorv1.Unmanaged,
 				},
-				&operatorv1alpha1.OperatorStatus{},
-				&operatorv1alpha1.StaticPodOperatorStatus{},
+				&operatorv1.OperatorStatus{},
+				&operatorv1.StaticPodOperatorStatus{},
 				nil,
 			),
 			validateActions: func(t *testing.T, actions []clienttesting.Action) {
@@ -110,11 +111,11 @@ func TestBackingResourceController(t *testing.T) {
 				&v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "installer-sa", Namespace: "service-account-exists"}},
 			},
 			staticPodOperatorClient: common.NewFakeStaticPodOperatorClient(
-				&operatorv1alpha1.OperatorSpec{
-					ManagementState: operatorv1alpha1.Managed,
+				&operatorv1.OperatorSpec{
+					ManagementState: operatorv1.Managed,
 				},
-				&operatorv1alpha1.OperatorStatus{},
-				&operatorv1alpha1.StaticPodOperatorStatus{},
+				&operatorv1.OperatorStatus{},
+				&operatorv1.StaticPodOperatorStatus{},
 				nil,
 			),
 			validateActions: func(t *testing.T, actions []clienttesting.Action) {
@@ -147,16 +148,16 @@ func TestBackingResourceController(t *testing.T) {
 				},
 			},
 			staticPodOperatorClient: common.NewFakeStaticPodOperatorClient(
-				&operatorv1alpha1.OperatorSpec{
-					ManagementState: operatorv1alpha1.Managed,
+				&operatorv1.OperatorSpec{
+					ManagementState: operatorv1.Managed,
 				},
-				&operatorv1alpha1.OperatorStatus{},
-				&operatorv1alpha1.StaticPodOperatorStatus{},
+				&operatorv1.OperatorStatus{},
+				&operatorv1.StaticPodOperatorStatus{},
 				nil,
 			),
 			expectSyncError: `test error`,
-			validateStatus: func(t *testing.T, status *operatorv1alpha1.StaticPodOperatorStatus) {
-				if status.Conditions[0].Type != operatorv1alpha1.OperatorStatusTypeFailing {
+			validateStatus: func(t *testing.T, status *operatorv1.StaticPodOperatorStatus) {
+				if status.Conditions[0].Type != operatorv1.OperatorStatusTypeFailing {
 					t.Errorf("expected status condition to be failing, got %v", status.Conditions[0].Type)
 				}
 				if status.Conditions[0].Reason != "CreateBackingResourcesError" {
@@ -175,11 +176,13 @@ func TestBackingResourceController(t *testing.T) {
 			for _, r := range tc.prependReactors {
 				kubeClient.PrependReactor(r.verb, r.resource, r.reaction)
 			}
+			eventRecorder := events.NewInMemoryRecorder("")
 			c := NewBackingResourceController(
 				tc.targetNamespace,
 				tc.staticPodOperatorClient,
 				informers.NewSharedInformerFactoryWithOptions(kubeClient, 1*time.Minute, informers.WithNamespace(tc.targetNamespace)),
 				kubeClient,
+				eventRecorder,
 			)
 			syncErr := c.sync()
 			if tc.validateStatus != nil {

@@ -18,12 +18,13 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	operatorv1alpha1 "github.com/openshift/api/operator/v1alpha1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/library-go/pkg/assets"
+	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/backingresource/bindata"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/common"
-	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
 const (
@@ -45,7 +46,8 @@ type BackingResourceController struct {
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
 
-	kubeClient kubernetes.Interface
+	kubeClient    kubernetes.Interface
+	eventRecorder events.Recorder
 }
 
 func NewBackingResourceController(
@@ -53,10 +55,12 @@ func NewBackingResourceController(
 	operatorConfigClient common.OperatorClient,
 	kubeInformersForTargetNamespace informers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
+	eventRecorder events.Recorder,
 ) *BackingResourceController {
 	c := &BackingResourceController{
 		targetNamespace:      targetNamespace,
 		operatorConfigClient: operatorConfigClient,
+		eventRecorder:        eventRecorder,
 
 		saListerSynced: kubeInformersForTargetNamespace.Core().V1().ServiceAccounts().Informer().HasSynced,
 		saLister:       kubeInformersForTargetNamespace.Core().V1().ServiceAccounts().Lister(),
@@ -77,14 +81,14 @@ func NewBackingResourceController(
 }
 
 // resetFailingConditionForReason reset the failing operator condition status to false for the specified reason.
-func (c BackingResourceController) resetFailingConditionForReason(status *operatorv1alpha1.StaticPodOperatorStatus, resourceVersion, reason string) error {
-	failingCondition := v1alpha1helpers.FindOperatorCondition(status.Conditions, operatorv1alpha1.OperatorStatusTypeFailing)
+func (c BackingResourceController) resetFailingConditionForReason(status *operatorv1.StaticPodOperatorStatus, resourceVersion, reason string) error {
+	failingCondition := v1helpers.FindOperatorCondition(status.Conditions, operatorv1.OperatorStatusTypeFailing)
 	if failingCondition == nil || failingCondition.Reason != reason {
 		return nil
 	}
 
-	failingCondition.Status = operatorv1alpha1.ConditionFalse
-	v1alpha1helpers.SetOperatorCondition(&status.Conditions, *failingCondition)
+	failingCondition.Status = operatorv1.ConditionFalse
+	v1helpers.SetOperatorCondition(&status.Conditions, *failingCondition)
 
 	_, err := c.operatorConfigClient.UpdateStatus(resourceVersion, status)
 	return err
@@ -107,15 +111,15 @@ func (c BackingResourceController) sync() error {
 
 	operatorStatus := originalOperatorStatus.DeepCopy()
 	switch operatorSpec.ManagementState {
-	case operatorv1alpha1.Unmanaged:
+	case operatorv1.Unmanaged:
 		return nil
-	case operatorv1alpha1.Removed:
+	case operatorv1.Removed:
 		// TODO: Should we delete the installer-sa and cluster role binding?
 		return nil
 	}
 
 	errors := []string{}
-	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.mustTemplateAsset,
+	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.eventRecorder, c.mustTemplateAsset,
 		"manifests/installer-sa.yaml",
 		"manifests/installer-cluster-rolebinding.yaml",
 	)
@@ -132,9 +136,9 @@ func (c BackingResourceController) sync() error {
 		return c.resetFailingConditionForReason(operatorStatus, resourceVersion, "CreateBackingResourcesError")
 	}
 
-	v1alpha1helpers.SetOperatorCondition(&operatorStatus.Conditions, operatorv1alpha1.OperatorCondition{
-		Type:    operatorv1alpha1.OperatorStatusTypeFailing,
-		Status:  operatorv1alpha1.ConditionTrue,
+	v1helpers.SetOperatorCondition(&operatorStatus.Conditions, operatorv1.OperatorCondition{
+		Type:    operatorv1.OperatorStatusTypeFailing,
+		Status:  operatorv1.ConditionTrue,
 		Reason:  "CreateBackingResourcesError",
 		Message: strings.Join(errors, ","),
 	})

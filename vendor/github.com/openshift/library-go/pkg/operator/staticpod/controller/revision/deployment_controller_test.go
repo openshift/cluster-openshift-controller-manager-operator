@@ -1,4 +1,4 @@
-package deployment
+package revision
 
 import (
 	"strings"
@@ -12,7 +12,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
 
-	operatorv1alpha1 "github.com/openshift/api/operator/v1alpha1"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/staticpod/controller/common"
 )
 
@@ -28,7 +29,7 @@ func filterCreateActions(actions []clienttesting.Action) []runtime.Object {
 	return createdObjects
 }
 
-func TestDeploymentController(t *testing.T) {
+func TestRevisionController(t *testing.T) {
 	tests := []struct {
 		targetNamespace         string
 		testSecrets             []string
@@ -36,17 +37,17 @@ func TestDeploymentController(t *testing.T) {
 		startingObjects         []runtime.Object
 		staticPodOperatorClient common.OperatorClient
 		validateActions         func(t *testing.T, actions []clienttesting.Action)
-		validateStatus          func(t *testing.T, status *operatorv1alpha1.StaticPodOperatorStatus)
+		validateStatus          func(t *testing.T, status *operatorv1.StaticPodOperatorStatus)
 		expectSyncError         string
 	}{
 		{
 			targetNamespace: "operator-unmanaged",
 			staticPodOperatorClient: common.NewFakeStaticPodOperatorClient(
-				&operatorv1alpha1.OperatorSpec{
-					ManagementState: operatorv1alpha1.Unmanaged,
+				&operatorv1.OperatorSpec{
+					ManagementState: operatorv1.Unmanaged,
 				},
-				&operatorv1alpha1.OperatorStatus{},
-				&operatorv1alpha1.StaticPodOperatorStatus{},
+				&operatorv1.OperatorStatus{},
+				&operatorv1.StaticPodOperatorStatus{},
 				nil,
 			),
 			validateActions: func(t *testing.T, actions []clienttesting.Action) {
@@ -59,18 +60,17 @@ func TestDeploymentController(t *testing.T) {
 		{
 			targetNamespace: "missing-source-resources",
 			staticPodOperatorClient: common.NewFakeStaticPodOperatorClient(
-				&operatorv1alpha1.OperatorSpec{
-					ManagementState: operatorv1alpha1.Managed,
-					Version:         "3.11.1",
+				&operatorv1.OperatorSpec{
+					ManagementState: operatorv1.Managed,
 				},
-				&operatorv1alpha1.OperatorStatus{},
-				&operatorv1alpha1.StaticPodOperatorStatus{
-					LatestAvailableDeploymentGeneration: 1,
-					NodeStatuses: []operatorv1alpha1.NodeStatus{
+				&operatorv1.OperatorStatus{},
+				&operatorv1.StaticPodOperatorStatus{
+					LatestAvailableRevision: 1,
+					NodeStatuses: []operatorv1.NodeStatus{
 						{
-							NodeName:                    "test-node-1",
-							CurrentDeploymentGeneration: 0,
-							TargetDeploymentGeneration:  0,
+							NodeName:        "test-node-1",
+							CurrentRevision: 0,
+							TargetRevision:  0,
 						},
 					},
 				},
@@ -79,9 +79,9 @@ func TestDeploymentController(t *testing.T) {
 			testConfigs:     []string{"test-config"},
 			testSecrets:     []string{"test-secret"},
 			expectSyncError: "synthetic requeue request",
-			validateStatus: func(t *testing.T, status *operatorv1alpha1.StaticPodOperatorStatus) {
-				if status.Conditions[0].Type != "DeploymentControllerFailing" {
-					t.Errorf("expected status condition to be 'DeploymentControllerFailing', got %v", status.Conditions[0].Type)
+			validateStatus: func(t *testing.T, status *operatorv1.StaticPodOperatorStatus) {
+				if status.Conditions[0].Type != "RevisionControllerFailing" {
+					t.Errorf("expected status condition to be 'RevisionControllerFailing', got %v", status.Conditions[0].Type)
 				}
 				if status.Conditions[0].Reason != "ContentCreationError" {
 					t.Errorf("expected status condition reason to be 'ContentCreationError', got %v", status.Conditions[0].Reason)
@@ -94,18 +94,17 @@ func TestDeploymentController(t *testing.T) {
 		{
 			targetNamespace: "copy-resources",
 			staticPodOperatorClient: common.NewFakeStaticPodOperatorClient(
-				&operatorv1alpha1.OperatorSpec{
-					ManagementState: operatorv1alpha1.Managed,
-					Version:         "3.11.1",
+				&operatorv1.OperatorSpec{
+					ManagementState: operatorv1.Managed,
 				},
-				&operatorv1alpha1.OperatorStatus{},
-				&operatorv1alpha1.StaticPodOperatorStatus{
-					LatestAvailableDeploymentGeneration: 1,
-					NodeStatuses: []operatorv1alpha1.NodeStatus{
+				&operatorv1.OperatorStatus{},
+				&operatorv1.StaticPodOperatorStatus{
+					LatestAvailableRevision: 1,
+					NodeStatuses: []operatorv1.NodeStatus{
 						{
-							NodeName:                    "test-node-1",
-							CurrentDeploymentGeneration: 0,
-							TargetDeploymentGeneration:  0,
+							NodeName:        "test-node-1",
+							CurrentRevision: 0,
+							TargetRevision:  0,
 						},
 					},
 				},
@@ -146,13 +145,16 @@ func TestDeploymentController(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.targetNamespace, func(t *testing.T) {
 			kubeClient := fake.NewSimpleClientset(tc.startingObjects...)
-			c := NewDeploymentController(
+			eventRecorder := events.NewRecorder(kubeClient.CoreV1().Events("test"), "test-operator", &v1.ObjectReference{})
+
+			c := NewRevisionController(
 				tc.targetNamespace,
 				tc.testConfigs,
 				tc.testSecrets,
 				informers.NewSharedInformerFactoryWithOptions(kubeClient, 1*time.Minute, informers.WithNamespace(tc.targetNamespace)),
 				tc.staticPodOperatorClient,
 				kubeClient,
+				eventRecorder,
 			)
 			syncErr := c.sync()
 			if tc.validateStatus != nil {
