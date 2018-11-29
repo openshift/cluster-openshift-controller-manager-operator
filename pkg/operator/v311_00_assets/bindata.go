@@ -9,9 +9,6 @@
 // bindata/v3.11.0/openshift-controller-manager/leader-rolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/ns.yaml
 // bindata/v3.11.0/openshift-controller-manager/operator-config.yaml
-// bindata/v3.11.0/openshift-controller-manager/public-info-role.yaml
-// bindata/v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml
-// bindata/v3.11.0/openshift-controller-manager/public-info.yaml
 // bindata/v3.11.0/openshift-controller-manager/sa.yaml
 // bindata/v3.11.0/openshift-controller-manager/separate-sa-role.yaml
 // bindata/v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml
@@ -363,93 +360,6 @@ func v3110OpenshiftControllerManagerOperatorConfigYaml() (*asset, error) {
 	return a, nil
 }
 
-var _v3110OpenshiftControllerManagerPublicInfoRoleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  namespace: openshift-controller-manager
-  name: system:openshift:operator:openshift-controller-manager:public
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-  resourceNames:
-  - public-info
-`)
-
-func v3110OpenshiftControllerManagerPublicInfoRoleYamlBytes() ([]byte, error) {
-	return _v3110OpenshiftControllerManagerPublicInfoRoleYaml, nil
-}
-
-func v3110OpenshiftControllerManagerPublicInfoRoleYaml() (*asset, error) {
-	bytes, err := v3110OpenshiftControllerManagerPublicInfoRoleYamlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/public-info-role.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _v3110OpenshiftControllerManagerPublicInfoRolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  namespace: openshift-controller-manager
-  name: system:openshift:operator:openshift-controller-manager:public
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: system:openshift:operator:openshift-controller-manager:public
-subjects:
-- kind: Group
-  name: system:authenticated
-`)
-
-func v3110OpenshiftControllerManagerPublicInfoRolebindingYamlBytes() ([]byte, error) {
-	return _v3110OpenshiftControllerManagerPublicInfoRolebindingYaml, nil
-}
-
-func v3110OpenshiftControllerManagerPublicInfoRolebindingYaml() (*asset, error) {
-	bytes, err := v3110OpenshiftControllerManagerPublicInfoRolebindingYamlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
-var _v3110OpenshiftControllerManagerPublicInfoYaml = []byte(`apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: openshift-controller-manager
-  name: public-info
-data:
-  # version is the current of the openshift-controller-manager.  It is updated *after* it is being served consistently.
-  version:
-`)
-
-func v3110OpenshiftControllerManagerPublicInfoYamlBytes() ([]byte, error) {
-	return _v3110OpenshiftControllerManagerPublicInfoYaml, nil
-}
-
-func v3110OpenshiftControllerManagerPublicInfoYaml() (*asset, error) {
-	bytes, err := v3110OpenshiftControllerManagerPublicInfoYamlBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/public-info.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
-	a := &asset{bytes: bytes, info: info}
-	return a, nil
-}
-
 var _v3110OpenshiftControllerManagerSaYaml = []byte(`apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -636,9 +546,6 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml":          v3110OpenshiftControllerManagerLeaderRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/ns.yaml":                          v3110OpenshiftControllerManagerNsYaml,
 	"v3.11.0/openshift-controller-manager/operator-config.yaml":             v3110OpenshiftControllerManagerOperatorConfigYaml,
-	"v3.11.0/openshift-controller-manager/public-info-role.yaml":            v3110OpenshiftControllerManagerPublicInfoRoleYaml,
-	"v3.11.0/openshift-controller-manager/public-info-rolebinding.yaml":     v3110OpenshiftControllerManagerPublicInfoRolebindingYaml,
-	"v3.11.0/openshift-controller-manager/public-info.yaml":                 v3110OpenshiftControllerManagerPublicInfoYaml,
 	"v3.11.0/openshift-controller-manager/sa.yaml":                          v3110OpenshiftControllerManagerSaYaml,
 	"v3.11.0/openshift-controller-manager/separate-sa-role.yaml":            v3110OpenshiftControllerManagerSeparateSaRoleYaml,
 	"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml":     v3110OpenshiftControllerManagerSeparateSaRolebindingYaml,
@@ -697,9 +604,6 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"leader-rolebinding.yaml":          {v3110OpenshiftControllerManagerLeaderRolebindingYaml, map[string]*bintree{}},
 			"ns.yaml":                          {v3110OpenshiftControllerManagerNsYaml, map[string]*bintree{}},
 			"operator-config.yaml":             {v3110OpenshiftControllerManagerOperatorConfigYaml, map[string]*bintree{}},
-			"public-info-role.yaml":            {v3110OpenshiftControllerManagerPublicInfoRoleYaml, map[string]*bintree{}},
-			"public-info-rolebinding.yaml":     {v3110OpenshiftControllerManagerPublicInfoRolebindingYaml, map[string]*bintree{}},
-			"public-info.yaml":                 {v3110OpenshiftControllerManagerPublicInfoYaml, map[string]*bintree{}},
 			"sa.yaml":                          {v3110OpenshiftControllerManagerSaYaml, map[string]*bintree{}},
 			"separate-sa-role.yaml":            {v3110OpenshiftControllerManagerSeparateSaRoleYaml, map[string]*bintree{}},
 			"separate-sa-rolebinding.yaml":     {v3110OpenshiftControllerManagerSeparateSaRolebindingYaml, map[string]*bintree{}},
