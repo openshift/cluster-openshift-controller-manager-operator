@@ -11,7 +11,6 @@ import (
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	operatorv1alpha1 "github.com/openshift/api/operator/v1alpha1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
@@ -21,24 +20,25 @@ import (
 
 	operatorclientinformers "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
-	"github.com/openshift/library-go/pkg/operator/status"
+	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
+	status "github.com/openshift/library-go/pkg/operator/v1alpha1status"
 )
 
-func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
-	kubeClient, err := kubernetes.NewForConfig(clientConfig)
+func RunOperator(ctx *controllercmd.ControllerContext) error {
+	kubeClient, err := kubernetes.NewForConfig(ctx.KubeConfig)
 	if err != nil {
 		return err
 	}
-	operatorConfigClient, err := operatorconfigclient.NewForConfig(clientConfig)
+	operatorConfigClient, err := operatorconfigclient.NewForConfig(ctx.KubeConfig)
 	if err != nil {
 		return err
 	}
-	dynamicClient, err := dynamic.NewForConfig(clientConfig)
+	dynamicClient, err := dynamic.NewForConfig(ctx.KubeConfig)
 	if err != nil {
 		return err
 	}
-	configClient, err := configv1client.NewForConfig(clientConfig)
+	configClient, err := configv1client.NewForConfig(ctx.KubeConfig)
 	if err != nil {
 		return err
 	}
@@ -60,6 +60,7 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		kubeInformersForOpenshiftControllerManagerNamespace,
 		operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
 		kubeClient,
+		ctx.EventRecorder,
 	)
 
 	configObserver := NewConfigObserver(
@@ -76,16 +77,16 @@ func RunOperator(clientConfig *rest.Config, stopCh <-chan struct{}) error {
 		&operatorStatusProvider{informers: operatorConfigInformers},
 	)
 
-	operatorConfigInformers.Start(stopCh)
-	kubeInformersForOpenshiftControllerManagerNamespace.Start(stopCh)
-	kubeInformersForOpenshiftCoreOperatorsNamespace.Start(stopCh)
-	configInformers.Start(stopCh)
+	operatorConfigInformers.Start(ctx.StopCh)
+	kubeInformersForOpenshiftControllerManagerNamespace.Start(ctx.StopCh)
+	kubeInformersForOpenshiftCoreOperatorsNamespace.Start(ctx.StopCh)
+	configInformers.Start(ctx.StopCh)
 
-	go operator.Run(1, stopCh)
-	go configObserver.Run(1, stopCh)
-	go clusterOperatorStatus.Run(1, stopCh)
+	go operator.Run(1, ctx.StopCh)
+	go configObserver.Run(1, ctx.StopCh)
+	go clusterOperatorStatus.Run(1, ctx.StopCh)
 
-	<-stopCh
+	<-ctx.StopCh
 	return fmt.Errorf("stopped")
 }
 

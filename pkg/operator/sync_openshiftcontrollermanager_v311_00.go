@@ -11,6 +11,7 @@ import (
 
 	operatorsv1alpha1 "github.com/openshift/api/operator/v1alpha1"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
+	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
@@ -29,7 +30,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	errors := []error{}
 	var err error
 
-	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, v311_00_assets.Asset,
+	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.recorder, v311_00_assets.Asset,
 		"v3.11.0/openshift-controller-manager/ns.yaml",
 		"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
 		"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
@@ -56,12 +57,12 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		}
 	}
 
-	controllerManagerConfig, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), operatorConfig)
+	controllerManagerConfig, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
 	// the kube-apiserver is the source of truth for client CA bundles
-	clientCAModified, err := manageOpenShiftAPIServerClientCA_v311_00_to_latest(c.kubeClient.CoreV1())
+	clientCAModified, err := manageOpenShiftAPIServerClientCA_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "client-ca", err))
 	}
@@ -71,7 +72,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), operatorConfig, previousAvailability, forceRollout)
+	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, previousAvailability, forceRollout)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
 	}
@@ -80,42 +81,42 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	if controllerManagerConfig != nil {
 		configData = controllerManagerConfig.Data["config.yaml"]
 	}
-	_, _, err = manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), configData, operatorConfig)
+	_, _, err = manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder, configData, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap/public-info", err))
 	}
 
-	return resourcemerge.ApplyDaemonSetGenerationAvailability(versionAvailability, actualDaemonSet, errors...), errors
+	return resourcemerge.ApplyDaemonSetGenerationAvailabilityV1alpha1(versionAvailability, actualDaemonSet, errors...), errors
 }
 
-func manageOpenShiftAPIServerClientCA_v311_00_to_latest(client coreclientv1.CoreV1Interface) (bool, error) {
+func manageOpenShiftAPIServerClientCA_v311_00_to_latest(client coreclientv1.CoreV1Interface, recorder events.Recorder) (bool, error) {
 	const apiserverClientCA = "client-ca"
-	_, caChanged, err := resourceapply.SyncConfigMap(client, kubeAPIServerNamespaceName, apiserverClientCA, targetNamespaceName, apiserverClientCA)
+	_, caChanged, err := resourceapply.SyncConfigMap(client, recorder, kubeAPIServerNamespaceName, apiserverClientCA, targetNamespaceName, apiserverClientCA)
 	if err != nil {
 		return false, err
 	}
 	return caChanged, nil
 }
 
-func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
+func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
 	defaultConfig := v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.UserConfig.Raw, operatorConfig.Spec.ObservedConfig.Raw)
 	if err != nil {
 		return nil, false, err
 	}
-	return resourceapply.ApplyConfigMap(client, requiredConfigMap)
+	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *v1alpha1.OpenShiftControllerManagerOperatorConfig, previousAvailability *operatorsv1alpha1.VersionAvailability, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
 	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
 	required.Spec.Template.Spec.Containers[0].Image = options.Spec.ImagePullSpec
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", options.Spec.Logging.Level))
 
-	return resourceapply.ApplyDaemonSet(client, required, resourcemerge.ExpectedDaemonSetGeneration(required, previousAvailability), forceRollout)
+	return resourceapply.ApplyDaemonSet(client, recorder, required, resourcemerge.ExpectedDaemonSetGenerationV1alpha1(required, previousAvailability), forceRollout)
 }
 
-func manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, apiserverConfigString string, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
+func manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder, apiserverConfigString string, operatorConfig *v1alpha1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
 	uncastUnstructured, err := runtime.Decode(unstructured.UnstructuredJSONScheme, []byte(apiserverConfigString))
 	if err != nil {
 		return nil, false, err
@@ -141,5 +142,5 @@ func manageOpenShiftControllerManagerPublicConfigMap_v311_00_to_latest(client co
 		return nil, false, err
 	}
 
-	return resourceapply.ApplyConfigMap(client, configMap)
+	return resourceapply.ApplyConfigMap(client, recorder, configMap)
 }

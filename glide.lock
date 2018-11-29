@@ -1,5 +1,5 @@
 hash: eae225e9e9024cb6827e64e8124f5ab4ed973d6516ab0e1e00d066772db67168
-updated: 2018-11-07T14:30:22.79224919-05:00
+updated: 2018-11-28T11:30:43.370923667-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -187,7 +187,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: fd594d07117b2d47134db828fb9ea85efa2a0c2f
+  version: e7dc90658844828191986cb07f3e44eeeba0b03a
   subpackages:
   - apps
   - apps/v1
@@ -211,6 +211,7 @@ imports:
   - openshiftcontrolplane
   - openshiftcontrolplane/v1
   - operator
+  - operator/v1
   - operator/v1alpha1
   - osin
   - osin/v1
@@ -232,9 +233,20 @@ imports:
   - webconsole
   - webconsole/v1
 - name: github.com/openshift/client-go
-  version: 90ddfba1bba0c0c6279412e3060aad5ac199092e
+  version: 960f72aa32a8e9b4dd769b90ff1cb5bd4c898eec
+  subpackages:
+  - config/clientset/versioned
+  - config/clientset/versioned/fake
+  - config/clientset/versioned/scheme
+  - config/clientset/versioned/typed/config/v1
+  - config/clientset/versioned/typed/config/v1/fake
+  - config/informers/externalversions
+  - config/informers/externalversions/config
+  - config/informers/externalversions/config/v1
+  - config/informers/externalversions/internalinterfaces
+  - config/listers/config/v1
 - name: github.com/openshift/library-go
-  version: 85241b52707ef2beb85ad9254a176448c58ee021
+  version: c4d280c6b881654a8719a3b2777b85422ecbe23f
   subpackages:
   - pkg/assets
   - pkg/config/client
@@ -242,13 +254,16 @@ imports:
   - pkg/config/leaderelection
   - pkg/config/serving
   - pkg/controller/controllercmd
+  - pkg/controller/fileobserver
   - pkg/controller/metrics
   - pkg/crypto
+  - pkg/operator/events
   - pkg/operator/resource/resourceapply
   - pkg/operator/resource/resourcemerge
   - pkg/operator/resource/resourceread
   - pkg/operator/status
   - pkg/operator/v1alpha1helpers
+  - pkg/operator/v1helpers
   - pkg/operator/versioning
   - pkg/serviceability
 - name: github.com/pborman/uuid
@@ -284,9 +299,9 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/spf13/cobra
-  version: fe5e611709b0c57fa4a89136deaa8e1d4004d053
+  version: d2d81d9a96e23f0255397222bb0b4e3165e492dc
 - name: github.com/spf13/pflag
-  version: 454a7fbb95f91e2b48adee781b0b02496988da92
+  version: aea12ed6721610dc6ed40141676d7ab0a1dac9e9
 - name: github.com/ugorji/go
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
