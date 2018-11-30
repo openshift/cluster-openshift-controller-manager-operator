@@ -31,7 +31,7 @@ import (
 const (
 	kubeAPIServerNamespaceName = "openshift-kube-apiserver"
 	targetNamespaceName        = "openshift-controller-manager"
-	operatorNamespaceName      = "openshift-core-operators"
+	operatorNamespaceName      = "openshift-cluster-openshift-controller-manager-operator"
 	workQueueKey               = "key"
 )
 

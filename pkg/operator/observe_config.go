@@ -59,7 +59,7 @@ type ConfigObserver struct {
 func NewConfigObserver(
 	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
-	kubeInformersForOpenshiftCoreOperators informers.SharedInformerFactory,
+	kubeInformersForOperator informers.SharedInformerFactory,
 	configInformer configinformers.SharedInformerFactory,
 ) *ConfigObserver {
 	c := &ConfigObserver{
@@ -75,18 +75,18 @@ func NewConfigObserver(
 		},
 		listers: Listers{
 			imageConfigLister: configInformer.Config().V1().Images().Lister(),
-			configmapLister:   kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Lister(),
+			configmapLister:   kubeInformersForOperator.Core().V1().ConfigMaps().Lister(),
 			buildConfigLister: configInformer.Config().V1().Builds().Lister(),
 		},
 	}
 
 	c.operatorConfigSynced = operatorConfigInformer.Informer().HasSynced
-	c.configmapSynced = kubeInformersForOpenshiftCoreOperators.Core().V1().ConfigMaps().Informer().HasSynced
+	c.configmapSynced = kubeInformersForOperator.Core().V1().ConfigMaps().Informer().HasSynced
 	c.imageConfigSynced = configInformer.Config().V1().Images().Informer().HasSynced
 	c.buildConfigSynced = configInformer.Config().V1().Builds().Informer().HasSynced
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
-	kubeInformersForOpenshiftCoreOperators.Core().V1().Namespaces().Informer().AddEventHandler(c.eventHandler())
+	kubeInformersForOperator.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
 	configInformer.Config().V1().Images().Informer().AddEventHandler(c.eventHandler())
 
 	return c
