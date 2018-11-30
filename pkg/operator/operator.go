@@ -103,6 +103,12 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 		return nil
 	}
 
+	// block until config is obvserved
+	if len(operatorConfig.Spec.ObservedConfig.Raw) == 0 {
+		glog.Info("Waiting for observed configuration to be available")
+		return nil
+	}
+
 	var currentActualVerion *semver.Version
 
 	if operatorConfig.Status.CurrentAvailability != nil {
