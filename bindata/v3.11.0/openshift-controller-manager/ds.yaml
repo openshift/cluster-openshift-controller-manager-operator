@@ -40,7 +40,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: deployment-controller-manager-config
+          name: config
       - name: client-ca
         configMap:
           name: client-ca

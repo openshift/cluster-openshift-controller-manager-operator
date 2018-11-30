@@ -64,7 +64,7 @@ var _v3110OpenshiftControllerManagerCmYaml = []byte(`apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: openshift-controller-manager
-  name: deployment-controller-manager-config
+  name: config
 data:
   config.yaml:
 `)
@@ -145,7 +145,7 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: deployment-controller-manager-config
+          name: config
       - name: client-ca
         configMap:
           name: client-ca
