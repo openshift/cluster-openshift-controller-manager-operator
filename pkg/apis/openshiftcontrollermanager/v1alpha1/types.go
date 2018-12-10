@@ -2,14 +2,13 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
-	operatorsv1alpha1api "github.com/openshift/api/operator/v1alpha1"
+	operatorsv1 "github.com/openshift/api/operator/v1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// KubeApiserverConfig provides information to configure openshift-controller-manager
+// OpenShiftControllerManagerConfig provides information to configure openshift-controller-manager
 type OpenShiftControllerManagerConfig struct {
 	metav1.TypeMeta `json:",inline"`
 }
@@ -18,7 +17,7 @@ type OpenShiftControllerManagerConfig struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// KubeApiserverOperatorConfig provides information to configure an operator to manage openshift-controller-manager.
+// OpenShiftControllerManagerOperatorConfig provides information to configure an operator to manage openshift-controller-manager.
 type OpenShiftControllerManagerOperatorConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
@@ -28,26 +27,16 @@ type OpenShiftControllerManagerOperatorConfig struct {
 }
 
 type OpenShiftControllerManagerOperatorConfigSpec struct {
-	operatorsv1alpha1api.OperatorSpec `json:",inline" protobuf:"bytes,1,opt,name=operatorSpec"`
-
-	// userConfig holds a sparse config that the user wants for this component.  It only needs to be the overrides from the defaults
-	// it will end up overlaying in the following order:
-	// 1. hardcoded default
-	// 2. this config
-	UserConfig runtime.RawExtension `json:"userConfig"`
-
-	// observedConfig holds a sparse config that controller has observed from the cluster state.  It exists in spec because
-	// it causes action for the operator
-	ObservedConfig runtime.RawExtension `json:"observedConfig"`
+	operatorsv1.OperatorSpec `json:",inline" protobuf:"bytes,1,opt,name=operatorSpec"`
 }
 
 type OpenShiftControllerManagerOperatorConfigStatus struct {
-	operatorsv1alpha1api.OperatorStatus `json:",inline" protobuf:"bytes,1,opt,name=operatorStatus"`
+	operatorsv1.OperatorStatus `json:",inline" protobuf:"bytes,1,opt,name=operatorStatus"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// KubeApiserverOperatorConfigList is a collection of items
+// OpenShiftControllerManagerOperatorConfigList is a collection of items
 type OpenShiftControllerManagerOperatorConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.

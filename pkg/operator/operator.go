@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/blang/semver"
 	"github.com/golang/glog"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -20,12 +18,10 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
 
-	operatorsv1alpha1 "github.com/openshift/api/operator/v1alpha1"
+	operatorsv1 "github.com/openshift/api/operator/v1"
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1alpha1"
 	"github.com/openshift/library-go/pkg/operator/events"
-	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
-	"github.com/openshift/library-go/pkg/operator/versioning"
 )
 
 const (
@@ -33,9 +29,11 @@ const (
 	targetNamespaceName        = "openshift-controller-manager"
 	operatorNamespaceName      = "openshift-cluster-openshift-controller-manager-operator"
 	workQueueKey               = "key"
+	workloadFailingCondition   = "WorkloadFailing"
 )
 
 type OpenShiftControllerManagerOperator struct {
+	targetImagePullSpec  string
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
 
 	kubeClient kubernetes.Interface
@@ -48,6 +46,7 @@ type OpenShiftControllerManagerOperator struct {
 }
 
 func NewOpenShiftControllerManagerOperator(
+	targetImagePullSpec string,
 	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
 	kubeInformersForOpenshiftControllerManager informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
@@ -55,6 +54,7 @@ func NewOpenShiftControllerManagerOperator(
 	recorder events.Recorder,
 ) *OpenShiftControllerManagerOperator {
 	c := &OpenShiftControllerManagerOperator{
+		targetImagePullSpec:  targetImagePullSpec,
 		operatorConfigClient: operatorConfigClient,
 		kubeClient:           kubeClient,
 		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
@@ -80,70 +80,24 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 		return err
 	}
 	switch operatorConfig.Spec.ManagementState {
-	case operatorsv1alpha1.Unmanaged:
+	case operatorsv1.Unmanaged:
 		return nil
 
-	case operatorsv1alpha1.Removed:
+	case operatorsv1.Removed:
 		// TODO probably need to watch until the NS is really gone
 		if err := c.kubeClient.CoreV1().Namespaces().Delete(targetNamespaceName, nil); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
-		operatorConfig.Status.TaskSummary = "Remove"
-		operatorConfig.Status.TargetAvailability = nil
-		operatorConfig.Status.CurrentAvailability = nil
-		operatorConfig.Status.Conditions = []operatorsv1alpha1.OperatorCondition{
-			{
-				Type:   operatorsv1alpha1.OperatorStatusTypeAvailable,
-				Status: operatorsv1alpha1.ConditionFalse,
-			},
-		}
-		if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().Update(operatorConfig); err != nil {
-			return err
-		}
+		// TODO report that we are removing?
 		return nil
 	}
 
-	var currentActualVerion *semver.Version
-
-	if operatorConfig.Status.CurrentAvailability != nil {
-		ver, err := semver.Parse(operatorConfig.Status.CurrentAvailability.Version)
-		if err != nil {
-			utilruntime.HandleError(err)
-		} else {
-			currentActualVerion = &ver
-		}
-	}
-	desiredVersion, err := semver.Parse(operatorConfig.Spec.Version)
-	if err != nil {
-		// TODO report failing status, we may actually attempt to do this in the "normal" error handling
-		return err
+	forceRequeue, err := syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig)
+	if forceRequeue && err != nil {
+		c.queue.AddRateLimited(workQueueKey)
 	}
 
-	v311_00_to_unknown := versioning.NewRangeOrDie("3.11.0", "3.12.0")
-
-	var versionAvailability operatorsv1alpha1.VersionAvailability
-	errors := []error{}
-	switch {
-	case v311_00_to_unknown.BetweenOrEmpty(currentActualVerion) && v311_00_to_unknown.Between(&desiredVersion):
-		operatorConfig.Status.TaskSummary = "sync-[3.11.0,3.12.0)"
-		operatorConfig.Status.TargetAvailability = nil
-		versionAvailability, errors = syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig, operatorConfig.Status.CurrentAvailability)
-
-	default:
-		operatorConfig.Status.TaskSummary = "unrecognized"
-		if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
-			utilruntime.HandleError(err)
-		}
-
-		return fmt.Errorf("unrecognized state")
-	}
-
-	v1alpha1helpers.SetStatusFromAvailability(&operatorConfig.Status.OperatorStatus, operatorConfig.ObjectMeta.Generation, &versionAvailability)
-	if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
-		errors = append(errors, err)
-	}
-
-	return utilerrors.NewAggregate(errors)
+	return err
 }
 
 // Run starts the openshift-controller-manager and blocks until stopCh is closed.
