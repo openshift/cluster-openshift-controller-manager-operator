@@ -1,5 +1,5 @@
 hash: eae225e9e9024cb6827e64e8124f5ab4ed973d6516ab0e1e00d066772db67168
-updated: 2018-11-28T11:30:43.370923667-05:00
+updated: 2018-12-18T17:06:18.009131332-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -7,8 +7,6 @@ imports:
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
-- name: github.com/blang/semver
-  version: b38d23b8782a487059e8fc8773e9a5b228a77cb6
 - name: github.com/certifi/gocertifi
   version: ee1a9a0726d2ae45f54118cac878c990d4016ded
 - name: github.com/coreos/etcd
@@ -187,7 +185,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: e7dc90658844828191986cb07f3e44eeeba0b03a
+  version: 797a09d386e407506afc2f8562f81d335d57aaab
   subpackages:
   - apps
   - apps/v1
@@ -236,20 +234,19 @@ imports:
   version: 960f72aa32a8e9b4dd769b90ff1cb5bd4c898eec
   subpackages:
   - config/clientset/versioned
-  - config/clientset/versioned/fake
   - config/clientset/versioned/scheme
   - config/clientset/versioned/typed/config/v1
-  - config/clientset/versioned/typed/config/v1/fake
   - config/informers/externalversions
   - config/informers/externalversions/config
   - config/informers/externalversions/config/v1
   - config/informers/externalversions/internalinterfaces
   - config/listers/config/v1
 - name: github.com/openshift/library-go
-  version: c4d280c6b881654a8719a3b2777b85422ecbe23f
+  version: 2d609c3ef30cbfabb70f7a5f6660944cad97e815
   subpackages:
   - pkg/assets
   - pkg/config/client
+  - pkg/config/clusteroperator/v1helpers
   - pkg/config/configdefaults
   - pkg/config/leaderelection
   - pkg/config/serving
@@ -264,7 +261,6 @@ imports:
   - pkg/operator/status
   - pkg/operator/v1alpha1helpers
   - pkg/operator/v1helpers
-  - pkg/operator/versioning
   - pkg/serviceability
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
@@ -301,7 +297,7 @@ imports:
 - name: github.com/spf13/cobra
   version: d2d81d9a96e23f0255397222bb0b4e3165e492dc
 - name: github.com/spf13/pflag
-  version: aea12ed6721610dc6ed40141676d7ab0a1dac9e9
+  version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/ugorji/go
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
@@ -421,6 +417,8 @@ imports:
   subpackages:
   - pkg/apis/apiextensions
   - pkg/apis/apiextensions/v1beta1
+  - pkg/client/clientset/clientset/scheme
+  - pkg/client/clientset/clientset/typed/apiextensions/v1beta1
 - name: k8s.io/apimachinery
   version: 103fd098999dc9c0c88536f5c9ad2e5da39373ae
   subpackages:
@@ -612,66 +610,36 @@ imports:
   - informers/storage/v1alpha1
   - informers/storage/v1beta1
   - kubernetes
-  - kubernetes/fake
   - kubernetes/scheme
   - kubernetes/typed/admissionregistration/v1alpha1
-  - kubernetes/typed/admissionregistration/v1alpha1/fake
   - kubernetes/typed/admissionregistration/v1beta1
-  - kubernetes/typed/admissionregistration/v1beta1/fake
   - kubernetes/typed/apps/v1
-  - kubernetes/typed/apps/v1/fake
   - kubernetes/typed/apps/v1beta1
-  - kubernetes/typed/apps/v1beta1/fake
   - kubernetes/typed/apps/v1beta2
-  - kubernetes/typed/apps/v1beta2/fake
   - kubernetes/typed/authentication/v1
-  - kubernetes/typed/authentication/v1/fake
   - kubernetes/typed/authentication/v1beta1
-  - kubernetes/typed/authentication/v1beta1/fake
   - kubernetes/typed/authorization/v1
-  - kubernetes/typed/authorization/v1/fake
   - kubernetes/typed/authorization/v1beta1
-  - kubernetes/typed/authorization/v1beta1/fake
   - kubernetes/typed/autoscaling/v1
-  - kubernetes/typed/autoscaling/v1/fake
   - kubernetes/typed/autoscaling/v2beta1
-  - kubernetes/typed/autoscaling/v2beta1/fake
   - kubernetes/typed/batch/v1
-  - kubernetes/typed/batch/v1/fake
   - kubernetes/typed/batch/v1beta1
-  - kubernetes/typed/batch/v1beta1/fake
   - kubernetes/typed/batch/v2alpha1
-  - kubernetes/typed/batch/v2alpha1/fake
   - kubernetes/typed/certificates/v1beta1
-  - kubernetes/typed/certificates/v1beta1/fake
   - kubernetes/typed/core/v1
-  - kubernetes/typed/core/v1/fake
   - kubernetes/typed/events/v1beta1
-  - kubernetes/typed/events/v1beta1/fake
   - kubernetes/typed/extensions/v1beta1
-  - kubernetes/typed/extensions/v1beta1/fake
   - kubernetes/typed/networking/v1
-  - kubernetes/typed/networking/v1/fake
   - kubernetes/typed/policy/v1beta1
-  - kubernetes/typed/policy/v1beta1/fake
   - kubernetes/typed/rbac/v1
-  - kubernetes/typed/rbac/v1/fake
   - kubernetes/typed/rbac/v1alpha1
-  - kubernetes/typed/rbac/v1alpha1/fake
   - kubernetes/typed/rbac/v1beta1
-  - kubernetes/typed/rbac/v1beta1/fake
   - kubernetes/typed/scheduling/v1alpha1
-  - kubernetes/typed/scheduling/v1alpha1/fake
   - kubernetes/typed/scheduling/v1beta1
-  - kubernetes/typed/scheduling/v1beta1/fake
   - kubernetes/typed/settings/v1alpha1
-  - kubernetes/typed/settings/v1alpha1/fake
   - kubernetes/typed/storage/v1
-  - kubernetes/typed/storage/v1/fake
   - kubernetes/typed/storage/v1alpha1
-  - kubernetes/typed/storage/v1alpha1/fake
   - kubernetes/typed/storage/v1beta1
-  - kubernetes/typed/storage/v1beta1/fake
   - listers/admissionregistration/v1alpha1
   - listers/admissionregistration/v1beta1
   - listers/apps/v1
