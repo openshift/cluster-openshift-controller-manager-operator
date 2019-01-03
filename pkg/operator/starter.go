@@ -21,7 +21,7 @@ import (
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/status"
-	"github.com/openshift/library-go/pkg/operator/v1alpha1helpers"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
 func RunOperator(ctx *controllercmd.ControllerContext) error {
@@ -42,11 +42,10 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		return err
 	}
 
-	v1alpha1helpers.EnsureOperatorConfigExists(
+	v1helpers.EnsureOperatorConfigExists(
 		dynamicClient,
 		v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/operator-config.yaml"),
 		schema.GroupVersionResource{Group: v1alpha1.GroupName, Version: "v1alpha1", Resource: "openshiftcontrollermanageroperatorconfigs"},
-		v1alpha1helpers.GetImageEnv,
 	)
 
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
@@ -77,9 +76,9 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"openshift-cluster-openshift-controller-manager-operator",
-		"openshift-cluster-openshift-controller-manager-operator",
-		dynamicClient,
+		configClient.ConfigV1(),
 		opClient,
+		ctx.EventRecorder,
 	)
 
 	operatorConfigInformers.Start(ctx.StopCh)
