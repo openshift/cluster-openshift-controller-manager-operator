@@ -10,24 +10,23 @@ import (
 
 	"github.com/golang/glog"
 
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/flowcontrol"
-	"k8s.io/client-go/util/workqueue"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/diff"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/flowcontrol"
+	"k8s.io/client-go/util/workqueue"
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
 	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1alpha1"
-	"k8s.io/apimachinery/pkg/util/diff"
 )
 
 type Listers struct {
@@ -172,23 +171,22 @@ func observeBuildControllerConfig(listers Listers, observedConfig map[string]int
 		return nil, err
 	}
 	// set build defaults
-	if len(build.Spec.BuildDefaults.GitHTTPProxy) > 0 {
-		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitHTTPProxy, "build.buildDefaults.gitHTTPProxy", true); err != nil {
+
+	if build.Spec.BuildDefaults.GitProxy != nil {
+		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitProxy.HTTPProxy, "build.buildDefaults.gitHTTPProxy", false); err != nil {
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitHTTPProxy", err)
 		}
-	}
-	if len(build.Spec.BuildDefaults.GitHTTPSProxy) > 0 {
-		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitHTTPSProxy, "build.buildDefaults.gitHTTPSProxy", true); err != nil {
+		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitProxy.HTTPSProxy, "build.buildDefaults.gitHTTPSProxy", false); err != nil {
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitHTTPSProxy", err)
 		}
-	}
-	if len(build.Spec.BuildDefaults.GitNoProxy) > 0 {
-		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitNoProxy, "build.buildDefaults.gitNoProxy", true); err != nil {
+		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitProxy.NoProxy, "build.buildDefaults.gitNoProxy", false); err != nil {
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitNoProxy", err)
 		}
 	}
-	if len(build.Spec.BuildDefaults.Env) > 0 {
-		if err = observeField(observedConfig, build.Spec.BuildDefaults.Env, "build.buildDefaults.env", true); err != nil {
+
+	buildEnv := build.Spec.BuildDefaults.Env
+	if len(buildEnv) > 0 {
+		if err = observeField(observedConfig, buildEnv, "build.buildDefaults.env", true); err != nil {
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.env", err)
 		}
 	}
