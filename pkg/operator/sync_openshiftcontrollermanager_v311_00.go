@@ -2,6 +2,7 @@ package operator
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 
@@ -90,7 +91,14 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		})
 	}
 
-	if actualDaemonSet.ObjectMeta.Generation == operatorConfig.Status.ObservedGeneration {
+	var progressingMessages []string
+	if actualDaemonSet != nil && actualDaemonSet.ObjectMeta.Generation != actualDaemonSet.Status.ObservedGeneration {
+		progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: observed generation is %d, desired generation is %d.", actualDaemonSet.Status.ObservedGeneration, actualDaemonSet.ObjectMeta.Generation))
+	}
+	if operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration {
+		progressingMessages = append(progressingMessages, fmt.Sprintf("openshiftcontrollermanageroperatorconfigs/instance: observed generation is %d, desired generation is %d.", operatorConfig.Status.ObservedGeneration, operatorConfig.ObjectMeta.Generation))
+	}
+	if len(progressingMessages) == 0 {
 		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
 			Type:   operatorv1.OperatorStatusTypeProgressing,
 			Status: operatorv1.ConditionFalse,
@@ -100,7 +108,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 			Type:    operatorv1.OperatorStatusTypeProgressing,
 			Status:  operatorv1.ConditionTrue,
 			Reason:  "DesiredStateNotYetAchieved",
-			Message: fmt.Sprintf("Generation: expected: %v, actual: %v", operatorConfig.Status.ObservedGeneration, actualDaemonSet.ObjectMeta.Generation),
+			Message: strings.Join(progressingMessages, "\n"),
 		})
 	}
 
