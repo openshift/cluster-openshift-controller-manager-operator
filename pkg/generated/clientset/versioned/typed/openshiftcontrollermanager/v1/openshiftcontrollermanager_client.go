@@ -11,7 +11,7 @@ import (
 
 type OpenshiftcontrollermanagerV1Interface interface {
 	RESTClient() rest.Interface
-	OpenShiftControllerManagerOperatorConfigsGetter
+	ConfigsGetter
 }
 
 // OpenshiftcontrollermanagerV1Client is used to interact with features provided by the openshiftcontrollermanager.operator.openshift.io group.
@@ -19,8 +19,8 @@ type OpenshiftcontrollermanagerV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *OpenshiftcontrollermanagerV1Client) OpenShiftControllerManagerOperatorConfigs() OpenShiftControllerManagerOperatorConfigInterface {
-	return newOpenShiftControllerManagerOperatorConfigs(c)
+func (c *OpenshiftcontrollermanagerV1Client) Configs() ConfigInterface {
+	return newConfigs(c)
 }
 
 // NewForConfig creates a new OpenshiftcontrollermanagerV1Client for the given config.

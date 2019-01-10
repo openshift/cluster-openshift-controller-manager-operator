@@ -37,8 +37,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=openshiftcontrollermanager.operator.openshift.io, Version=v1
-	case v1.SchemeGroupVersion.WithResource("openshiftcontrollermanageroperatorconfigs"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("configs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Openshiftcontrollermanager().V1().Configs().Informer()}, nil
 
 	}
 

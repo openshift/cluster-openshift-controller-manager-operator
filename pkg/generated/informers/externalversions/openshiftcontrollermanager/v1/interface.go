@@ -8,8 +8,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// OpenShiftControllerManagerOperatorConfigs returns a OpenShiftControllerManagerOperatorConfigInformer.
-	OpenShiftControllerManagerOperatorConfigs() OpenShiftControllerManagerOperatorConfigInformer
+	// Configs returns a ConfigInformer.
+	Configs() ConfigInformer
 }
 
 type version struct {
@@ -23,7 +23,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// OpenShiftControllerManagerOperatorConfigs returns a OpenShiftControllerManagerOperatorConfigInformer.
-func (v *version) OpenShiftControllerManagerOperatorConfigs() OpenShiftControllerManagerOperatorConfigInformer {
-	return &openShiftControllerManagerOperatorConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+// Configs returns a ConfigInformer.
+func (v *version) Configs() ConfigInformer {
+	return &configInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

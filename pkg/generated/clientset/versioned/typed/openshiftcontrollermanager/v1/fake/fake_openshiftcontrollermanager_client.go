@@ -12,8 +12,8 @@ type FakeOpenshiftcontrollermanagerV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeOpenshiftcontrollermanagerV1) OpenShiftControllerManagerOperatorConfigs() v1.OpenShiftControllerManagerOperatorConfigInterface {
-	return &FakeOpenShiftControllerManagerOperatorConfigs{c}
+func (c *FakeOpenshiftcontrollermanagerV1) Configs() v1.ConfigInterface {
+	return &FakeConfigs{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

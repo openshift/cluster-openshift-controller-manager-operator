@@ -2,4 +2,4 @@
 
 package v1
 
-type OpenShiftControllerManagerOperatorConfigExpansion interface{}
+type ConfigExpansion interface{}

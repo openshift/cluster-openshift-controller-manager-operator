@@ -2,6 +2,6 @@
 
 package v1
 
-// OpenShiftControllerManagerOperatorConfigListerExpansion allows custom methods to be added to
-// OpenShiftControllerManagerOperatorConfigLister.
-type OpenShiftControllerManagerOperatorConfigListerExpansion interface{}
+// ConfigListerExpansion allows custom methods to be added to
+// ConfigLister.
+type ConfigListerExpansion interface{}
