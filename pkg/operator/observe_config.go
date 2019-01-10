@@ -38,7 +38,7 @@ type Listers struct {
 type observeConfigFunc func(Listers, map[string]interface{}) (map[string]interface{}, error)
 
 type ConfigObserver struct {
-	operatorConfigClient operatorconfigclientv1.OpenShiftControllerManagerOperatorConfigInterface
+	operatorConfigClient operatorconfigclientv1.ConfigInterface
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -56,13 +56,13 @@ type ConfigObserver struct {
 }
 
 func NewConfigObserver(
-	operatorConfigInformer operatorconfiginformerv1.OpenShiftControllerManagerOperatorConfigInformer,
+	operatorConfigInformer operatorconfiginformerv1.ConfigInformer,
 	operatorConfigClient operatorconfigclientv1.OpenshiftcontrollermanagerV1Interface,
 	kubeInformersForOperator informers.SharedInformerFactory,
 	configInformer configinformers.SharedInformerFactory,
 ) *ConfigObserver {
 	c := &ConfigObserver{
-		operatorConfigClient: operatorConfigClient.OpenShiftControllerManagerOperatorConfigs(),
+		operatorConfigClient: operatorConfigClient.Configs(),
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ConfigObserver"),
 

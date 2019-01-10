@@ -55,7 +55,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 
 	operator := NewOpenShiftControllerManagerOperator(
 		os.Getenv("IMAGE"),
-		operatorConfigInformers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs(),
+		operatorConfigInformers.Openshiftcontrollermanager().V1().Configs(),
 		kubeInformersForOpenshiftControllerManagerNamespace,
 		operatorConfigClient.OpenshiftcontrollermanagerV1(),
 		kubeClient,
@@ -63,7 +63,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	)
 
 	configObserver := NewConfigObserver(
-		operatorConfigInformers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs(),
+		operatorConfigInformers.Openshiftcontrollermanager().V1().Configs(),
 		operatorConfigClient.OpenshiftcontrollermanagerV1(),
 		kubeInformersForOperatorNamespace,
 		configInformers,

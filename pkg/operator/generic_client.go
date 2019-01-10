@@ -14,11 +14,11 @@ type operatorClient struct {
 }
 
 func (p *operatorClient) Informer() cache.SharedIndexInformer {
-	return p.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Informer()
+	return p.informers.Openshiftcontrollermanager().V1().Configs().Informer()
 }
 
 func (p *operatorClient) CurrentStatus() (operatorv1.OperatorStatus, error) {
-	instance, err := p.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
+	instance, err := p.informers.Openshiftcontrollermanager().V1().Configs().Lister().Get("instance")
 	if err != nil {
 		return operatorv1.OperatorStatus{}, err
 	}
@@ -27,7 +27,7 @@ func (p *operatorClient) CurrentStatus() (operatorv1.OperatorStatus, error) {
 }
 
 func (c *operatorClient) GetOperatorState() (*operatorv1.OperatorSpec, *operatorv1.OperatorStatus, string, error) {
-	instance, err := c.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
+	instance, err := c.informers.Openshiftcontrollermanager().V1().Configs().Lister().Get("instance")
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -36,7 +36,7 @@ func (c *operatorClient) GetOperatorState() (*operatorv1.OperatorSpec, *operator
 }
 
 func (c *operatorClient) UpdateOperatorSpec(resourceVersion string, spec *operatorv1.OperatorSpec) (*operatorv1.OperatorSpec, string, error) {
-	original, err := c.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
+	original, err := c.informers.Openshiftcontrollermanager().V1().Configs().Lister().Get("instance")
 	if err != nil {
 		return nil, "", err
 	}
@@ -44,7 +44,7 @@ func (c *operatorClient) UpdateOperatorSpec(resourceVersion string, spec *operat
 	copy.ResourceVersion = resourceVersion
 	copy.Spec.OperatorSpec = *spec
 
-	ret, err := c.client.OpenShiftControllerManagerOperatorConfigs().Update(copy)
+	ret, err := c.client.Configs().Update(copy)
 	if err != nil {
 		return nil, "", err
 	}
@@ -52,7 +52,7 @@ func (c *operatorClient) UpdateOperatorSpec(resourceVersion string, spec *operat
 	return &ret.Spec.OperatorSpec, ret.ResourceVersion, nil
 }
 func (c *operatorClient) UpdateOperatorStatus(resourceVersion string, status *operatorv1.OperatorStatus) (*operatorv1.OperatorStatus, string, error) {
-	original, err := c.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
+	original, err := c.informers.Openshiftcontrollermanager().V1().Configs().Lister().Get("instance")
 	if err != nil {
 		return nil, "", err
 	}
@@ -60,7 +60,7 @@ func (c *operatorClient) UpdateOperatorStatus(resourceVersion string, status *op
 	copy.ResourceVersion = resourceVersion
 	copy.Status.OperatorStatus = *status
 
-	ret, err := c.client.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(copy)
+	ret, err := c.client.Configs().UpdateStatus(copy)
 	if err != nil {
 		return nil, "", err
 	}

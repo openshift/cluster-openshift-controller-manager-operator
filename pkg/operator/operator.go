@@ -47,7 +47,7 @@ type OpenShiftControllerManagerOperator struct {
 
 func NewOpenShiftControllerManagerOperator(
 	targetImagePullSpec string,
-	operatorConfigInformer operatorconfiginformerv1.OpenShiftControllerManagerOperatorConfigInformer,
+	operatorConfigInformer operatorconfiginformerv1.ConfigInformer,
 	kubeInformersForOpenshiftControllerManager informers.SharedInformerFactory,
 	operatorConfigClient operatorconfigclientv1.OpenshiftcontrollermanagerV1Interface,
 	kubeClient kubernetes.Interface,
@@ -75,7 +75,7 @@ func NewOpenShiftControllerManagerOperator(
 }
 
 func (c OpenShiftControllerManagerOperator) sync() error {
-	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().Get("instance", metav1.GetOptions{})
+	operatorConfig, err := c.operatorConfigClient.Configs().Get("instance", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

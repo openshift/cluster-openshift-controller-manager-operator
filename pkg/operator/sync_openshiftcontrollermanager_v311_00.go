@@ -23,7 +23,7 @@ import (
 
 // syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
 // most of the time the sync method will be good for a large span of minor versions
-func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManagerOperator, originalOperatorConfig *v1.OpenShiftControllerManagerOperatorConfig) (bool, error) {
+func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManagerOperator, originalOperatorConfig *v1.Config) (bool, error) {
 	errors := []error{}
 	var err error
 	operatorConfig := originalOperatorConfig.DeepCopy()
@@ -130,7 +130,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	}
 
 	if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
-		if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
+		if _, err := c.operatorConfigClient.Configs().UpdateStatus(operatorConfig); err != nil {
 			return false, err
 		}
 	}
@@ -150,7 +150,7 @@ func manageOpenShiftAPIServerClientCA_v311_00_to_latest(client coreclientv1.Core
 	return caChanged, nil
 }
 
-func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
+func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1.Config) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
 	defaultConfig := v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.UnsupportedConfigOverrides.Raw, operatorConfig.Spec.ObservedConfig.Raw)
@@ -160,7 +160,7 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclie
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *v1.OpenShiftControllerManagerOperatorConfig, imagePullSpec string, generationStatus []operatorv1.GenerationStatus, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *v1.Config, imagePullSpec string, generationStatus []operatorv1.GenerationStatus, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
 	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
 
 	if len(imagePullSpec) > 0 {
