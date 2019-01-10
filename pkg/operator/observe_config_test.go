@@ -173,9 +173,16 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				},
 				Spec: configv1.BuildSpec{
 					BuildDefaults: configv1.BuildDefaults{
-						GitHTTPProxy:  "http://my-proxy",
-						GitHTTPSProxy: "https://my-proxy",
-						GitNoProxy:    "https://no-proxy",
+						DefaultProxy: &configv1.ProxyConfig{
+							HTTPProxy:  "http://user:pass@someproxy.net",
+							HTTPSProxy: "https://user:pass@someproxy.net",
+							NoProxy:    "image-resgistry.cluster.svc.local",
+						},
+						GitProxy: &configv1.ProxyConfig{
+							HTTPProxy:  "http://my-proxy",
+							HTTPSProxy: "https://my-proxy",
+							NoProxy:    "https://no-proxy",
+						},
 						Env: []corev1.EnvVar{
 							{
 								Name:  "FOO",
@@ -218,6 +225,28 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "empty proxy values",
+			buildConfig: &configv1.Build{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+				Spec: configv1.BuildSpec{
+					BuildDefaults: configv1.BuildDefaults{
+						DefaultProxy: &configv1.ProxyConfig{
+							HTTPProxy:  "",
+							HTTPSProxy: "https://user:pass@someproxy.net",
+							NoProxy:    "",
+						},
+						GitProxy: &configv1.ProxyConfig{
+							HTTPProxy:  "http://my-proxy",
+							HTTPSProxy: "",
+							NoProxy:    "https://no-proxy",
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "match expressions",
 			buildConfig: &configv1.Build{
 				ObjectMeta: metav1.ObjectMeta{
@@ -238,6 +267,37 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				},
 			},
 			expectError: false,
+		},
+		{
+			name: "build proxy with env vars",
+			buildConfig: &configv1.Build{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+				Spec: configv1.BuildSpec{
+					BuildDefaults: configv1.BuildDefaults{
+						DefaultProxy: &configv1.ProxyConfig{
+							HTTPProxy:  "http://user:pass@someproxy.net",
+							HTTPSProxy: "https://user:pass@someproxy.net",
+							NoProxy:    "image-resgistry.cluster.svc.local",
+						},
+						Env: []corev1.EnvVar{
+							{
+								Name:  "HTTP_PROXY",
+								Value: "http://other:user@otherproxy.com",
+							},
+							{
+								Name:  "HTTPS_PROXY",
+								Value: "https://other:user@otherproxy.com",
+							},
+							{
+								Name:  "NO_PROXY",
+								Value: "somedomain",
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 	for _, test := range tests {
@@ -272,14 +332,22 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				return
 			}
 
-			testNestedField(observed, test.buildConfig.Spec.BuildDefaults.GitHTTPProxy, "build.buildDefaults.gitHTTPProxy", false, t)
-			testNestedField(observed, test.buildConfig.Spec.BuildDefaults.GitHTTPSProxy, "build.buildDefaults.gitHTTPSProxy", false, t)
-			testNestedField(observed, test.buildConfig.Spec.BuildDefaults.GitNoProxy, "build.buildDefaults.gitNoProxy", false, t)
-			testNestedField(observed, test.buildConfig.Spec.BuildDefaults.Env, "build.buildDefaults.env", false, t)
+			expectedEnv := test.buildConfig.Spec.BuildDefaults.Env
+			testNestedField(observed, expectedEnv, "build.buildDefaults.env", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildDefaults.ImageLabels, "build.buildDefaults.imageLabels", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.ImageLabels, "build.buildOverrides.imageLabels", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.NodeSelector.MatchLabels, "build.buildOverrides.nodeSelector", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.Tolerations, "build.buildOverrides.tolerations", false, t)
+
+			if test.buildConfig.Spec.BuildDefaults.GitProxy != nil {
+				testNestedField(observed, test.buildConfig.Spec.BuildDefaults.GitProxy.HTTPProxy, "build.buildDefaults.gitHTTPProxy", true, t)
+				testNestedField(observed, test.buildConfig.Spec.BuildDefaults.GitProxy.HTTPSProxy, "build.buildDefaults.gitHTTPSProxy", true, t)
+				testNestedField(observed, test.buildConfig.Spec.BuildDefaults.GitProxy.NoProxy, "build.buildDefaults.gitNoProxy", true, t)
+			} else {
+				testNestedField(observed, nil, "build.buildDefaults.gitHTTPProxy", false, t)
+				testNestedField(observed, nil, "build.buildDefaults.gitHTTPSProxy", false, t)
+				testNestedField(observed, nil, "build.buildDefaults.gitNoProxy", false, t)
+			}
 		})
 	}
 }
@@ -319,7 +387,7 @@ func testNestedField(obj map[string]interface{}, expectedVal interface{}, field 
 			t.Fatalf("unable to test field %s: %v", field, err)
 		}
 		if !equality.Semantic.DeepEqual(value, rawExpected) {
-			t.Errorf("expected %s to be %v, got %v", field, expected, value)
+			t.Errorf("expected %s to be %v, got %v", field, rawExpected, value)
 		}
 		if existIfEmpty && !found {
 			t.Errorf("expected field %s to exist, even if empty", field)
