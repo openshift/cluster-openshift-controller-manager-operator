@@ -32,8 +32,8 @@ func Resource(resource string) schema.GroupResource {
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 		&OpenShiftControllerManagerConfig{},
-		&OpenShiftControllerManagerOperatorConfig{},
-		&OpenShiftControllerManagerOperatorConfigList{},
+		&Config{},
+		&ConfigList{},
 	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 

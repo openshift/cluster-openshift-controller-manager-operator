@@ -1,15 +1,16 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: openshiftcontrollermanageroperatorconfigs.openshiftcontrollermanager.operator.openshift.io
+  name: configs.openshiftcontrollermanager.operator.openshift.io
 spec:
   scope: Cluster
   group: openshiftcontrollermanager.operator.openshift.io
   version: v1
   names:
-    kind: OpenShiftControllerManagerOperatorConfig
-    plural: openshiftcontrollermanageroperatorconfigs
-    singular: openshiftcontrollermanageroperatorconfig
+    kind: Config
+    plural: configs
+    singular: config
+    listKind: ConfigList
     categories:
     - coreoperators
   subresources:

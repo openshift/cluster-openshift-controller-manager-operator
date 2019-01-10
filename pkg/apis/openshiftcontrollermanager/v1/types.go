@@ -17,8 +17,8 @@ type OpenShiftControllerManagerConfig struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OpenShiftControllerManagerOperatorConfig provides information to configure an operator to manage openshift-controller-manager.
-type OpenShiftControllerManagerOperatorConfig struct {
+// Config provides information to configure an operator to manage openshift-controller-manager.
+type Config struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
 
@@ -36,11 +36,11 @@ type OpenShiftControllerManagerOperatorConfigStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OpenShiftControllerManagerOperatorConfigList is a collection of items
-type OpenShiftControllerManagerOperatorConfigList struct {
+// ConfigList is a collection of items
+type ConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Items contains the items
-	Items []OpenShiftControllerManagerOperatorConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []Config `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

@@ -1,5 +1,5 @@
 apiVersion: openshiftcontrollermanager.operator.openshift.io/v1
-kind: OpenShiftControllerManagerOperatorConfig 
+kind: Config 
 metadata:
   name: instance
 spec:
