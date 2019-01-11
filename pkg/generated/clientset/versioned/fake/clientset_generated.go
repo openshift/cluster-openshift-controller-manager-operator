@@ -4,8 +4,8 @@ package fake
 
 import (
 	clientset "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned"
-	openshiftcontrollermanagerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
-	fakeopenshiftcontrollermanagerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1/fake"
+	openshiftcontrollermanagerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1"
+	fakeopenshiftcontrollermanagerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -55,12 +55,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// OpenshiftcontrollermanagerV1alpha1 retrieves the OpenshiftcontrollermanagerV1alpha1Client
-func (c *Clientset) OpenshiftcontrollermanagerV1alpha1() openshiftcontrollermanagerv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface {
-	return &fakeopenshiftcontrollermanagerv1alpha1.FakeOpenshiftcontrollermanagerV1alpha1{Fake: &c.Fake}
+// OpenshiftcontrollermanagerV1 retrieves the OpenshiftcontrollermanagerV1Client
+func (c *Clientset) OpenshiftcontrollermanagerV1() openshiftcontrollermanagerv1.OpenshiftcontrollermanagerV1Interface {
+	return &fakeopenshiftcontrollermanagerv1.FakeOpenshiftcontrollermanagerV1{Fake: &c.Fake}
 }
 
-// Openshiftcontrollermanager retrieves the OpenshiftcontrollermanagerV1alpha1Client
-func (c *Clientset) Openshiftcontrollermanager() openshiftcontrollermanagerv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface {
-	return &fakeopenshiftcontrollermanagerv1alpha1.FakeOpenshiftcontrollermanagerV1alpha1{Fake: &c.Fake}
+// Openshiftcontrollermanager retrieves the OpenshiftcontrollermanagerV1Client
+func (c *Clientset) Openshiftcontrollermanager() openshiftcontrollermanagerv1.OpenshiftcontrollermanagerV1Interface {
+	return &fakeopenshiftcontrollermanagerv1.FakeOpenshiftcontrollermanagerV1{Fake: &c.Fake}
 }

@@ -3,7 +3,7 @@
 package scheme
 
 import (
-	openshiftcontrollermanagerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1alpha1"
+	openshiftcontrollermanagerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,5 +34,5 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	openshiftcontrollermanagerv1alpha1.AddToScheme(scheme)
+	openshiftcontrollermanagerv1.AddToScheme(scheme)
 }
