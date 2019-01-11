@@ -14,7 +14,7 @@ import (
 
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1alpha1"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1"
 	operatorconfigclient "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned"
 
 	operatorclientinformers "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions"
@@ -45,7 +45,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	v1helpers.EnsureOperatorConfigExists(
 		dynamicClient,
 		v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/operator-config.yaml"),
-		schema.GroupVersionResource{Group: v1alpha1.GroupName, Version: "v1alpha1", Resource: "openshiftcontrollermanageroperatorconfigs"},
+		schema.GroupVersionResource{Group: v1.GroupName, Version: "v1", Resource: "openshiftcontrollermanageroperatorconfigs"},
 	)
 
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
@@ -55,23 +55,23 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 
 	operator := NewOpenShiftControllerManagerOperator(
 		os.Getenv("IMAGE"),
-		operatorConfigInformers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs(),
+		operatorConfigInformers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs(),
 		kubeInformersForOpenshiftControllerManagerNamespace,
-		operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
+		operatorConfigClient.OpenshiftcontrollermanagerV1(),
 		kubeClient,
 		ctx.EventRecorder,
 	)
 
 	configObserver := NewConfigObserver(
-		operatorConfigInformers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs(),
-		operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
+		operatorConfigInformers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs(),
+		operatorConfigClient.OpenshiftcontrollermanagerV1(),
 		kubeInformersForOperatorNamespace,
 		configInformers,
 	)
 
 	opClient := &operatorClient{
 		informers: operatorConfigInformers,
-		client:    operatorConfigClient.OpenshiftcontrollermanagerV1alpha1(),
+		client:    operatorConfigClient.OpenshiftcontrollermanagerV1(),
 	}
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(

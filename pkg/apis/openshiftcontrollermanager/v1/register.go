@@ -1,4 +1,4 @@
-package v1alpha1
+package v1
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
@@ -10,7 +10,7 @@ import (
 
 var (
 	GroupName     = "openshiftcontrollermanager.operator.openshift.io"
-	GroupVersion  = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
+	GroupVersion  = schema.GroupVersion{Group: GroupName, Version: "v1"}
 	schemeBuilder = runtime.NewSchemeBuilder(addKnownTypes, configv1.Install, operatorsv1alpha1api.Install)
 	// Install is a function which adds this version to a scheme
 	Install = schemeBuilder.AddToScheme

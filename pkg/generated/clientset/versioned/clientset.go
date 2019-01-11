@@ -3,7 +3,7 @@
 package versioned
 
 import (
-	openshiftcontrollermanagerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
+	openshiftcontrollermanagerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -11,27 +11,27 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	OpenshiftcontrollermanagerV1alpha1() openshiftcontrollermanagerv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
+	OpenshiftcontrollermanagerV1() openshiftcontrollermanagerv1.OpenshiftcontrollermanagerV1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Openshiftcontrollermanager() openshiftcontrollermanagerv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
+	Openshiftcontrollermanager() openshiftcontrollermanagerv1.OpenshiftcontrollermanagerV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	openshiftcontrollermanagerV1alpha1 *openshiftcontrollermanagerv1alpha1.OpenshiftcontrollermanagerV1alpha1Client
+	openshiftcontrollermanagerV1 *openshiftcontrollermanagerv1.OpenshiftcontrollermanagerV1Client
 }
 
-// OpenshiftcontrollermanagerV1alpha1 retrieves the OpenshiftcontrollermanagerV1alpha1Client
-func (c *Clientset) OpenshiftcontrollermanagerV1alpha1() openshiftcontrollermanagerv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface {
-	return c.openshiftcontrollermanagerV1alpha1
+// OpenshiftcontrollermanagerV1 retrieves the OpenshiftcontrollermanagerV1Client
+func (c *Clientset) OpenshiftcontrollermanagerV1() openshiftcontrollermanagerv1.OpenshiftcontrollermanagerV1Interface {
+	return c.openshiftcontrollermanagerV1
 }
 
 // Deprecated: Openshiftcontrollermanager retrieves the default version of OpenshiftcontrollermanagerClient.
 // Please explicitly pick a version.
-func (c *Clientset) Openshiftcontrollermanager() openshiftcontrollermanagerv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface {
-	return c.openshiftcontrollermanagerV1alpha1
+func (c *Clientset) Openshiftcontrollermanager() openshiftcontrollermanagerv1.OpenshiftcontrollermanagerV1Interface {
+	return c.openshiftcontrollermanagerV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -50,7 +50,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.openshiftcontrollermanagerV1alpha1, err = openshiftcontrollermanagerv1alpha1.NewForConfig(&configShallowCopy)
+	cs.openshiftcontrollermanagerV1, err = openshiftcontrollermanagerv1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.openshiftcontrollermanagerV1alpha1 = openshiftcontrollermanagerv1alpha1.NewForConfigOrDie(c)
+	cs.openshiftcontrollermanagerV1 = openshiftcontrollermanagerv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -75,7 +75,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.openshiftcontrollermanagerV1alpha1 = openshiftcontrollermanagerv1alpha1.New(c)
+	cs.openshiftcontrollermanagerV1 = openshiftcontrollermanagerv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

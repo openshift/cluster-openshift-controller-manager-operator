@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	clientconfigv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
-	clientopenshiftcontrollermanagerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
+	clientopenshiftcontrollermanagerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1"
 )
 
 // Clientset is a set of Kubernetes clients.
@@ -21,7 +21,7 @@ type Clientset struct {
 	clientcorev1.CoreV1Interface
 	clientappsv1.AppsV1Interface
 	clientconfigv1.ConfigV1Interface
-	clientopenshiftcontrollermanagerv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
+	clientopenshiftcontrollermanagerv1.OpenshiftcontrollermanagerV1Interface
 }
 
 // NewClientset creates a set of Kubernetes clients. The default kubeconfig is
@@ -47,7 +47,7 @@ func NewClientset(kubeconfig *restclient.Config) (clientset *Clientset, err erro
 	if err != nil {
 		return
 	}
-	clientset.OpenshiftcontrollermanagerV1alpha1Interface, err = clientopenshiftcontrollermanagerv1alpha1.NewForConfig(kubeconfig)
+	clientset.OpenshiftcontrollermanagerV1Interface, err = clientopenshiftcontrollermanagerv1.NewForConfig(kubeconfig)
 	if err != nil {
 		return
 	}
