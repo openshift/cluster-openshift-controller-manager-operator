@@ -19,8 +19,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	operatorsv1 "github.com/openshift/api/operator/v1"
-	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
-	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1alpha1"
+	operatorconfigclientv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1"
+	operatorconfiginformerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1"
 	"github.com/openshift/library-go/pkg/operator/events"
 )
 
@@ -34,7 +34,7 @@ const (
 
 type OpenShiftControllerManagerOperator struct {
 	targetImagePullSpec  string
-	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
+	operatorConfigClient operatorconfigclientv1.OpenshiftcontrollermanagerV1Interface
 
 	kubeClient kubernetes.Interface
 
@@ -47,9 +47,9 @@ type OpenShiftControllerManagerOperator struct {
 
 func NewOpenShiftControllerManagerOperator(
 	targetImagePullSpec string,
-	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
+	operatorConfigInformer operatorconfiginformerv1.OpenShiftControllerManagerOperatorConfigInformer,
 	kubeInformersForOpenshiftControllerManager informers.SharedInformerFactory,
-	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
+	operatorConfigClient operatorconfigclientv1.OpenshiftcontrollermanagerV1Interface,
 	kubeClient kubernetes.Interface,
 	recorder events.Recorder,
 ) *OpenShiftControllerManagerOperator {

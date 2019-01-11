@@ -332,7 +332,7 @@ func v3110OpenshiftControllerManagerNsYaml() (*asset, error) {
 	return a, nil
 }
 
-var _v3110OpenshiftControllerManagerOperatorConfigYaml = []byte(`apiVersion: openshiftcontrollermanager.operator.openshift.io/v1alpha1
+var _v3110OpenshiftControllerManagerOperatorConfigYaml = []byte(`apiVersion: openshiftcontrollermanager.operator.openshift.io/v1
 kind: OpenShiftControllerManagerOperatorConfig 
 metadata:
   name: instance

@@ -25,8 +25,8 @@ import (
 
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
-	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
-	operatorconfiginformerv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1alpha1"
+	operatorconfigclientv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1"
+	operatorconfiginformerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1"
 )
 
 type Listers struct {
@@ -38,7 +38,7 @@ type Listers struct {
 type observeConfigFunc func(Listers, map[string]interface{}) (map[string]interface{}, error)
 
 type ConfigObserver struct {
-	operatorConfigClient operatorconfigclientv1alpha1.OpenShiftControllerManagerOperatorConfigInterface
+	operatorConfigClient operatorconfigclientv1.OpenShiftControllerManagerOperatorConfigInterface
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -56,8 +56,8 @@ type ConfigObserver struct {
 }
 
 func NewConfigObserver(
-	operatorConfigInformer operatorconfiginformerv1alpha1.OpenShiftControllerManagerOperatorConfigInformer,
-	operatorConfigClient operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface,
+	operatorConfigInformer operatorconfiginformerv1.OpenShiftControllerManagerOperatorConfigInformer,
+	operatorConfigClient operatorconfigclientv1.OpenshiftcontrollermanagerV1Interface,
 	kubeInformersForOperator informers.SharedInformerFactory,
 	configInformer configinformers.SharedInformerFactory,
 ) *ConfigObserver {

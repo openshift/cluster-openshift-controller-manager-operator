@@ -4,21 +4,21 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorconfigclientv1alpha1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1alpha1"
-	operatorclientinformers "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions"
+	clientv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1"
+	clientinformers "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions"
 )
 
 type operatorClient struct {
-	informers operatorclientinformers.SharedInformerFactory
-	client    operatorconfigclientv1alpha1.OpenshiftcontrollermanagerV1alpha1Interface
+	informers clientinformers.SharedInformerFactory
+	client    clientv1.OpenshiftcontrollermanagerV1Interface
 }
 
 func (p *operatorClient) Informer() cache.SharedIndexInformer {
-	return p.informers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs().Informer()
+	return p.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Informer()
 }
 
 func (p *operatorClient) CurrentStatus() (operatorv1.OperatorStatus, error) {
-	instance, err := p.informers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
+	instance, err := p.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
 	if err != nil {
 		return operatorv1.OperatorStatus{}, err
 	}
@@ -27,7 +27,7 @@ func (p *operatorClient) CurrentStatus() (operatorv1.OperatorStatus, error) {
 }
 
 func (c *operatorClient) GetOperatorState() (*operatorv1.OperatorSpec, *operatorv1.OperatorStatus, string, error) {
-	instance, err := c.informers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
+	instance, err := c.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -36,7 +36,7 @@ func (c *operatorClient) GetOperatorState() (*operatorv1.OperatorSpec, *operator
 }
 
 func (c *operatorClient) UpdateOperatorSpec(resourceVersion string, spec *operatorv1.OperatorSpec) (*operatorv1.OperatorSpec, string, error) {
-	original, err := c.informers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
+	original, err := c.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
 	if err != nil {
 		return nil, "", err
 	}
@@ -52,7 +52,7 @@ func (c *operatorClient) UpdateOperatorSpec(resourceVersion string, spec *operat
 	return &ret.Spec.OperatorSpec, ret.ResourceVersion, nil
 }
 func (c *operatorClient) UpdateOperatorStatus(resourceVersion string, status *operatorv1.OperatorStatus) (*operatorv1.OperatorStatus, string, error) {
-	original, err := c.informers.Openshiftcontrollermanager().V1alpha1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
+	original, err := c.informers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs().Lister().Get("instance")
 	if err != nil {
 		return nil, "", err
 	}

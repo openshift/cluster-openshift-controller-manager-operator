@@ -5,7 +5,7 @@ metadata:
 spec:
   scope: Cluster
   group: openshiftcontrollermanager.operator.openshift.io
-  version: v1alpha1
+  version: v1
   names:
     kind: OpenShiftControllerManagerOperatorConfig
     plural: openshiftcontrollermanageroperatorconfigs
