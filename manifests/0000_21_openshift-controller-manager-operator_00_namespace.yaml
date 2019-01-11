@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   labels:
     openshift.io/run-level: "0"
-  name: openshift-cluster-openshift-controller-manager-operator
+  name: openshift-controller-manager-operator
