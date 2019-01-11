@@ -172,14 +172,19 @@ func observeBuildControllerConfig(listers Listers, observedConfig map[string]int
 	}
 	// set build defaults
 
+	gitProxy := build.Spec.BuildDefaults.DefaultProxy
 	if build.Spec.BuildDefaults.GitProxy != nil {
-		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitProxy.HTTPProxy, "build.buildDefaults.gitHTTPProxy", false); err != nil {
+		gitProxy = build.Spec.BuildDefaults.GitProxy
+	}
+
+	if gitProxy != nil {
+		if err = observeField(observedConfig, gitProxy.HTTPProxy, "build.buildDefaults.gitHTTPProxy", false); err != nil {
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitHTTPProxy", err)
 		}
-		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitProxy.HTTPSProxy, "build.buildDefaults.gitHTTPSProxy", false); err != nil {
+		if err = observeField(observedConfig, gitProxy.HTTPSProxy, "build.buildDefaults.gitHTTPSProxy", false); err != nil {
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitHTTPSProxy", err)
 		}
-		if err = observeField(observedConfig, build.Spec.BuildDefaults.GitProxy.NoProxy, "build.buildDefaults.gitNoProxy", false); err != nil {
+		if err = observeField(observedConfig, gitProxy.NoProxy, "build.buildDefaults.gitNoProxy", false); err != nil {
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitNoProxy", err)
 		}
 	}
