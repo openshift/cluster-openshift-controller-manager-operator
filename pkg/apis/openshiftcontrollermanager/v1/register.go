@@ -2,7 +2,7 @@ package v1
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
-	operatorsv1alpha1api "github.com/openshift/api/operator/v1alpha1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -11,7 +11,7 @@ import (
 var (
 	GroupName     = "openshiftcontrollermanager.operator.openshift.io"
 	GroupVersion  = schema.GroupVersion{Group: GroupName, Version: "v1"}
-	schemeBuilder = runtime.NewSchemeBuilder(addKnownTypes, configv1.Install, operatorsv1alpha1api.Install)
+	schemeBuilder = runtime.NewSchemeBuilder(addKnownTypes, configv1.Install, operatorv1.Install)
 	// Install is a function which adds this version to a scheme
 	Install = schemeBuilder.AddToScheme
 

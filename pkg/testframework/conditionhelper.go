@@ -8,9 +8,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	osapi "github.com/openshift/api/config/v1"
-	operatorapi "github.com/openshift/api/operator/v1alpha1"
-
 	configv1 "github.com/openshift/api/config/v1"
 )
 
@@ -19,13 +16,13 @@ func hasExpectedClusterOperatorConditions(status *configv1.ClusterOperator) bool
 	gotProgressing := false
 	gotFailing := false
 	for _, c := range status.Status.Conditions {
-		if c.Type == operatorapi.OperatorStatusTypeAvailable && c.Status == osapi.ConditionTrue {
+		if c.Type == configv1.OperatorAvailable && c.Status == configv1.ConditionTrue {
 			gotAvailable = true
 		}
-		if c.Type == operatorapi.OperatorStatusTypeProgressing && c.Status == osapi.ConditionFalse {
+		if c.Type == configv1.OperatorProgressing && c.Status == configv1.ConditionFalse {
 			gotProgressing = true
 		}
-		if c.Type == operatorapi.OperatorStatusTypeFailing && c.Status == osapi.ConditionFalse {
+		if c.Type == configv1.OperatorFailing && c.Status == configv1.ConditionFalse {
 			gotFailing = true
 		}
 	}
