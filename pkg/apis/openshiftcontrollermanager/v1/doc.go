@@ -3,4 +3,4 @@
 // +k8s:openapi-gen=true
 
 // +groupName=openshiftcontrollermanager.operator.openshift.io
-package v1alpha1
+package v1

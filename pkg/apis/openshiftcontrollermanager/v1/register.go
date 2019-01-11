@@ -1,4 +1,4 @@
-package v1alpha1
+package v1
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
