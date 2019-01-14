@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: openshift-cluster-openshift-controller-manager-operator
-  name: openshift-cluster-openshift-controller-manager-operator
+  namespace: openshift-controller-manager-operator
+  name: openshift-controller-manager-operator
   labels:
-    app: openshift-cluster-openshift-controller-manager-operator
+    app: openshift-controller-manager-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: openshift-cluster-openshift-controller-manager-operator
+      app: openshift-controller-manager-operator
   template:
     metadata:
-      name: openshift-cluster-openshift-controller-manager-operator
+      name: openshift-controller-manager-operator
       labels:
-        app: openshift-cluster-openshift-controller-manager-operator
+        app: openshift-controller-manager-operator
     spec:
-      serviceAccountName: openshift-cluster-openshift-controller-manager-operator
+      serviceAccountName: openshift-controller-manager-operator
       containers:
       - name: operator
         image: docker.io/openshift/origin-cluster-openshift-controller-manager-operator:v4.0
@@ -42,12 +42,12 @@ spec:
       - name: serving-cert
         secret:
           defaultMode: 400
-          secretName: openshift-cluster-openshift-controller-manager-operator-serving-cert
+          secretName: openshift-controller-manager-operator-serving-cert
           optional: true
       - name: config
         configMap:
           defaultMode: 440
-          name: openshift-cluster-openshift-controller-manager-operator-config
+          name: openshift-controller-manager-operator-config
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:

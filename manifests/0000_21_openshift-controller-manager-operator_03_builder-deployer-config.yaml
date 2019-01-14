@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  namespace: openshift-cluster-openshift-controller-manager-operator
+  namespace: openshift-controller-manager-operator
   name: openshift-controller-manager-images
 data:
   builderImage: quay.io/openshift/origin-docker-builder:v4.0
