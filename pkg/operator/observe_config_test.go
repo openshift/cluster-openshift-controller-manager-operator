@@ -173,12 +173,12 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				},
 				Spec: configv1.BuildSpec{
 					BuildDefaults: configv1.BuildDefaults{
-						DefaultProxy: &configv1.ProxyConfig{
+						DefaultProxy: &configv1.ProxySpec{
 							HTTPProxy:  "http://user:pass@someproxy.net",
 							HTTPSProxy: "https://user:pass@someproxy.net",
 							NoProxy:    "image-resgistry.cluster.svc.local",
 						},
-						GitProxy: &configv1.ProxyConfig{
+						GitProxy: &configv1.ProxySpec{
 							HTTPProxy:  "http://my-proxy",
 							HTTPSProxy: "https://my-proxy",
 							NoProxy:    "https://no-proxy",
@@ -208,10 +208,8 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 								Value: "teset2",
 							},
 						},
-						NodeSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"foo": "bar",
-							},
+						NodeSelector: map[string]string{
+							"foo": "bar",
 						},
 						Tolerations: []corev1.Toleration{
 							{
@@ -232,12 +230,12 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				},
 				Spec: configv1.BuildSpec{
 					BuildDefaults: configv1.BuildDefaults{
-						DefaultProxy: &configv1.ProxyConfig{
+						DefaultProxy: &configv1.ProxySpec{
 							HTTPProxy:  "",
 							HTTPSProxy: "https://user:pass@someproxy.net",
 							NoProxy:    "",
 						},
-						GitProxy: &configv1.ProxyConfig{
+						GitProxy: &configv1.ProxySpec{
 							HTTPProxy:  "http://my-proxy",
 							HTTPSProxy: "",
 							NoProxy:    "https://no-proxy",
@@ -247,28 +245,6 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "match expressions",
-			buildConfig: &configv1.Build{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster",
-				},
-				Spec: configv1.BuildSpec{
-					BuildOverrides: configv1.BuildOverrides{
-						NodeSelector: metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{
-									Key:      "mylabel",
-									Values:   []string{"foo", "bar"},
-									Operator: metav1.LabelSelectorOpIn,
-								},
-							},
-						},
-					},
-				},
-			},
-			expectError: false,
-		},
-		{
 			name: "default proxy",
 			buildConfig: &configv1.Build{
 				ObjectMeta: metav1.ObjectMeta{
@@ -276,7 +252,7 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				},
 				Spec: configv1.BuildSpec{
 					BuildDefaults: configv1.BuildDefaults{
-						DefaultProxy: &configv1.ProxyConfig{
+						DefaultProxy: &configv1.ProxySpec{
 							HTTPProxy:  "http://user:pass@someproxy.net",
 							HTTPSProxy: "https://user:pass@someproxy.net",
 							NoProxy:    "image-resgistry.cluster.svc.local",
@@ -293,7 +269,7 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				},
 				Spec: configv1.BuildSpec{
 					BuildDefaults: configv1.BuildDefaults{
-						DefaultProxy: &configv1.ProxyConfig{
+						DefaultProxy: &configv1.ProxySpec{
 							HTTPProxy:  "http://user:pass@someproxy.net",
 							HTTPSProxy: "https://user:pass@someproxy.net",
 							NoProxy:    "image-resgistry.cluster.svc.local",
@@ -324,7 +300,7 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				},
 				Spec: configv1.BuildSpec{
 					BuildDefaults: configv1.BuildDefaults{
-						GitProxy: &configv1.ProxyConfig{
+						GitProxy: &configv1.ProxySpec{
 							HTTPProxy:  "http://user:pass@someproxy.net",
 							HTTPSProxy: "https://user:pass@someproxy.net",
 							NoProxy:    "image-resgistry.cluster.svc.local",
@@ -370,7 +346,7 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 			testNestedField(observed, expectedEnv, "build.buildDefaults.env", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildDefaults.ImageLabels, "build.buildDefaults.imageLabels", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.ImageLabels, "build.buildOverrides.imageLabels", false, t)
-			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.NodeSelector.MatchLabels, "build.buildOverrides.nodeSelector", false, t)
+			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.NodeSelector, "build.buildOverrides.nodeSelector", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.Tolerations, "build.buildOverrides.tolerations", false, t)
 
 			expectedGitProxy := test.buildConfig.Spec.BuildDefaults.DefaultProxy
