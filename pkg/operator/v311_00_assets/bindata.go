@@ -133,6 +133,7 @@ spec:
         resources:
           requests:
             memory: 100Mi
+            cpu: 100m
         ports:
         - containerPort: 8443
         volumeMounts:
