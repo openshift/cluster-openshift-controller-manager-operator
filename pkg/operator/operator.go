@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -18,10 +19,12 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
 
-	operatorsv1 "github.com/openshift/api/operator/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
 	operatorconfigclientv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1"
 	operatorconfiginformerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1"
-	"github.com/openshift/library-go/pkg/operator/events"
 )
 
 const (
@@ -80,10 +83,36 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 		return err
 	}
 	switch operatorConfig.Spec.ManagementState {
-	case operatorsv1.Unmanaged:
+	case operatorv1.Unmanaged:
+		// manage status
+		originalOperatorConfig := operatorConfig.DeepCopy()
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+			Type:    operatorv1.OperatorStatusTypeAvailable,
+			Status:  operatorv1.ConditionUnknown,
+			Reason:  "Unmanaged",
+			Message: "the controller manager is in an unmanaged state, therefore its availability is unknown.",
+		})
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+			Type:    operatorv1.OperatorStatusTypeProgressing,
+			Status:  operatorv1.ConditionFalse,
+			Reason:  "Unmanaged",
+			Message: "the controller manager is in an unmanaged state, therefore no changes are being applied.",
+		})
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+			Type:    operatorv1.OperatorStatusTypeFailing,
+			Status:  operatorv1.ConditionFalse,
+			Reason:  "Unmanaged",
+			Message: "the controller manager is in an unmanaged state, therefore no operator actions are failing.",
+		})
+
+		if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
+			if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
+				return err
+			}
+		}
 		return nil
 
-	case operatorsv1.Removed:
+	case operatorv1.Removed:
 		// TODO probably need to watch until the NS is really gone
 		if err := c.kubeClient.CoreV1().Namespaces().Delete(targetNamespaceName, nil); err != nil && !apierrors.IsNotFound(err) {
 			return err
