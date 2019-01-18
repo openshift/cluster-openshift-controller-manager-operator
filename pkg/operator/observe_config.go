@@ -207,15 +207,10 @@ func observeBuildControllerConfig(listers Listers, observedConfig map[string]int
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildOverrides.imageLabels", err)
 		}
 	}
-	nodeSelector := build.Spec.BuildOverrides.NodeSelector
-	if len(build.Spec.BuildOverrides.NodeSelector.MatchLabels) > 0 {
-		if err = observeField(observedConfig, nodeSelector.MatchLabels, "build.buildOverrides.nodeSelector", true); err != nil {
+	if len(build.Spec.BuildOverrides.NodeSelector) > 0 {
+		if err = observeField(observedConfig, build.Spec.BuildOverrides.NodeSelector, "build.buildOverrides.nodeSelector", true); err != nil {
 			return nil, fmt.Errorf("failed to observe %s: %v", "build.buildOverrides.nodeSelector", err)
 		}
-	}
-	// Control plane config does not support MatchExpressions yet
-	if len(nodeSelector.MatchExpressions) > 0 {
-		glog.Warningf("config.Build: %s is not supported", "buildOverrides.nodeSelector.matchExpressions")
 	}
 	if len(build.Spec.BuildOverrides.Tolerations) > 0 {
 		if err = observeField(observedConfig, build.Spec.BuildOverrides.Tolerations, "build.buildOverrides.tolerations", true); err != nil {
