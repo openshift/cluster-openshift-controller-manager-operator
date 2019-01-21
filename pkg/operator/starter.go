@@ -80,6 +80,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		[]configv1.ObjectReference{},
 		configClient.ConfigV1(),
 		opClient,
+		status.NewVersionGetter(),
 		ctx.EventRecorder,
 	)
 
