@@ -15,14 +15,16 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1"
-	operatorconfigclient "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned"
-
-	operatorclientinformers "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions"
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1"
+	operatorconfigclient "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned"
+	operatorclientinformers "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions"
+	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
 func RunOperator(ctx *controllercmd.ControllerContext) error {
@@ -51,7 +53,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
 	kubeInformersForOpenshiftControllerManagerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(targetNamespaceName))
-	kubeInformersForOperatorNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(operatorNamespaceName))
+	kubeInformersForOperatorNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(util.OperatorNamespaceName))
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 
 	operator := NewOpenShiftControllerManagerOperator(
@@ -63,17 +65,17 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		ctx.EventRecorder,
 	)
 
-	configObserver := NewConfigObserver(
-		operatorConfigInformers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs(),
-		operatorConfigClient.OpenshiftcontrollermanagerV1(),
-		kubeInformersForOperatorNamespace,
-		configInformers,
-	)
-
 	opClient := &operatorClient{
 		informers: operatorConfigInformers,
 		client:    operatorConfigClient.OpenshiftcontrollermanagerV1(),
 	}
+
+	configObserver := configobservationcontroller.NewConfigObserver(
+		opClient,
+		configInformers,
+		kubeInformersForOperatorNamespace,
+		ctx.EventRecorder,
+	)
 
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		"openshift-controller-manager-operator",
