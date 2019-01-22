@@ -12,6 +12,7 @@ import (
 	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
+
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/library-go/pkg/operator/events"
@@ -167,8 +168,19 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appscli
 	if len(imagePullSpec) > 0 {
 		required.Spec.Template.Spec.Containers[0].Image = imagePullSpec
 	}
-	// TODO: translate high-level operator log levels currently in https://github.com/openshift/api/pull/138
-	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 4))
+
+	level := 2
+	switch options.Spec.LogLevel {
+	case operatorv1.TraceAll:
+		level = 8
+	case operatorv1.Trace:
+		level = 6
+	case operatorv1.Debug:
+		level = 4
+	case operatorv1.Normal:
+		level = 2
+	}
+	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", level))
 
 	return resourceapply.ApplyDaemonSet(client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus), forceRollout)
 }
