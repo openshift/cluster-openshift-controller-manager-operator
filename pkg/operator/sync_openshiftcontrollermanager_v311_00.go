@@ -30,15 +30,18 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	var err error
 	operatorConfig := originalOperatorConfig.DeepCopy()
 	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.recorder, v311_00_assets.Asset,
-		"v3.11.0/openshift-controller-manager/ns.yaml",
 		"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
 		"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
+		"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
+		"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
 		"v3.11.0/openshift-controller-manager/leader-role.yaml",
 		"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
 		"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
 		"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
 		"v3.11.0/openshift-controller-manager/sa.yaml",
 		"v3.11.0/openshift-controller-manager/svc.yaml",
+		"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
+		"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
 	)
 	resourcesThatForceRedeployment := sets.NewString("v3.11.0/openshift-controller-manager/sa.yaml")
 	forceRollout := false
