@@ -86,15 +86,15 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		ctx.EventRecorder,
 	)
 
-	operatorConfigInformers.Start(ctx.StopCh)
-	kubeInformersForOpenshiftControllerManagerNamespace.Start(ctx.StopCh)
-	kubeInformersForOperatorNamespace.Start(ctx.StopCh)
-	configInformers.Start(ctx.StopCh)
+	operatorConfigInformers.Start(ctx.Context.Done())
+	kubeInformersForOpenshiftControllerManagerNamespace.Start(ctx.Context.Done())
+	kubeInformersForOperatorNamespace.Start(ctx.Context.Done())
+	configInformers.Start(ctx.Context.Done())
 
-	go operator.Run(1, ctx.StopCh)
-	go configObserver.Run(1, ctx.StopCh)
-	go clusterOperatorStatus.Run(1, ctx.StopCh)
+	go operator.Run(1, ctx.Context.Done())
+	go configObserver.Run(1, ctx.Context.Done())
+	go clusterOperatorStatus.Run(1, ctx.Context.Done())
 
-	<-ctx.StopCh
+	<-ctx.Context.Done()
 	return fmt.Errorf("stopped")
 }
