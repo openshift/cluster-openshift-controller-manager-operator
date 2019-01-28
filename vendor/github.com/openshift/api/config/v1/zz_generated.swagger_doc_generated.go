@@ -378,7 +378,7 @@ func (ClusterOperatorSpec) SwaggerDoc() map[string]string {
 var map_ClusterOperatorStatus = map[string]string{
 	"":               "ClusterOperatorStatus provides information about the status of the operator.",
 	"conditions":     "conditions describes the state of the operator's reconciliation functionality.",
-	"version":        "version indicates which version of the operator updated the current status object.",
+	"versions":       "versions is a slice of operand version tuples.  Operators which manage multiple operands will have multiple entries in the array.  If an operator is Available, it must have at least one entry.  You must report the version of the operator itself with the name \"operator\".",
 	"relatedObjects": "relatedObjects is a list of objects that are \"interesting\" or related to this operator.  Common uses are: 1. the detailed resource driving the operator 2. operator namespaces 3. operand namespaces",
 	"extension":      "extension contains any additional status information specific to the operator which owns this status object.",
 }
@@ -410,6 +410,15 @@ var map_ObjectReference = map[string]string{
 
 func (ObjectReference) SwaggerDoc() map[string]string {
 	return map_ObjectReference
+}
+
+var map_OperandVersion = map[string]string{
+	"name":    "name is the name of the particular operand this version is for.  It usually matches container images, not operators.",
+	"version": "version indicates which version of a particular operand is currently being manage.  It must always match the Available condition.  If 1.0.0 is Available, then this must indicate 1.0.0 even if the operator is trying to rollout 1.1.0",
+}
+
+func (OperandVersion) SwaggerDoc() map[string]string {
+	return map_OperandVersion
 }
 
 var map_ClusterVersion = map[string]string{
@@ -778,9 +787,8 @@ func (IdentityProviderConfig) SwaggerDoc() map[string]string {
 }
 
 var map_KeystoneIdentityProvider = map[string]string{
-	"":                    "KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials",
-	"domainName":          "domainName is required for keystone v3",
-	"useUsernameIdentity": "useUsernameIdentity indicates that users should be authenticated by username, not keystone ID DEPRECATED - only use this option for legacy systems to ensure backwards compatibility",
+	"":           "KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials",
+	"domainName": "domainName is required for keystone v3",
 }
 
 func (KeystoneIdentityProvider) SwaggerDoc() map[string]string {
@@ -943,6 +951,25 @@ var map_ProjectList = map[string]string{
 
 func (ProjectList) SwaggerDoc() map[string]string {
 	return map_ProjectList
+}
+
+var map_ProjectSpec = map[string]string{
+	"": "ProjectSpec holds the project creation configuration.",
+	"projectRequestMessage":  "projectRequestMessage is the string presented to a user if they are unable to request a project via the projectrequest api endpoint",
+	"projectRequestTemplate": "projectRequestTemplate is the template to use for creating projects in response to projectrequest. This must point to a template in 'openshift-config' namespace. It is optional. If it is not specified, a default template is used.",
+}
+
+func (ProjectSpec) SwaggerDoc() map[string]string {
+	return map_ProjectSpec
+}
+
+var map_TemplateReference = map[string]string{
+	"":     "TemplateReference references a template in a specific namespace. The namespace must be specified at the point of use.",
+	"name": "name is the metadata.name of the referenced project request template",
+}
+
+func (TemplateReference) SwaggerDoc() map[string]string {
+	return map_TemplateReference
 }
 
 var map_Proxy = map[string]string{
