@@ -48,7 +48,7 @@ func TestClusterBuildConfigObservation(t *testing.T) {
 	}()
 
 	err := wait.Poll(5*time.Second, 1*time.Minute, func() (bool, error) {
-		cfg, err := client.OpenShiftControllerManagerOperatorConfigs().Get("instance", metav1.GetOptions{})
+		cfg, err := client.OpenShiftControllerManagers().Get("instance", metav1.GetOptions{})
 		if cfg == nil || err != nil {
 			t.Logf("error getting openshift controller manager config: %v", err)
 			return false, nil
@@ -71,7 +71,7 @@ func TestClusterImageConfigObservation(t *testing.T) {
 	framework.MustEnsureClusterOperatorStatusIsSet(t, client)
 
 	err := wait.Poll(5*time.Second, 1*time.Minute, func() (bool, error) {
-		cfg, err := client.OpenShiftControllerManagerOperatorConfigs().Get("instance", metav1.GetOptions{})
+		cfg, err := client.OpenShiftControllerManagers().Get("instance", metav1.GetOptions{})
 		if cfg == nil || err != nil {
 			t.Logf("error getting openshift controller manager config: %v", err)
 			return false, nil

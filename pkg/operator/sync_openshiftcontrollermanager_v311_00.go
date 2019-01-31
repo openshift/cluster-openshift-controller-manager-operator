@@ -8,24 +8,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
-
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1"
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
+	operatorapiv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
-	"k8s.io/apimachinery/pkg/util/sets"
+
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 )
 
 // syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
 // most of the time the sync method will be good for a large span of minor versions
-func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManagerOperator, originalOperatorConfig *v1.OpenShiftControllerManagerOperatorConfig) (bool, error) {
+func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManagerOperator, originalOperatorConfig *operatorapiv1.OpenShiftControllerManager) (bool, error) {
 	errors := []error{}
 	var err error
 	operatorConfig := originalOperatorConfig.DeepCopy()
@@ -82,14 +81,14 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 
 	// manage status
 	if actualDaemonSet.Status.NumberAvailable > 0 {
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
-			Type:   operatorv1.OperatorStatusTypeAvailable,
-			Status: operatorv1.ConditionTrue,
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:   operatorapiv1.OperatorStatusTypeAvailable,
+			Status: operatorapiv1.ConditionTrue,
 		})
 	} else {
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
-			Type:    operatorv1.OperatorStatusTypeAvailable,
-			Status:  operatorv1.ConditionFalse,
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:    operatorapiv1.OperatorStatusTypeAvailable,
+			Status:  operatorapiv1.ConditionFalse,
 			Reason:  "NoPodsAvailable",
 			Message: "no daemon pods available on any node.",
 		})
@@ -103,14 +102,14 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		progressingMessages = append(progressingMessages, fmt.Sprintf("openshiftcontrollermanageroperatorconfigs/instance: observed generation is %d, desired generation is %d.", operatorConfig.Status.ObservedGeneration, operatorConfig.ObjectMeta.Generation))
 	}
 	if len(progressingMessages) == 0 {
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
-			Type:   operatorv1.OperatorStatusTypeProgressing,
-			Status: operatorv1.ConditionFalse,
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:   operatorapiv1.OperatorStatusTypeProgressing,
+			Status: operatorapiv1.ConditionFalse,
 		})
 	} else {
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
-			Type:    operatorv1.OperatorStatusTypeProgressing,
-			Status:  operatorv1.ConditionTrue,
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:    operatorapiv1.OperatorStatusTypeProgressing,
+			Status:  operatorapiv1.ConditionTrue,
 			Reason:  "DesiredStateNotYetAchieved",
 			Message: strings.Join(progressingMessages, "\n"),
 		})
@@ -121,21 +120,21 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		for _, err := range errors {
 			message = message + err.Error() + "\n"
 		}
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
 			Type:    workloadFailingCondition,
-			Status:  operatorv1.ConditionTrue,
+			Status:  operatorapiv1.ConditionTrue,
 			Message: message,
 			Reason:  "SyncError",
 		})
 	} else {
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
 			Type:   workloadFailingCondition,
-			Status: operatorv1.ConditionFalse,
+			Status: operatorapiv1.ConditionFalse,
 		})
 	}
 
 	if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
-		if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
+		if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(operatorConfig); err != nil {
 			return false, err
 		}
 	}
@@ -155,7 +154,7 @@ func manageOpenShiftAPIServerClientCA_v311_00_to_latest(client coreclientv1.Core
 	return caChanged, nil
 }
 
-func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *v1.OpenShiftControllerManagerOperatorConfig) (*corev1.ConfigMap, bool, error) {
+func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
 	defaultConfig := v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.UnsupportedConfigOverrides.Raw, operatorConfig.Spec.ObservedConfig.Raw)
@@ -165,7 +164,7 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(client coreclie
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *v1.OpenShiftControllerManagerOperatorConfig, imagePullSpec string, generationStatus []operatorv1.GenerationStatus, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *operatorapiv1.OpenShiftControllerManager, imagePullSpec string, generationStatus []operatorapiv1.GenerationStatus, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
 	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
 
 	if len(imagePullSpec) > 0 {
@@ -174,13 +173,13 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appscli
 
 	level := 2
 	switch options.Spec.LogLevel {
-	case operatorv1.TraceAll:
+	case operatorapiv1.TraceAll:
 		level = 8
-	case operatorv1.Trace:
+	case operatorapiv1.Trace:
 		level = 6
-	case operatorv1.Debug:
+	case operatorapiv1.Debug:
 		level = 4
-	case operatorv1.Normal:
+	case operatorapiv1.Normal:
 		level = 2
 	}
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", level))

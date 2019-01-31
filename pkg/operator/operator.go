@@ -19,12 +19,11 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorapiv1 "github.com/openshift/api/operator/v1"
+	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
+	operatorinformersv1 "github.com/openshift/client-go/operator/informers/externalversions/operator/v1"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
-
-	operatorconfigclientv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned/typed/openshiftcontrollermanager/v1"
-	operatorconfiginformerv1 "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions/openshiftcontrollermanager/v1"
 )
 
 const (
@@ -36,7 +35,7 @@ const (
 
 type OpenShiftControllerManagerOperator struct {
 	targetImagePullSpec  string
-	operatorConfigClient operatorconfigclientv1.OpenshiftcontrollermanagerV1Interface
+	operatorConfigClient operatorclientv1.OperatorV1Interface
 
 	kubeClient kubernetes.Interface
 
@@ -49,9 +48,9 @@ type OpenShiftControllerManagerOperator struct {
 
 func NewOpenShiftControllerManagerOperator(
 	targetImagePullSpec string,
-	operatorConfigInformer operatorconfiginformerv1.OpenShiftControllerManagerOperatorConfigInformer,
+	operatorConfigInformer operatorinformersv1.OpenShiftControllerManagerInformer,
 	kubeInformersForOpenshiftControllerManager informers.SharedInformerFactory,
-	operatorConfigClient operatorconfigclientv1.OpenshiftcontrollermanagerV1Interface,
+	operatorConfigClient operatorclientv1.OperatorV1Interface,
 	kubeClient kubernetes.Interface,
 	recorder events.Recorder,
 ) *OpenShiftControllerManagerOperator {
@@ -77,41 +76,41 @@ func NewOpenShiftControllerManagerOperator(
 }
 
 func (c OpenShiftControllerManagerOperator) sync() error {
-	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().Get("instance", metav1.GetOptions{})
+	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagers().Get("instance", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 	switch operatorConfig.Spec.ManagementState {
-	case operatorv1.Unmanaged:
+	case operatorapiv1.Unmanaged:
 		// manage status
 		originalOperatorConfig := operatorConfig.DeepCopy()
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
-			Type:    operatorv1.OperatorStatusTypeAvailable,
-			Status:  operatorv1.ConditionUnknown,
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:    operatorapiv1.OperatorStatusTypeAvailable,
+			Status:  operatorapiv1.ConditionUnknown,
 			Reason:  "Unmanaged",
 			Message: "the controller manager is in an unmanaged state, therefore its availability is unknown.",
 		})
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
-			Type:    operatorv1.OperatorStatusTypeProgressing,
-			Status:  operatorv1.ConditionFalse,
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:    operatorapiv1.OperatorStatusTypeProgressing,
+			Status:  operatorapiv1.ConditionFalse,
 			Reason:  "Unmanaged",
 			Message: "the controller manager is in an unmanaged state, therefore no changes are being applied.",
 		})
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorv1.OperatorCondition{
-			Type:    operatorv1.OperatorStatusTypeFailing,
-			Status:  operatorv1.ConditionFalse,
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:    operatorapiv1.OperatorStatusTypeFailing,
+			Status:  operatorapiv1.ConditionFalse,
 			Reason:  "Unmanaged",
 			Message: "the controller manager is in an unmanaged state, therefore no operator actions are failing.",
 		})
 
 		if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
-			if _, err := c.operatorConfigClient.OpenShiftControllerManagerOperatorConfigs().UpdateStatus(operatorConfig); err != nil {
+			if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(operatorConfig); err != nil {
 				return err
 			}
 		}
 		return nil
 
-	case operatorv1.Removed:
+	case operatorapiv1.Removed:
 		// TODO probably need to watch until the NS is really gone
 		if err := c.kubeClient.CoreV1().Namespaces().Delete(targetNamespaceName, nil); err != nil && !apierrors.IsNotFound(err) {
 			return err

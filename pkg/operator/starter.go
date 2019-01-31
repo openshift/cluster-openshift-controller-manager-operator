@@ -13,15 +13,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorapiv1 "github.com/openshift/api/operator/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
+	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/apis/openshiftcontrollermanager/v1"
-	operatorconfigclient "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/clientset/versioned"
-	operatorclientinformers "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/generated/informers/externalversions"
 	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
@@ -32,7 +32,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	if err != nil {
 		return err
 	}
-	operatorConfigClient, err := operatorconfigclient.NewForConfig(ctx.KubeConfig)
+	operatorclient, err := operatorclient.NewForConfig(ctx.KubeConfig)
 	if err != nil {
 		return err
 	}
@@ -48,26 +48,26 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	v1helpers.EnsureOperatorConfigExists(
 		dynamicClient,
 		v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/operator-config.yaml"),
-		schema.GroupVersionResource{Group: v1.GroupName, Version: "v1", Resource: "openshiftcontrollermanageroperatorconfigs"},
+		schema.GroupVersionResource{Group: operatorapiv1.GroupName, Version: "v1", Resource: "openshiftcontrollermanagers"},
 	)
 
-	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
+	operatorConfigInformers := operatorinformers.NewSharedInformerFactory(operatorclient, 10*time.Minute)
 	kubeInformersForOpenshiftControllerManagerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(targetNamespaceName))
 	kubeInformersForOperatorNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(util.OperatorNamespaceName))
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 
 	operator := NewOpenShiftControllerManagerOperator(
 		os.Getenv("IMAGE"),
-		operatorConfigInformers.Openshiftcontrollermanager().V1().OpenShiftControllerManagerOperatorConfigs(),
+		operatorConfigInformers.Operator().V1().OpenShiftControllerManagers(),
 		kubeInformersForOpenshiftControllerManagerNamespace,
-		operatorConfigClient.OpenshiftcontrollermanagerV1(),
+		operatorclient.OperatorV1(),
 		kubeClient,
 		ctx.EventRecorder,
 	)
 
 	opClient := &operatorClient{
 		informers: operatorConfigInformers,
-		client:    operatorConfigClient.OpenshiftcontrollermanagerV1(),
+		client:    operatorclient.OperatorV1(),
 	}
 
 	configObserver := configobservationcontroller.NewConfigObserver(

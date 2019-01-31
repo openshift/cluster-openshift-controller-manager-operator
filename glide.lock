@@ -1,5 +1,5 @@
 hash: df0c756a6fc949808aebcbfee35bda15fae50957b0ba2295c0c3ff25de70dca2
-updated: 2019-01-28T14:37:33.05346989-05:00
+updated: 2019-01-30T12:59:29.281586081-05:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -196,7 +196,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 677153041bd22c1aa01fef67b68a8502ab1333d5
+  version: 0e93a752a8cbf93d6c542ab9eeb1a89c2a38f899
   subpackages:
   - apps
   - apps/v1
@@ -242,7 +242,7 @@ imports:
   - webconsole
   - webconsole/v1
 - name: github.com/openshift/client-go
-  version: 1540772775fa910515f0ff094d83ef41735d470b
+  version: 9d9c3dc826335abee846500602f450ba1bdb70ed
   subpackages:
   - config/clientset/versioned
   - config/clientset/versioned/scheme
@@ -253,7 +253,7 @@ imports:
   - config/informers/externalversions/internalinterfaces
   - config/listers/config/v1
 - name: github.com/openshift/library-go
-  version: 86f3eb4ba0e678146cf47f61010c34c638cea2d2
+  version: cef3bac303c956844aa15215630d26b1e0a1085a
   subpackages:
   - pkg/assets
   - pkg/config/client
@@ -281,7 +281,7 @@ imports:
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/pkg/profile
-  version: 22592cc4bae3572d59be8852c6980023e4c9dec5
+  version: 057bc52a47ec3c79498dda63f4a6f8298725e976
 - name: github.com/prometheus/client_golang
   version: e7e903064f5e9eb5da98208bae10b475d4db0f8c
   subpackages:
@@ -307,7 +307,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/spf13/cobra
-  version: 7547e83b2d85fd1893c7d76916f67689d761fecb
+  version: c439c4fa093711d42e1b01acb1235b52004753c1
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/ugorji/go
@@ -365,7 +365,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: e9657d882bb81064595ca3b56cbe2546bbabf7b1
+  version: 12d5545dc1cfa6047a286d5e853841b6471f4c19
   subpackages:
   - internal
   - internal/base
