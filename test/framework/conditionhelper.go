@@ -32,7 +32,7 @@ func hasExpectedClusterOperatorConditions(status *configv1.ClusterOperator) bool
 func ensureClusterOperatorStatusIsSet(logger Logger, client *Clientset) error {
 	var status *configv1.ClusterOperator
 	err := wait.Poll(1*time.Second, 2*time.Minute, func() (stop bool, err error) {
-		status, err = client.ClusterOperators().Get("openshift-controller-manager-operator", metav1.GetOptions{})
+		status, err = client.ClusterOperators().Get("openshift-controller-manager", metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			logger.Logf("waiting for the cluster operator resource: the resource does not exist")
 			return false, nil
