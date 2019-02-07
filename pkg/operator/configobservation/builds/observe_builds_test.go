@@ -184,7 +184,6 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 			}
 			listers := configobservation.Listers{
 				BuildConfigLister: configlistersv1.NewBuildLister(indexer),
-				BuildConfigSynced: func() bool { return true },
 			}
 			config := map[string]interface{}{}
 			observed, err := ObserveBuildControllerConfig(listers, events.NewInMemoryRecorder(""), config)

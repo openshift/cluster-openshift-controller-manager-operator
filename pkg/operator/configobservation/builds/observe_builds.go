@@ -59,11 +59,6 @@ func ObserveBuildControllerConfig(genericListers configobserver.Listers, recorde
 		}
 	}
 
-	if !listers.BuildConfigSynced() {
-		glog.Warning("builds.config.openshift.io not synced")
-		return prevObservedConfig, errs
-	}
-
 	// now gather the cluster config and turn it into the observed config
 	observedConfig := map[string]interface{}{}
 	buildConfig, err := listers.BuildConfigLister.Get("cluster")

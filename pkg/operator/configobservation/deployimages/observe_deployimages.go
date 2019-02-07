@@ -8,7 +8,6 @@ import (
 
 	"github.com/openshift/library-go/pkg/operator/configobserver"
 	"github.com/openshift/library-go/pkg/operator/events"
-
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
@@ -42,11 +41,6 @@ func ObserveControllerManagerImagesConfig(genericListers configobserver.Listers,
 		if err != nil {
 			return prevObservedConfig, append(errs, err)
 		}
-	}
-
-	if !listers.ConfigMapSynced() {
-		glog.Warning("configmaps not synced")
-		return prevObservedConfig, errs
 	}
 
 	// now gather the cluster config and turn it into the observed config
