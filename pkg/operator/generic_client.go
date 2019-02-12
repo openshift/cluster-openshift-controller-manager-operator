@@ -18,7 +18,7 @@ func (p *operatorClient) Informer() cache.SharedIndexInformer {
 }
 
 func (p *operatorClient) CurrentStatus() (operatorapiv1.OperatorStatus, error) {
-	instance, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("instance")
+	instance, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return operatorapiv1.OperatorStatus{}, err
 	}
@@ -27,7 +27,7 @@ func (p *operatorClient) CurrentStatus() (operatorapiv1.OperatorStatus, error) {
 }
 
 func (c *operatorClient) GetOperatorState() (*operatorapiv1.OperatorSpec, *operatorapiv1.OperatorStatus, string, error) {
-	instance, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("instance")
+	instance, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -36,7 +36,7 @@ func (c *operatorClient) GetOperatorState() (*operatorapiv1.OperatorSpec, *opera
 }
 
 func (c *operatorClient) UpdateOperatorSpec(resourceVersion string, spec *operatorapiv1.OperatorSpec) (*operatorapiv1.OperatorSpec, string, error) {
-	original, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("instance")
+	original, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return nil, "", err
 	}
@@ -52,7 +52,7 @@ func (c *operatorClient) UpdateOperatorSpec(resourceVersion string, spec *operat
 	return &ret.Spec.OperatorSpec, ret.ResourceVersion, nil
 }
 func (c *operatorClient) UpdateOperatorStatus(resourceVersion string, status *operatorapiv1.OperatorStatus) (*operatorapiv1.OperatorStatus, error) {
-	original, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("instance")
+	original, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return nil, err
 	}

@@ -317,7 +317,7 @@ func v3110OpenshiftControllerManagerLeaderRolebindingYaml() (*asset, error) {
 var _v3110OpenshiftControllerManagerOperatorConfigYaml = []byte(`apiVersion: operator.openshift.io/v1
 kind: OpenShiftControllerManager
 metadata:
-  name: instance
+  name: cluster
 spec:
   managementState: Managed
   imagePullSpec: openshift/origin-hypershift:latest

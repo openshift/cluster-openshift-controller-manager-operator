@@ -76,7 +76,7 @@ func NewOpenShiftControllerManagerOperator(
 }
 
 func (c OpenShiftControllerManagerOperator) sync() error {
-	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagers().Get("instance", metav1.GetOptions{})
+	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagers().Get("cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
