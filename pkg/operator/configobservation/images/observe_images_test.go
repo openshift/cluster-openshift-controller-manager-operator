@@ -31,7 +31,6 @@ func TestObserveRegistryConfig(t *testing.T) {
 
 	listers := configobservation.Listers{
 		ImageConfigLister: configlistersv1.NewImageLister(indexer),
-		ImageConfigSynced: func() bool { return true },
 	}
 
 	result, errs := ObserveInternalRegistryHostname(listers, events.NewInMemoryRecorder(""), map[string]interface{}{})

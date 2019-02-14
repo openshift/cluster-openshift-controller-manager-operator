@@ -32,12 +32,12 @@ func NewConfigObserver(
 			eventRecorder,
 			configobservation.Listers{
 				ImageConfigLister: configInformers.Config().V1().Images().Lister(),
-				ImageConfigSynced: configInformers.Config().V1().Images().Informer().HasSynced,
 				BuildConfigLister: configInformers.Config().V1().Builds().Lister(),
-				BuildConfigSynced: configInformers.Config().V1().Builds().Informer().HasSynced,
 				ConfigMapLister:   kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Lister(),
-				ConfigMapSynced:   kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
 				PreRunCachesSynced: []cache.InformerSynced{
+					configInformers.Config().V1().Images().Informer().HasSynced,
+					configInformers.Config().V1().Builds().Informer().HasSynced,
+					kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
 					configInformers.Config().V1().Images().Informer().HasSynced,
 					configInformers.Config().V1().Builds().Informer().HasSynced,
 					kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Informer().HasSynced,

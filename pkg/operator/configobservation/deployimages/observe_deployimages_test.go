@@ -103,7 +103,6 @@ func TestObserveClusterConfig(t *testing.T) {
 
 			listers := configobservation.Listers{
 				ConfigMapLister: corelistersv1.NewConfigMapLister(indexer),
-				ConfigMapSynced: func() bool { return true },
 			}
 			result, err := ObserveControllerManagerImagesConfig(listers, events.NewInMemoryRecorder(""), map[string]interface{}{})
 			if err != nil {
