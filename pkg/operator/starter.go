@@ -28,7 +28,7 @@ import (
 )
 
 func RunOperator(ctx *controllercmd.ControllerContext) error {
-	kubeClient, err := kubernetes.NewForConfig(ctx.KubeConfig)
+	kubeClient, err := kubernetes.NewForConfig(ctx.ProtoKubeConfig)
 	if err != nil {
 		return err
 	}
@@ -86,15 +86,15 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		ctx.EventRecorder,
 	)
 
-	operatorConfigInformers.Start(ctx.Context.Done())
-	kubeInformersForOpenshiftControllerManagerNamespace.Start(ctx.Context.Done())
-	kubeInformersForOperatorNamespace.Start(ctx.Context.Done())
-	configInformers.Start(ctx.Context.Done())
+	operatorConfigInformers.Start(ctx.Done())
+	kubeInformersForOpenshiftControllerManagerNamespace.Start(ctx.Done())
+	kubeInformersForOperatorNamespace.Start(ctx.Done())
+	configInformers.Start(ctx.Done())
 
-	go operator.Run(1, ctx.Context.Done())
-	go configObserver.Run(1, ctx.Context.Done())
-	go clusterOperatorStatus.Run(1, ctx.Context.Done())
+	go operator.Run(1, ctx.Done())
+	go configObserver.Run(1, ctx.Done())
+	go clusterOperatorStatus.Run(1, ctx.Done())
 
-	<-ctx.Context.Done()
+	<-ctx.Done()
 	return fmt.Errorf("stopped")
 }
