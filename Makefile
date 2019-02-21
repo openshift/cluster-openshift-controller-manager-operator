@@ -18,7 +18,7 @@ test: test-unit test-e2e
 
 test-unit:
 ifndef JUNITFILE
-	go test $(GOFLAGS) -race ./...
+	go test $(GOFLAGS) -race ./pkg/... ./cmd/...
 else
 ifeq (, $(shell which gotest2junit 2>/dev/null))
 $(error gotest2junit not found! Get it by `go get -u github.com/openshift/release/tools/gotest2junit`.)
