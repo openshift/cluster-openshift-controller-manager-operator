@@ -45,7 +45,7 @@ func ObserveControllerManagerImagesConfig(genericListers configobserver.Listers,
 
 	// now gather the cluster config and turn it into the observed config
 	observedConfig := map[string]interface{}{}
-	controllerManagerImagesConfigMap, err := listers.ConfigMapLister.ConfigMaps(util.OperatorNamespaceName).Get("openshift-controller-manager-images")
+	controllerManagerImagesConfigMap, err := listers.ConfigMapLister.ConfigMaps(util.OperatorNamespace).Get("openshift-controller-manager-images")
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("configmap/openshift-controller-manager-images: not found")
 		return observedConfig, errs

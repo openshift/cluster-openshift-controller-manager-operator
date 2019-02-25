@@ -22,15 +22,14 @@ import (
 	operatorapiv1 "github.com/openshift/api/operator/v1"
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformersv1 "github.com/openshift/client-go/operator/informers/externalversions/operator/v1"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
 const (
-	kubeAPIServerNamespaceName = "openshift-kube-apiserver"
-	targetNamespaceName        = "openshift-controller-manager"
-	workQueueKey               = "key"
-	workloadFailingCondition   = "WorkloadFailing"
+	workQueueKey             = "key"
+	workloadFailingCondition = "WorkloadFailing"
 )
 
 type OpenShiftControllerManagerOperator struct {
@@ -112,7 +111,7 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 
 	case operatorapiv1.Removed:
 		// TODO probably need to watch until the NS is really gone
-		if err := c.kubeClient.CoreV1().Namespaces().Delete(targetNamespaceName, nil); err != nil && !apierrors.IsNotFound(err) {
+		if err := c.kubeClient.CoreV1().Namespaces().Delete(util.TargetNamespace, nil); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		// TODO report that we are removing?
@@ -178,7 +177,7 @@ func (c *OpenShiftControllerManagerOperator) eventHandler() cache.ResourceEventH
 }
 
 // this set of namespaces will include things like logging and metrics which are used to drive
-var interestingNamespaces = sets.NewString(targetNamespaceName)
+var interestingNamespaces = sets.NewString(util.TargetNamespace)
 
 func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
@@ -187,7 +186,7 @@ func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.Resou
 			if !ok {
 				c.queue.Add(workQueueKey)
 			}
-			if ns.Name == targetNamespaceName {
+			if ns.Name == util.TargetNamespace {
 				c.queue.Add(workQueueKey)
 			}
 		},
@@ -196,7 +195,7 @@ func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.Resou
 			if !ok {
 				c.queue.Add(workQueueKey)
 			}
-			if ns.Name == targetNamespaceName {
+			if ns.Name == util.TargetNamespace {
 				c.queue.Add(workQueueKey)
 			}
 		},
@@ -214,7 +213,7 @@ func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.Resou
 					return
 				}
 			}
-			if ns.Name == targetNamespaceName {
+			if ns.Name == util.TargetNamespace {
 				c.queue.Add(workQueueKey)
 			}
 		},

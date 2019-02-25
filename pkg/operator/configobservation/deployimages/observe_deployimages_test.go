@@ -25,7 +25,7 @@ func TestObserveClusterConfig(t *testing.T) {
 			cm: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "openshift-controller-manager-images",
-					Namespace: util.OperatorNamespaceName,
+					Namespace: util.OperatorNamespace,
 				},
 				Data: map[string]string{
 					"builderImage":  "quay.io/sample/origin-builder:v4.0",
@@ -50,7 +50,7 @@ func TestObserveClusterConfig(t *testing.T) {
 			cm: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "openshift-controller-manager-images",
-					Namespace: util.OperatorNamespaceName,
+					Namespace: util.OperatorNamespace,
 				},
 				Data: map[string]string{
 					"builderImage": "quay.io/sample/origin-builder:v4.0",
@@ -70,7 +70,7 @@ func TestObserveClusterConfig(t *testing.T) {
 			cm: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "openshift-controller-manager-images",
-					Namespace: util.OperatorNamespaceName,
+					Namespace: util.OperatorNamespace,
 				},
 				Data: map[string]string{
 					"unknownField":  "quay.io/sample/origin-builder:v4.0",
@@ -84,7 +84,7 @@ func TestObserveClusterConfig(t *testing.T) {
 			cm: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shall-not-be-found",
-					Namespace: util.OperatorNamespaceName,
+					Namespace: util.OperatorNamespace,
 				},
 				Data: map[string]string{
 					"builderImage":  "quay.io/sample/origin-builder:v4.0",
