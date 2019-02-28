@@ -17,7 +17,4 @@ spec:
       regex: etcd_(debugging|disk|request|server).*
       sourceLabels:
       - __name__
-  namespaceSelector:
-    matchNames:
-    - openshift-controller-manager
   selector: {}
