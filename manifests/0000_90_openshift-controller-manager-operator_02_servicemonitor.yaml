@@ -18,9 +18,6 @@ spec:
       caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
       serverName: metrics.openshift-controller-manager-operator.svc
   jobLabel: component
-  namespaceSelector:
-    matchNames:
-    - openshift-controller-manager-operator
   selector:
     matchLabels:
       app: openshift-controller-manager-operator

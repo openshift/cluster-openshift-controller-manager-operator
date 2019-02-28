@@ -12,7 +12,9 @@ spec:
     tlsConfig:
       caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
       serverName: controller-manager.openshift-controller-manager.svc
-  namespaceSelector:
-    matchNames:
-    - openshift-controller-manager
+    metricRelabelings:
+    - action: drop
+      regex: etcd_(debugging|disk|request|server).*
+      sourceLabels:
+      - __name__
   selector: {}
