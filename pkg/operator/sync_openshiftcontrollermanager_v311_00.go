@@ -2,6 +2,7 @@ package operator
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -95,6 +96,11 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 			Reason:  "NoPodsAvailable",
 			Message: "no daemon pods available on any node.",
 		})
+	}
+	if actualDaemonSet.Status.NumberAvailable > 0 && actualDaemonSet.Status.UpdatedNumberScheduled == actualDaemonSet.Status.CurrentNumberScheduled {
+		if len(actualDaemonSet.Annotations[util.VersionAnnotation]) > 0 {
+			operatorConfig.Status.Version = actualDaemonSet.Annotations[util.VersionAnnotation]
+		}
 	}
 
 	var progressingMessages []string
@@ -200,6 +206,10 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appscli
 		level = 2
 	}
 	required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", level))
+	if required.Annotations == nil {
+		required.Annotations = map[string]string{}
+	}
+	required.Annotations[util.VersionAnnotation] = os.Getenv("RELEASE_VERSION")
 
 	return resourceapply.ApplyDaemonSet(client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus), forceRollout)
 }
