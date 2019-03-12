@@ -158,6 +158,7 @@ spec:
           secretName: serving-cert
       nodeSelector:
         node-role.kubernetes.io/master: ""
+      priorityClassName: "system-cluster-critical"
       tolerations:
       - operator: Exists
 `)

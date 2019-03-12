@@ -59,5 +59,6 @@ spec:
           name: openshift-controller-manager-operator-config
       nodeSelector:
         node-role.kubernetes.io/master: ""
+      priorityClassName: "system-cluster-critical"
       tolerations:
       - operator: Exists
