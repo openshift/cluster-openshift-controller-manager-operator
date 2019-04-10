@@ -80,9 +80,6 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
 	}
 
-	operatorConfig.Status.ObservedGeneration = operatorConfig.ObjectMeta.Generation
-	resourcemerge.SetDaemonSetGeneration(&operatorConfig.Status.Generations, actualDaemonSet)
-
 	// manage status
 	if actualDaemonSet.Status.NumberAvailable > 0 {
 		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
@@ -123,6 +120,9 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 			Message: strings.Join(progressingMessages, "\n"),
 		})
 	}
+
+	operatorConfig.Status.ObservedGeneration = operatorConfig.ObjectMeta.Generation
+	resourcemerge.SetDaemonSetGeneration(&operatorConfig.Status.Generations, actualDaemonSet)
 
 	if len(errors) > 0 {
 		message := ""
