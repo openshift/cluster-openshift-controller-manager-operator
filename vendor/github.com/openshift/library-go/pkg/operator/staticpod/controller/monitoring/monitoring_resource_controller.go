@@ -8,7 +8,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/management"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	operatorStatusMonitoringResourceControllerFailing = "MonitoringResourceControllerFailing"
-	controllerWorkQueueKey                            = "key"
-	manifestDir                                       = "pkg/operator/staticpod/controller/monitoring"
+	operatorStatusMonitoringResourceControllerDegraded = "MonitoringResourceControllerDegraded"
+	controllerWorkQueueKey                             = "key"
+	manifestDir                                        = "pkg/operator/staticpod/controller/monitoring"
 )
 
 type MonitoringResourceController struct {
@@ -127,7 +127,7 @@ func (c MonitoringResourceController) sync() error {
 
 	// NOTE: Failing to create the monitoring resources should not lead to operator failed state.
 	cond := operatorv1.OperatorCondition{
-		Type:   operatorStatusMonitoringResourceControllerFailing,
+		Type:   operatorStatusMonitoringResourceControllerDegraded,
 		Status: operatorv1.ConditionFalse,
 	}
 	if err != nil {
@@ -150,8 +150,8 @@ func (c *MonitoringResourceController) Run(workers int, stopCh <-chan struct{}) 
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting MonitoringResourceController")
-	defer glog.Infof("Shutting down MonitoringResourceController")
+	klog.Infof("Starting MonitoringResourceController")
+	defer klog.Infof("Shutting down MonitoringResourceController")
 	if !cache.WaitForCacheSync(stopCh, c.preRunCachesSynced...) {
 		return
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/management"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	operatorStatusBackingResourceControllerFailing = "BackingResourceControllerFailing"
-	controllerWorkQueueKey                         = "key"
-	manifestDir                                    = "pkg/operator/staticpod/controller/backingresource"
+	operatorStatusBackingResourceControllerDegraded = "BackingResourceControllerDegraded"
+	controllerWorkQueueKey                          = "key"
+	manifestDir                                     = "pkg/operator/staticpod/controller/backingresource"
 )
 
 // BackingResourceController is a controller that watches the operator config and updates
@@ -117,7 +117,7 @@ func (c BackingResourceController) sync() error {
 
 	// update failing condition
 	cond := operatorv1.OperatorCondition{
-		Type:   operatorStatusBackingResourceControllerFailing,
+		Type:   operatorStatusBackingResourceControllerDegraded,
 		Status: operatorv1.ConditionFalse,
 	}
 	if err != nil {
@@ -139,8 +139,8 @@ func (c *BackingResourceController) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting BackingResourceController")
-	defer glog.Infof("Shutting down BackingResourceController")
+	klog.Infof("Starting BackingResourceController")
+	defer klog.Infof("Shutting down BackingResourceController")
 	if !cache.WaitForCacheSync(stopCh, c.saListerSynced) {
 		return
 	}
