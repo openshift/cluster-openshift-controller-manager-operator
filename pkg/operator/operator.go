@@ -11,7 +11,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -175,9 +174,6 @@ func (c *OpenShiftControllerManagerOperator) eventHandler() cache.ResourceEventH
 		DeleteFunc: func(obj interface{}) { c.queue.Add(workQueueKey) },
 	}
 }
-
-// this set of namespaces will include things like logging and metrics which are used to drive
-var interestingNamespaces = sets.NewString(util.TargetNamespace)
 
 func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
