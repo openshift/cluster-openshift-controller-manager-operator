@@ -8,16 +8,16 @@ import (
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 )
 
-type operatorClient struct {
+type genericClient struct {
 	informers operatorinformers.SharedInformerFactory
 	client    operatorclientv1.OperatorV1Interface
 }
 
-func (p *operatorClient) Informer() cache.SharedIndexInformer {
+func (p *genericClient) Informer() cache.SharedIndexInformer {
 	return p.informers.Operator().V1().OpenShiftControllerManagers().Informer()
 }
 
-func (p *operatorClient) CurrentStatus() (operatorapiv1.OperatorStatus, error) {
+func (p *genericClient) CurrentStatus() (operatorapiv1.OperatorStatus, error) {
 	instance, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return operatorapiv1.OperatorStatus{}, err
@@ -26,8 +26,8 @@ func (p *operatorClient) CurrentStatus() (operatorapiv1.OperatorStatus, error) {
 	return instance.Status.OperatorStatus, nil
 }
 
-func (c *operatorClient) GetOperatorState() (*operatorapiv1.OperatorSpec, *operatorapiv1.OperatorStatus, string, error) {
-	instance, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
+func (p *genericClient) GetOperatorState() (*operatorapiv1.OperatorSpec, *operatorapiv1.OperatorStatus, string, error) {
+	instance, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -35,32 +35,32 @@ func (c *operatorClient) GetOperatorState() (*operatorapiv1.OperatorSpec, *opera
 	return &instance.Spec.OperatorSpec, &instance.Status.OperatorStatus, instance.ResourceVersion, nil
 }
 
-func (c *operatorClient) UpdateOperatorSpec(resourceVersion string, spec *operatorapiv1.OperatorSpec) (*operatorapiv1.OperatorSpec, string, error) {
-	original, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
+func (p *genericClient) UpdateOperatorSpec(resourceVersion string, spec *operatorapiv1.OperatorSpec) (*operatorapiv1.OperatorSpec, string, error) {
+	resource, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return nil, "", err
 	}
-	copy := original.DeepCopy()
-	copy.ResourceVersion = resourceVersion
-	copy.Spec.OperatorSpec = *spec
+	resourceCopy := resource.DeepCopy()
+	resourceCopy.ResourceVersion = resourceVersion
+	resourceCopy.Spec.OperatorSpec = *spec
 
-	ret, err := c.client.OpenShiftControllerManagers().Update(copy)
+	ret, err := p.client.OpenShiftControllerManagers().Update(resourceCopy)
 	if err != nil {
 		return nil, "", err
 	}
 
 	return &ret.Spec.OperatorSpec, ret.ResourceVersion, nil
 }
-func (c *operatorClient) UpdateOperatorStatus(resourceVersion string, status *operatorapiv1.OperatorStatus) (*operatorapiv1.OperatorStatus, error) {
-	original, err := c.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
+func (p *genericClient) UpdateOperatorStatus(resourceVersion string, status *operatorapiv1.OperatorStatus) (*operatorapiv1.OperatorStatus, error) {
+	resource, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return nil, err
 	}
-	copy := original.DeepCopy()
-	copy.ResourceVersion = resourceVersion
-	copy.Status.OperatorStatus = *status
+	resourceCopy := resource.DeepCopy()
+	resourceCopy.ResourceVersion = resourceVersion
+	resourceCopy.Status.OperatorStatus = *status
 
-	ret, err := c.client.OpenShiftControllerManagers().UpdateStatus(copy)
+	ret, err := p.client.OpenShiftControllerManagers().UpdateStatus(resourceCopy)
 	if err != nil {
 		return nil, err
 	}

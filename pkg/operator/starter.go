@@ -32,7 +32,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	if err != nil {
 		return err
 	}
-	operatorclient, err := operatorclient.NewForConfig(ctx.KubeConfig)
+	operatorClient, err := operatorclient.NewForConfig(ctx.KubeConfig)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		schema.GroupVersionResource{Group: operatorapiv1.GroupName, Version: "v1", Resource: "openshiftcontrollermanagers"},
 	)
 
-	operatorConfigInformers := operatorinformers.NewSharedInformerFactory(operatorclient, 10*time.Minute)
+	operatorConfigInformers := operatorinformers.NewSharedInformerFactory(operatorClient, 10*time.Minute)
 	kubeInformersForOpenshiftControllerManagerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(util.TargetNamespace))
 	kubeInformersForOperatorNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(util.OperatorNamespace))
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
@@ -60,14 +60,14 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		os.Getenv("IMAGE"),
 		operatorConfigInformers.Operator().V1().OpenShiftControllerManagers(),
 		kubeInformersForOpenshiftControllerManagerNamespace,
-		operatorclient.OperatorV1(),
+		operatorClient.OperatorV1(),
 		kubeClient,
 		ctx.EventRecorder,
 	)
 
-	opClient := &operatorClient{
+	opClient := &genericClient{
 		informers: operatorConfigInformers,
-		client:    operatorclient.OperatorV1(),
+		client:    operatorClient.OperatorV1(),
 	}
 
 	configObserver := configobservationcontroller.NewConfigObserver(
@@ -78,7 +78,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	)
 
 	versionGetter := &versionGetter{
-		openshiftControllerManagers: operatorclient.OperatorV1().OpenShiftControllerManagers(),
+		openshiftControllerManagers: operatorClient.OperatorV1().OpenShiftControllerManagers(),
 		version:                     os.Getenv("RELEASE_VERSION"),
 	}
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(

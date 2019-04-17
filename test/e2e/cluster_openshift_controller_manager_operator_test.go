@@ -24,30 +24,47 @@ func TestClusterBuildConfigObservation(t *testing.T) {
 	// make sure the operator is fully up
 	framework.MustEnsureClusterOperatorStatusIsSet(t, client)
 
-	buildConfig := &configv1.Build{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "cluster",
-		},
-		Spec: configv1.BuildSpec{
-			BuildDefaults: configv1.BuildDefaults{
-				DefaultProxy: &configv1.ProxySpec{
-					HTTPProxy: "testhttpproxy",
-				},
-			},
+	buildConfig, err := client.Builds().Get("cluster", metav1.GetOptions{})
+	if err != nil {
+		t.Logf("error getting openshift controller manager config: %v", err)
+	}
+
+	buildDefaults := configv1.BuildDefaults{
+		DefaultProxy: &configv1.ProxySpec{
+			HTTPProxy: "testhttpproxy",
 		},
 	}
 
-	if _, err := client.Builds().Create(buildConfig); err != nil {
-		t.Fatalf("could not create cluster build configuration: %v", err)
+	if buildConfig == nil {
+		buildConfig = &configv1.Build{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cluster",
+			},
+			Spec: configv1.BuildSpec{
+				BuildDefaults: buildDefaults,
+			},
+		}
+
+		if _, err := client.Builds().Create(buildConfig); err != nil {
+			t.Fatalf("could not create cluster build configuration: %v", err)
+		}
+	} else {
+		buildConfig.Spec.BuildDefaults = buildDefaults
+
+		if _, err := client.Builds().Update(buildConfig); err != nil {
+			t.Fatalf("could not create cluster build configuration: %v", err)
+		}
 	}
+
 	defer func() {
-		err := client.Builds().Delete(buildConfig.Name, &metav1.DeleteOptions{})
-		if err != nil {
+		buildConfig.Spec.BuildDefaults.DefaultProxy.HTTPProxy = ""
+
+		if _, err := client.Builds().Update(buildConfig); err != nil {
 			t.Logf("failed to clean up cluster build config: %v", err)
 		}
 	}()
 
-	err := wait.Poll(5*time.Second, 1*time.Minute, func() (bool, error) {
+	err = wait.Poll(5*time.Second, 1*time.Minute, func() (bool, error) {
 		cfg, err := client.OpenShiftControllerManagers().Get("cluster", metav1.GetOptions{})
 		if cfg == nil || err != nil {
 			t.Logf("error getting openshift controller manager config: %v", err)
