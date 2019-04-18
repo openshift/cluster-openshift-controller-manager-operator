@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,6 +16,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog"
 
 	operatorapiv1 "github.com/openshift/api/operator/v1"
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
@@ -131,8 +130,8 @@ func (c *OpenShiftControllerManagerOperator) Run(workers int, stopCh <-chan stru
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting OpenShiftControllerManagerOperator")
-	defer glog.Infof("Shutting down OpenShiftControllerManagerOperator")
+	klog.Infof("Starting OpenShiftControllerManagerOperator")
+	defer klog.Infof("Shutting down OpenShiftControllerManagerOperator")
 
 	// doesn't matter what workers say, only start one.
 	go wait.Until(c.runWorker, time.Second, stopCh)

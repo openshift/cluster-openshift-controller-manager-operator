@@ -22,7 +22,7 @@ func hasExpectedClusterOperatorConditions(status *configv1.ClusterOperator) bool
 		if c.Type == configv1.OperatorProgressing && c.Status == configv1.ConditionFalse {
 			gotProgressing = true
 		}
-		if c.Type == configv1.OperatorFailing && c.Status == configv1.ConditionFalse {
+		if c.Type == configv1.OperatorDegraded && c.Status == configv1.ConditionFalse {
 			gotFailing = true
 		}
 	}
