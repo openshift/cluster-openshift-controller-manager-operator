@@ -3,7 +3,7 @@ package builds
 import (
 	"fmt"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -63,7 +63,7 @@ func ObserveBuildControllerConfig(genericListers configobserver.Listers, recorde
 	observedConfig := map[string]interface{}{}
 	buildConfig, err := listers.BuildConfigLister.Get("cluster")
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("builds.config.openshift.io/cluster: not found")
+		klog.V(2).Infof("builds.config.openshift.io/cluster: not found")
 		return observedConfig, errs
 	}
 	if err != nil {

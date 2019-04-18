@@ -8,7 +8,7 @@ cd $( readlink -f "$( dirname "${0}" )/.." )
 # Setup temporary GOPATH so we can install go-bindata from vendor
 export GOPATH=$( mktemp -d )
 ln -s $( pwd )/vendor "${GOPATH}/src"
-go install "./vendor/github.com/jteeuwen/go-bindata/..."
+go install "./vendor/github.com/go-bindata/go-bindata/..."
 
 OUTDIR=${OUTDIR:-"."}
 output="${OUTDIR}/pkg/operator/v311_00_assets/bindata.go"

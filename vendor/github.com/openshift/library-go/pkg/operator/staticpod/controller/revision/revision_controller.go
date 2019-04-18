@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -25,7 +25,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
-const operatorStatusRevisionControllerFailing = "RevisionControllerFailing"
+const operatorStatusRevisionControllerDegraded = "RevisionControllerDegraded"
 const revisionControllerWorkQueueKey = "key"
 
 // RevisionController is a controller that watches a set of configmaps and secrets and them against a revision snapshot
@@ -102,7 +102,7 @@ func (c RevisionController) createRevisionIfNeeded(operatorSpec *operatorv1.Stat
 	c.eventRecorder.Eventf("RevisionTriggered", "new revision %d triggered by %q", nextRevision, reason)
 	if err := c.createNewRevision(nextRevision); err != nil {
 		cond := operatorv1.OperatorCondition{
-			Type:    "RevisionControllerFailing",
+			Type:    "RevisionControllerDegraded",
 			Status:  operatorv1.ConditionTrue,
 			Reason:  "ContentCreationError",
 			Message: err.Error(),
@@ -115,12 +115,12 @@ func (c RevisionController) createRevisionIfNeeded(operatorSpec *operatorv1.Stat
 	}
 
 	cond := operatorv1.OperatorCondition{
-		Type:   "RevisionControllerFailing",
+		Type:   "RevisionControllerDegraded",
 		Status: operatorv1.ConditionFalse,
 	}
 	if _, updated, updateError := v1helpers.UpdateStaticPodStatus(c.operatorConfigClient, v1helpers.UpdateStaticPodConditionFn(cond), func(operatorStatus *operatorv1.StaticPodOperatorStatus) error {
 		if operatorStatus.LatestAvailableRevision == nextRevision {
-			glog.Warningf("revision %d is unexpectedly already the latest available revision. This is a possible race!", nextRevision)
+			klog.Warningf("revision %d is unexpectedly already the latest available revision. This is a possible race!", nextRevision)
 			return fmt.Errorf("conflicting latestAvailableRevision %d", operatorStatus.LatestAvailableRevision)
 		}
 		operatorStatus.LatestAvailableRevision = nextRevision
@@ -160,8 +160,8 @@ func (c RevisionController) isLatestRevisionCurrent(revision int32) (bool, strin
 			existingData = existing.Data
 		}
 		if !equality.Semantic.DeepEqual(existingData, requiredData) {
-			if glog.V(4) {
-				glog.Infof("configmap %q changes for revision %d: %s", cm.Name, revision, resourceapply.JSONPatch(existing, required))
+			if klog.V(4) {
+				klog.Infof("configmap %q changes for revision %d: %s", cm.Name, revision, resourceapply.JSONPatch(existing, required))
 			}
 			configChanges = append(configChanges, fmt.Sprintf("configmap/%s has changed", cm.Name))
 		}
@@ -187,8 +187,8 @@ func (c RevisionController) isLatestRevisionCurrent(revision int32) (bool, strin
 			existingData = existing.Data
 		}
 		if !equality.Semantic.DeepEqual(existingData, requiredData) {
-			if glog.V(4) {
-				glog.Infof("secret %q changes for revision %d: %s", s.Name, revision, resourceapply.JSONPatch(existing, required))
+			if klog.V(4) {
+				klog.Infof("secret %q changes for revision %d: %s", s.Name, revision, resourceapply.JSONPatch(existing, required))
 			}
 			secretChanges = append(secretChanges, fmt.Sprintf("secret/%s has changed", s.Name))
 		}
@@ -264,7 +264,7 @@ func (c RevisionController) sync() error {
 
 	// update failing condition
 	cond := operatorv1.OperatorCondition{
-		Type:   operatorStatusRevisionControllerFailing,
+		Type:   operatorStatusRevisionControllerDegraded,
 		Status: operatorv1.ConditionFalse,
 	}
 	if err != nil {
@@ -286,8 +286,8 @@ func (c *RevisionController) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting RevisionController")
-	defer glog.Infof("Shutting down RevisionController")
+	klog.Infof("Starting RevisionController")
+	defer klog.Infof("Shutting down RevisionController")
 
 	// doesn't matter what workers say, only start one.
 	go wait.Until(c.runWorker, time.Second, stopCh)

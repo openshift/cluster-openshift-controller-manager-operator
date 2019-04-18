@@ -1,7 +1,7 @@
 package deployimages
 
 import (
-	"github.com/golang/glog"
+	"k8s.io/klog"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -47,7 +47,7 @@ func ObserveControllerManagerImagesConfig(genericListers configobserver.Listers,
 	observedConfig := map[string]interface{}{}
 	controllerManagerImagesConfigMap, err := listers.ConfigMapLister.ConfigMaps(util.OperatorNamespace).Get("openshift-controller-manager-images")
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("configmap/openshift-controller-manager-images: not found")
+		klog.V(2).Infof("configmap/openshift-controller-manager-images: not found")
 		return observedConfig, errs
 	}
 	if err != nil {

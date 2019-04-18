@@ -178,10 +178,6 @@ func TestPruneAPIResources(t *testing.T) {
 	for _, tc := range tests {
 		kubeClient := fake.NewSimpleClientset(tc.startingObjects...)
 		fakeStaticPodOperatorClient := v1helpers.NewFakeStaticPodOperatorClient(
-			&operatorv1.OperatorSpec{
-				ManagementState: operatorv1.Managed,
-			},
-			&operatorv1.OperatorStatus{},
 			&operatorv1.StaticPodOperatorSpec{
 				FailedRevisionLimit:    tc.failedLimit,
 				SucceededRevisionLimit: tc.succeededLimit,
@@ -194,7 +190,7 @@ func TestPruneAPIResources(t *testing.T) {
 				NodeStatuses: []operatorv1.NodeStatus{
 					{
 						NodeName:        "test-node-1",
-						CurrentRevision: 0,
+						CurrentRevision: 1,
 						TargetRevision:  0,
 					},
 				},
@@ -208,7 +204,7 @@ func TestPruneAPIResources(t *testing.T) {
 			NodeStatuses: []operatorv1.NodeStatus{
 				{
 					NodeName:        "test-node-1",
-					CurrentRevision: 0,
+					CurrentRevision: 1,
 					TargetRevision:  0,
 				},
 			},
@@ -394,10 +390,6 @@ func TestPruneDiskResources(t *testing.T) {
 			})
 
 			fakeStaticPodOperatorClient := v1helpers.NewFakeStaticPodOperatorClient(
-				&operatorv1.OperatorSpec{
-					ManagementState: operatorv1.Managed,
-				},
-				&operatorv1.OperatorStatus{},
 				&operatorv1.StaticPodOperatorSpec{
 					FailedRevisionLimit:    test.failedLimit,
 					SucceededRevisionLimit: test.succeededLimit,
@@ -410,7 +402,7 @@ func TestPruneDiskResources(t *testing.T) {
 					NodeStatuses: []operatorv1.NodeStatus{
 						{
 							NodeName:        "test-node-1",
-							CurrentRevision: 0,
+							CurrentRevision: 1,
 							TargetRevision:  0,
 						},
 					},
@@ -424,7 +416,7 @@ func TestPruneDiskResources(t *testing.T) {
 				NodeStatuses: []operatorv1.NodeStatus{
 					{
 						NodeName:        "test-node-1",
-						CurrentRevision: 0,
+						CurrentRevision: 1,
 						TargetRevision:  0,
 					},
 				},

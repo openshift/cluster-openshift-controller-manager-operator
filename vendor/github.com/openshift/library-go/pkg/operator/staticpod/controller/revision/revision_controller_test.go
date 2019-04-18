@@ -52,10 +52,6 @@ func TestRevisionController(t *testing.T) {
 			testName:        "operator-unmanaged",
 			targetNamespace: targetNamespace,
 			staticPodOperatorClient: v1helpers.NewFakeStaticPodOperatorClient(
-				&operatorv1.OperatorSpec{
-					ManagementState: operatorv1.Unmanaged,
-				},
-				&operatorv1.OperatorStatus{},
 				&operatorv1.StaticPodOperatorSpec{
 					OperatorSpec: operatorv1.OperatorSpec{
 						ManagementState: operatorv1.Unmanaged,
@@ -75,10 +71,6 @@ func TestRevisionController(t *testing.T) {
 			testName:        "missing-source-resources",
 			targetNamespace: targetNamespace,
 			staticPodOperatorClient: v1helpers.NewFakeStaticPodOperatorClient(
-				&operatorv1.OperatorSpec{
-					ManagementState: operatorv1.Managed,
-				},
-				&operatorv1.OperatorStatus{},
 				&operatorv1.StaticPodOperatorSpec{
 					OperatorSpec: operatorv1.OperatorSpec{
 						ManagementState: operatorv1.Managed,
@@ -100,7 +92,7 @@ func TestRevisionController(t *testing.T) {
 			testSecrets:     []RevisionResource{{Name: "test-secret"}},
 			expectSyncError: "synthetic requeue request",
 			validateStatus: func(t *testing.T, status *operatorv1.StaticPodOperatorStatus) {
-				if status.Conditions[0].Type != "RevisionControllerFailing" {
+				if status.Conditions[0].Type != "RevisionControllerDegraded" {
 					t.Errorf("expected status condition to be 'RevisionControllerFailing', got %v", status.Conditions[0].Type)
 				}
 				if status.Conditions[0].Reason != "ContentCreationError" {
@@ -115,10 +107,6 @@ func TestRevisionController(t *testing.T) {
 			testName:        "copy-resources",
 			targetNamespace: targetNamespace,
 			staticPodOperatorClient: v1helpers.NewFakeStaticPodOperatorClient(
-				&operatorv1.OperatorSpec{
-					ManagementState: operatorv1.Managed,
-				},
-				&operatorv1.OperatorStatus{},
 				&operatorv1.StaticPodOperatorSpec{
 					OperatorSpec: operatorv1.OperatorSpec{
 						ManagementState: operatorv1.Managed,
@@ -185,10 +173,6 @@ func TestRevisionController(t *testing.T) {
 			testName:        "copy-resources-opt",
 			targetNamespace: targetNamespace,
 			staticPodOperatorClient: v1helpers.NewFakeStaticPodOperatorClient(
-				&operatorv1.OperatorSpec{
-					ManagementState: operatorv1.Managed,
-				},
-				&operatorv1.OperatorStatus{},
 				&operatorv1.StaticPodOperatorSpec{
 					OperatorSpec: operatorv1.OperatorSpec{
 						ManagementState: operatorv1.Managed,
@@ -267,10 +251,6 @@ func TestRevisionController(t *testing.T) {
 			testName:        "copy-resources-opt-missing",
 			targetNamespace: targetNamespace,
 			staticPodOperatorClient: v1helpers.NewFakeStaticPodOperatorClient(
-				&operatorv1.OperatorSpec{
-					ManagementState: operatorv1.Managed,
-				},
-				&operatorv1.OperatorStatus{},
 				&operatorv1.StaticPodOperatorSpec{
 					OperatorSpec: operatorv1.OperatorSpec{
 						ManagementState: operatorv1.Managed,
@@ -331,10 +311,6 @@ func TestRevisionController(t *testing.T) {
 			testName:        "latest-revision-current",
 			targetNamespace: targetNamespace,
 			staticPodOperatorClient: v1helpers.NewFakeStaticPodOperatorClient(
-				&operatorv1.OperatorSpec{
-					ManagementState: operatorv1.Managed,
-				},
-				&operatorv1.OperatorStatus{},
 				&operatorv1.StaticPodOperatorSpec{
 					OperatorSpec: operatorv1.OperatorSpec{
 						ManagementState: operatorv1.Managed,
@@ -372,10 +348,6 @@ func TestRevisionController(t *testing.T) {
 			testName:        "latest-revision-current-optionals-missing",
 			targetNamespace: targetNamespace,
 			staticPodOperatorClient: v1helpers.NewFakeStaticPodOperatorClient(
-				&operatorv1.OperatorSpec{
-					ManagementState: operatorv1.Managed,
-				},
-				&operatorv1.OperatorStatus{},
 				&operatorv1.StaticPodOperatorSpec{
 					OperatorSpec: operatorv1.OperatorSpec{
 						ManagementState: operatorv1.Managed,
