@@ -134,6 +134,7 @@ spec:
         app: openshift-controller-manager
         controller-manager: "true"
     spec:
+      priorityClassName: system-node-critical 
       serviceAccountName: openshift-controller-manager-sa
       containers:
       - name: controller-manager
