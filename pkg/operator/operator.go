@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	workQueueKey             = "key"
-	workloadFailingCondition = "WorkloadFailing"
+	workQueueKey              = "key"
+	workloadDegradedCondition = "WorkloadDegraded"
 )
 
 type OpenShiftControllerManagerOperator struct {
@@ -94,7 +94,7 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 			Message: "the controller manager is in an unmanaged state, therefore no changes are being applied.",
 		})
 		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:    operatorapiv1.OperatorStatusTypeFailing,
+			Type:    operatorapiv1.OperatorStatusTypeDegraded,
 			Status:  operatorapiv1.ConditionFalse,
 			Reason:  "Unmanaged",
 			Message: "the controller manager is in an unmanaged state, therefore no operator actions are failing.",
