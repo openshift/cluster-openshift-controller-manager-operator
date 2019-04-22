@@ -130,14 +130,14 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 			message = message + err.Error() + "\n"
 		}
 		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:    workloadFailingCondition,
+			Type:    workloadDegradedCondition,
 			Status:  operatorapiv1.ConditionTrue,
 			Message: message,
 			Reason:  "SyncError",
 		})
 	} else {
 		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:   workloadFailingCondition,
+			Type:   workloadDegradedCondition,
 			Status: operatorapiv1.ConditionFalse,
 		})
 	}

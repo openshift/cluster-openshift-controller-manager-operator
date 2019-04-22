@@ -14,7 +14,7 @@ import (
 func hasExpectedClusterOperatorConditions(status *configv1.ClusterOperator) bool {
 	gotAvailable := false
 	gotProgressing := false
-	gotFailing := false
+	gotDegraded := false
 	for _, c := range status.Status.Conditions {
 		if c.Type == configv1.OperatorAvailable && c.Status == configv1.ConditionTrue {
 			gotAvailable = true
@@ -23,10 +23,10 @@ func hasExpectedClusterOperatorConditions(status *configv1.ClusterOperator) bool
 			gotProgressing = true
 		}
 		if c.Type == configv1.OperatorDegraded && c.Status == configv1.ConditionFalse {
-			gotFailing = true
+			gotDegraded = true
 		}
 	}
-	return gotAvailable && gotProgressing && gotFailing
+	return gotAvailable && gotProgressing && gotDegraded
 }
 
 func ensureClusterOperatorStatusIsSet(logger Logger, client *Clientset) error {
