@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  namespace: openshift-controller-manager
+  namespace: kube-system
   name: system:openshift:leader-locking-openshift-controller-manager
 roleRef:
   kind: Role
