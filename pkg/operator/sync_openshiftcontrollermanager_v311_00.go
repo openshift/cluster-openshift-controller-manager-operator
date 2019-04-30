@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
@@ -72,8 +73,13 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		errors = append(errors, fmt.Errorf("%q: %v", "client-ca", err))
 	}
 
+	_, serviceCAModified, err := manageOpenShiftServiceCAConfigMap_v311_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "openshift-service-ca", err))
+	}
+
 	forceRollout = forceRollout || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
-	forceRollout = forceRollout || configMapModified || clientCAModified
+	forceRollout = forceRollout || configMapModified || clientCAModified || serviceCAModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
@@ -187,6 +193,38 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 	}
 
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+}
+
+func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml"))
+	existing, err := client.ConfigMaps(util.TargetNamespace).Get("openshift-service-ca", metav1.GetOptions{})
+	// Ensure we create the ConfigMap for the registry CA, and that it has the right annotations
+	// Lifted from library-go for the most part
+	if apierrors.IsNotFound(err) {
+		new, err := client.ConfigMaps(util.TargetNamespace).Create(configMap)
+		if err != nil {
+			recorder.Eventf("ConfigMapCreateFailed", "Failed to create %s%s/%s%s: %v", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager", err)
+			return nil, true, err
+		}
+		recorder.Eventf("ConfigMapCreated", "Created %s%s/%s%s because it was missing", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager")
+		return new, true, nil
+	}
+
+	// Ensure the openshift-service-ca ConfigMap has the service.beta.openshift.io/inject-cabundle annotation
+	// Otherwise ignore the contents of the ConfigMap
+	modified := resourcemerge.BoolPtr(false)
+	existingCopy := existing.DeepCopy()
+	resourcemerge.EnsureObjectMeta(modified, &existingCopy.ObjectMeta, configMap.ObjectMeta)
+	if !*modified {
+		return existing, false, nil
+	}
+	updated, err := client.ConfigMaps(util.TargetNamespace).Update(existingCopy)
+	if err != nil {
+		recorder.Eventf("ConfigMapUpdateFailed", "Failed to update %s%s/%s%s: %v", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager", err)
+		return nil, true, err
+	}
+	recorder.Eventf("ConfigMapUpdated", "Updated %s%s/%s%s", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager")
+	return updated, true, nil
 }
 
 func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *operatorapiv1.OpenShiftControllerManager, imagePullSpec string, generationStatus []operatorapiv1.GenerationStatus, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
