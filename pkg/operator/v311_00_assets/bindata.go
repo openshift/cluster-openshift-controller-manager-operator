@@ -9,6 +9,7 @@
 // bindata/v3.11.0/openshift-controller-manager/leader-rolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/old-leader-role.yaml
 // bindata/v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml
+// bindata/v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml
 // bindata/v3.11.0/openshift-controller-manager/sa.yaml
 // bindata/v3.11.0/openshift-controller-manager/separate-sa-role.yaml
 // bindata/v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml
@@ -398,6 +399,31 @@ func v3110OpenshiftControllerManagerOldLeaderRolebindingYaml() (*asset, error) {
 	return a, nil
 }
 
+var _v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml = []byte(`kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: openshift-service-ca
+  namespace: openshift-controller-manager
+  annotations: 
+    service.beta.openshift.io/inject-cabundle: "true"
+data: {}
+`)
+
+func v3110OpenshiftControllerManagerOpenshiftServiceCaCmYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml, nil
+}
+
+func v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerOpenshiftServiceCaCmYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _v3110OpenshiftControllerManagerSaYaml = []byte(`apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -709,6 +735,7 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml":             v3110OpenshiftControllerManagerLeaderRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/old-leader-role.yaml":                v3110OpenshiftControllerManagerOldLeaderRoleYaml,
 	"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml":         v3110OpenshiftControllerManagerOldLeaderRolebindingYaml,
+	"v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml":        v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml,
 	"v3.11.0/openshift-controller-manager/sa.yaml":                             v3110OpenshiftControllerManagerSaYaml,
 	"v3.11.0/openshift-controller-manager/separate-sa-role.yaml":               v3110OpenshiftControllerManagerSeparateSaRoleYaml,
 	"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml":        v3110OpenshiftControllerManagerSeparateSaRolebindingYaml,
@@ -771,6 +798,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"leader-rolebinding.yaml":             {v3110OpenshiftControllerManagerLeaderRolebindingYaml, map[string]*bintree{}},
 			"old-leader-role.yaml":                {v3110OpenshiftControllerManagerOldLeaderRoleYaml, map[string]*bintree{}},
 			"old-leader-rolebinding.yaml":         {v3110OpenshiftControllerManagerOldLeaderRolebindingYaml, map[string]*bintree{}},
+			"openshift-service-ca-cm.yaml":        {v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml, map[string]*bintree{}},
 			"sa.yaml":                             {v3110OpenshiftControllerManagerSaYaml, map[string]*bintree{}},
 			"separate-sa-role.yaml":               {v3110OpenshiftControllerManagerSeparateSaRoleYaml, map[string]*bintree{}},
 			"separate-sa-rolebinding.yaml":        {v3110OpenshiftControllerManagerSeparateSaRolebindingYaml, map[string]*bintree{}},
