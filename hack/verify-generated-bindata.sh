@@ -16,4 +16,4 @@ trap "cleanup" EXIT
 
 
 OUTDIR=${TMP_DIR} ./hack/update-generated-bindata.sh
-diff -Naup {.,${TMP_DIR}}/pkg/operator/v311_00_assets/bindata.go
+diff -Naup {.,${TMP_DIR}}/pkg/operator/v410_00_assets/bindata.go

@@ -116,7 +116,7 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 		return nil
 	}
 
-	forceRequeue, err := syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig)
+	forceRequeue, err := syncOpenShiftControllerManager_v410_00_to_latest(c, operatorConfig)
 	if forceRequeue && err != nil {
 		c.queue.AddRateLimited(workQueueKey)
 	}

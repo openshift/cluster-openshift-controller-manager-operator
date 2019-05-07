@@ -23,33 +23,33 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v410_00_assets"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
-// syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
+// syncOpenShiftControllerManager_v410_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
 // most of the time the sync method will be good for a large span of minor versions
-func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManagerOperator, originalOperatorConfig *operatorapiv1.OpenShiftControllerManager) (bool, error) {
+func syncOpenShiftControllerManager_v410_00_to_latest(c OpenShiftControllerManagerOperator, originalOperatorConfig *operatorapiv1.OpenShiftControllerManager) (bool, error) {
 	errors := []error{}
 	var err error
 	operatorConfig := originalOperatorConfig.DeepCopy()
-	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.recorder, v311_00_assets.Asset,
-		"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/leader-role.yaml",
-		"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
-		"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
-		"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/sa.yaml",
-		"v3.11.0/openshift-controller-manager/svc.yaml",
-		"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
-		"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
+	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.recorder, v410_00_assets.Asset,
+		"v4.1.0/openshift-controller-manager/informer-clusterrole.yaml",
+		"v4.1.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
+		"v4.1.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
+		"v4.1.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
+		"v4.1.0/openshift-controller-manager/leader-role.yaml",
+		"v4.1.0/openshift-controller-manager/leader-rolebinding.yaml",
+		"v4.1.0/openshift-controller-manager/old-leader-role.yaml",
+		"v4.1.0/openshift-controller-manager/old-leader-rolebinding.yaml",
+		"v4.1.0/openshift-controller-manager/separate-sa-role.yaml",
+		"v4.1.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
+		"v4.1.0/openshift-controller-manager/sa.yaml",
+		"v4.1.0/openshift-controller-manager/svc.yaml",
+		"v4.1.0/openshift-controller-manager/servicemonitor-role.yaml",
+		"v4.1.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
 	)
-	resourcesThatForceRedeployment := sets.NewString("v3.11.0/openshift-controller-manager/sa.yaml")
+	resourcesThatForceRedeployment := sets.NewString("v4.1.0/openshift-controller-manager/sa.yaml")
 	forceRollout := false
 
 	for _, currResult := range directResourceResults {
@@ -63,17 +63,17 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		}
 	}
 
-	_, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder, operatorConfig)
+	_, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v410_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
 	// the kube-apiserver is the source of truth for client CA bundles
-	clientCAModified, err := manageOpenShiftControllerManagerClientCA_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
+	clientCAModified, err := manageOpenShiftControllerManagerClientCA_v410_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "client-ca", err))
 	}
 
-	_, serviceCAModified, err := manageOpenShiftServiceCAConfigMap_v311_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder)
+	_, serviceCAModified, err := manageOpenShiftServiceCAConfigMap_v410_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "openshift-service-ca", err))
 	}
@@ -83,7 +83,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, forceRollout)
+	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v410_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, forceRollout)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
 	}
@@ -162,7 +162,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	return false, nil
 }
 
-func manageOpenShiftControllerManagerClientCA_v311_00_to_latest(client coreclientv1.CoreV1Interface, recorder events.Recorder) (bool, error) {
+func manageOpenShiftControllerManagerClientCA_v410_00_to_latest(client coreclientv1.CoreV1Interface, recorder events.Recorder) (bool, error) {
 	const apiserverClientCA = "client-ca"
 	_, caChanged, err := resourceapply.SyncConfigMap(client, recorder, util.KubeAPIServerNamespace, apiserverClientCA, util.TargetNamespace, apiserverClientCA, []metav1.OwnerReference{})
 	if err != nil {
@@ -171,9 +171,9 @@ func manageOpenShiftControllerManagerClientCA_v311_00_to_latest(client coreclien
 	return caChanged, nil
 }
 
-func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
-	defaultConfig := v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/defaultconfig.yaml")
+func manageOpenShiftControllerManagerConfigMap_v410_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
+	configMap := resourceread.ReadConfigMapV1OrDie(v410_00_assets.MustAsset("v4.1.0/openshift-controller-manager/cm.yaml"))
+	defaultConfig := v410_00_assets.MustAsset("v4.1.0/openshift-controller-manager/defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.UnsupportedConfigOverrides.Raw, operatorConfig.Spec.ObservedConfig.Raw)
 	if err != nil {
 		return nil, false, err
@@ -195,8 +195,8 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
 }
 
-func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml"))
+func manageOpenShiftServiceCAConfigMap_v410_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	configMap := resourceread.ReadConfigMapV1OrDie(v410_00_assets.MustAsset("v4.1.0/openshift-controller-manager/openshift-service-ca-cm.yaml"))
 	existing, err := client.ConfigMaps(util.TargetNamespace).Get("openshift-service-ca", metav1.GetOptions{})
 	// Ensure we create the ConfigMap for the registry CA, and that it has the right annotations
 	// Lifted from library-go for the most part
@@ -227,8 +227,8 @@ func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.I
 	return updated, true, nil
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *operatorapiv1.OpenShiftControllerManager, imagePullSpec string, generationStatus []operatorapiv1.GenerationStatus, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
-	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
+func manageOpenShiftControllerManagerDeployment_v410_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *operatorapiv1.OpenShiftControllerManager, imagePullSpec string, generationStatus []operatorapiv1.GenerationStatus, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+	required := resourceread.ReadDaemonSetV1OrDie(v410_00_assets.MustAsset("v4.1.0/openshift-controller-manager/ds.yaml"))
 
 	if len(imagePullSpec) > 0 {
 		required.Spec.Template.Spec.Containers[0].Image = imagePullSpec

@@ -128,7 +128,7 @@ func TestProgressingCondition(t *testing.T) {
 				operatorConfigClient: controllerManagerOperatorClient.OperatorV1(),
 			}
 
-			_, _ = syncOpenShiftControllerManager_v311_00_to_latest(operator, operatorConfig)
+			_, _ = syncOpenShiftControllerManager_v410_00_to_latest(operator, operatorConfig)
 
 			result, err := controllerManagerOperatorClient.OperatorV1().OpenShiftControllerManagers().Get("cluster", metav1.GetOptions{})
 			if err != nil {
