@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -30,8 +31,11 @@ func TestClusterBuildConfigObservation(t *testing.T) {
 	}
 
 	buildDefaults := configv1.BuildDefaults{
-		DefaultProxy: &configv1.ProxySpec{
-			HTTPProxy: "testhttpproxy",
+		Env: []corev1.EnvVar{
+			{
+				Name:  "FOO",
+				Value: "BAR",
+			},
 		},
 	}
 
@@ -57,7 +61,7 @@ func TestClusterBuildConfigObservation(t *testing.T) {
 	}
 
 	defer func() {
-		buildConfig.Spec.BuildDefaults.DefaultProxy.HTTPProxy = ""
+		buildConfig.Spec.BuildDefaults.Env = []corev1.EnvVar{}
 
 		if _, err := client.Builds().Update(buildConfig); err != nil {
 			t.Logf("failed to clean up cluster build config: %v", err)
@@ -71,14 +75,14 @@ func TestClusterBuildConfigObservation(t *testing.T) {
 			return false, nil
 		}
 		observed := string(cfg.Spec.ObservedConfig.Raw)
-		if strings.Contains(observed, "testhttpproxy") {
+		if strings.Contains(observed, "FOO") {
 			return true, nil
 		}
-		t.Logf("observed config missing proxy config: %s", observed)
+		t.Logf("observed config missing env config: %s", observed)
 		return false, nil
 	})
 	if err != nil {
-		t.Fatalf("did not see cluster build proxy config propagated to openshift controller config: %v", err)
+		t.Fatalf("did not see cluster build env config propagated to openshift controller config: %v", err)
 	}
 }
 
