@@ -215,19 +215,9 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.NodeSelector, "build.buildOverrides.nodeSelector", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.Tolerations, "build.buildOverrides.tolerations", false, t)
 
-			expectedGitProxy := test.buildConfig.Spec.BuildDefaults.DefaultProxy
-			if test.buildConfig.Spec.BuildDefaults.GitProxy != nil {
-				expectedGitProxy = test.buildConfig.Spec.BuildDefaults.GitProxy
-			}
-			if expectedGitProxy != nil {
-				testNestedField(observed, expectedGitProxy.HTTPProxy, "build.buildDefaults.gitHTTPProxy", true, t)
-				testNestedField(observed, expectedGitProxy.HTTPSProxy, "build.buildDefaults.gitHTTPSProxy", true, t)
-				testNestedField(observed, expectedGitProxy.NoProxy, "build.buildDefaults.gitNoProxy", true, t)
-			} else {
-				testNestedField(observed, nil, "build.buildDefaults.gitHTTPProxy", false, t)
-				testNestedField(observed, nil, "build.buildDefaults.gitHTTPSProxy", false, t)
-				testNestedField(observed, nil, "build.buildDefaults.gitNoProxy", false, t)
-			}
+			testNestedField(observed, nil, "build.buildDefaults.gitHTTPProxy", false, t)
+			testNestedField(observed, nil, "build.buildDefaults.gitHTTPSProxy", false, t)
+			testNestedField(observed, nil, "build.buildDefaults.gitNoProxy", false, t)
 		})
 	}
 }

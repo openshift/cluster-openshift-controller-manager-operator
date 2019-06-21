@@ -70,27 +70,8 @@ func ObserveBuildControllerConfig(genericListers configobserver.Listers, recorde
 		return prevObservedConfig, append(errs, err)
 	}
 
-	gitProxy := buildConfig.Spec.BuildDefaults.GitProxy
-	// note, default proxy is used for git proxy if git proxy is not set.
-	// default proxy is also used for builds to pull images, but that configuration
-	// is setup by the build controller reading the build cluster config directly,
-	// this operator does not need to pass it to the controller process configuration.
-	defaultProxy := buildConfig.Spec.BuildDefaults.DefaultProxy
-	if gitProxy == nil {
-		gitProxy = defaultProxy
-	}
-
-	if gitProxy != nil {
-		if err = configobservation.ObserveField(observedConfig, gitProxy.HTTPProxy, "build.buildDefaults.gitHTTPProxy", false); err != nil {
-			return nil, append(errs, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitHTTPProxy", err))
-		}
-		if err = configobservation.ObserveField(observedConfig, gitProxy.HTTPSProxy, "build.buildDefaults.gitHTTPSProxy", false); err != nil {
-			return nil, append(errs, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitHTTPSProxy", err))
-		}
-		if err = configobservation.ObserveField(observedConfig, gitProxy.NoProxy, "build.buildDefaults.gitNoProxy", false); err != nil {
-			return nil, append(errs, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.gitNoProxy", err))
-		}
-	}
+	// NOTE proxies are now entirely handled by the build controller itself;
+	// but we still process the other defaults/overrides cluster config for builds here
 
 	if len(buildConfig.Spec.BuildDefaults.Env) > 0 {
 		if err = configobservation.ObserveField(observedConfig, buildConfig.Spec.BuildDefaults.Env, "build.buildDefaults.env", true); err != nil {
