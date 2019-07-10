@@ -1,5 +1,5 @@
-hash: 70d4d97b1d5d335264c827c2c1abd7e92ae9fe4660d6477f4694ee2dedb64057
-updated: 2019-05-21T15:47:20.821253354-04:00
+hash: 3485af96107175c2837a2386ecc64242390a1ce82483c82523adc8fa04a2f01b
+updated: 2019-07-10T09:56:33.384785357+02:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -99,11 +99,9 @@ imports:
 - name: github.com/evanphx/json-patch
   version: 5858425f75500d40c52783dce87d085a483ce135
 - name: github.com/getsentry/raven-go
-  version: 32a13797442ccb601b11761d74232773c1402d14
+  version: c977f96e109525a5d8fa10a19165341f601f38b0
 - name: github.com/ghodss/yaml
-  version: 25d852aebe32c875e9c044af3eef9c7dc6bc777f
-- name: github.com/go-bindata/go-bindata
-  version: b97c95f139f1fc4b1f5c57a61068bdd25462594d
+  version: c7ce16629ff4cd059ed96ed06419dd3856fd3577
 - name: github.com/go-openapi/jsonpointer
   version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
 - name: github.com/go-openapi/jsonreference
@@ -155,6 +153,8 @@ imports:
   version: 5c0e6c6ab1a0a9ef0a8822cba3a05d62f7dad941
 - name: github.com/json-iterator/go
   version: ab8a2e0c74be9d3be70b3184d9acc634935ded82
+- name: github.com/jteeuwen/go-bindata
+  version: a0ff2567cfb70903282db057e799fd826784d41d
 - name: github.com/mailru/easyjson
   version: 2f5df55504ebc322e4d52d34df6a1f5b503bf26d
   subpackages:
@@ -176,7 +176,7 @@ imports:
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
 - name: github.com/openshift/api
-  version: 924343028ee3dc875057861a5faa5b817ec87f5b
+  version: 1fc8159732e8f46a0f24c51358b3dfe2a08e4fa6
   subpackages:
   - apps
   - apps/v1
@@ -222,7 +222,7 @@ imports:
   - webconsole
   - webconsole/v1
 - name: github.com/openshift/client-go
-  version: f4b242dfe08529a11803996e325ab6dc127d4e1d
+  version: c44a8b61b9f46cd9e802384dfeda0bc9942db68a
   subpackages:
   - config/clientset/versioned
   - config/clientset/versioned/scheme
@@ -237,13 +237,17 @@ imports:
   - operator/clientset/versioned/scheme
   - operator/clientset/versioned/typed/operator/v1
   - operator/clientset/versioned/typed/operator/v1/fake
+  - operator/clientset/versioned/typed/operator/v1alpha1
+  - operator/clientset/versioned/typed/operator/v1alpha1/fake
   - operator/informers/externalversions
   - operator/informers/externalversions/internalinterfaces
   - operator/informers/externalversions/operator
   - operator/informers/externalversions/operator/v1
+  - operator/informers/externalversions/operator/v1alpha1
   - operator/listers/operator/v1
+  - operator/listers/operator/v1alpha1
 - name: github.com/openshift/library-go
-  version: b262054915f9601d663211a625695845c2c8ff57
+  version: f8abdcd57c468b7f49a91caa77212c12bd05fa9f
   subpackages:
   - cmd/crd-schema-gen/generator
   - pkg/assets
@@ -310,9 +314,9 @@ imports:
   subpackages:
   - mem
 - name: github.com/spf13/cobra
-  version: 67fc4837d267bc9bfd6e47f77783fcc3dffc68de
+  version: c439c4fa093711d42e1b01acb1235b52004753c1
 - name: github.com/spf13/pflag
-  version: 24fa6976df40757dce6aea913e7b81ade90530e1
+  version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: golang.org/x/crypto
   version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:
@@ -364,7 +368,7 @@ imports:
   - go/ast/astutil
   - imports
 - name: google.golang.org/appengine
-  version: 311d3c5cf9373249645db030e53c37c209a8b378
+  version: b2f4a3cf3c67576a2ee09e1fe62656a5086ce880
   subpackages:
   - internal
   - internal/base
@@ -411,7 +415,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: 20b71e5b60d756d3d2f80def009790325acc2b23
 - name: gopkg.in/yaml.v2
-  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 - name: k8s.io/api
   version: 40a48860b5abbba9aa891b02b32da429b08d96a0
   subpackages:
@@ -454,7 +458,7 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apiextensions-apiserver
-  version: 24a12c96ddf6b6d588163d93fd164371425d35f2
+  version: ee330a2a5c6d54e58af0defc868f1258a5c47422
   repo: https://github.com/openshift/kubernetes-apiextensions-apiserver
   subpackages:
   - pkg/apis/apiextensions
@@ -806,7 +810,7 @@ imports:
 - name: k8s.io/code-generator
   version: 50b561225d70b3eb79a1faafd3dfe7b1a62cbe73
 - name: k8s.io/component-base
-  version: 4a91899592f42b2f5859587cc5a676a5b94d2ee3
+  version: f0322db00a103489b85cb3835886741a3911636b
   subpackages:
   - cli/flag
   - logs
