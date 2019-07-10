@@ -29,7 +29,7 @@ import:
   - package: github.com/openshift/library-go
     version: master
     # others last
-  - package: github.com/go-bindata/go-bindata
-    version: master
+  - package: github.com/jteeuwen/go-bindata
+    version: a0ff2567cfb70903282db057e799fd826784d41d
   - package: k8s.io/gengo/args
     version: e17681d19d3ac4837a019ece36c2a0ec31ffe985
