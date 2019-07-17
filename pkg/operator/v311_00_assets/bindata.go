@@ -133,7 +133,7 @@ spec:
       - name: controller-manager
         image: ${IMAGE}
         imagePullPolicy: IfNotPresent
-        command: ["hypershift", "openshift-controller-manager"]
+        command: ["openshift-controller-manager", "start"]
         args:
         - "--config=/var/run/configmaps/config/config.yaml"
         resources:

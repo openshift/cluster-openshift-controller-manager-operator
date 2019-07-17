@@ -6,10 +6,10 @@ spec:
     from:
       kind: DockerImage
       name: docker.io/openshift/origin-cluster-openshift-controller-manager-operator:v4.0
-  - name: hypershift
+  - name: openshift-controller-manager
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-hypershift:v4.0
+      name: quay.io/openshift/origin-openshift-controller-manager:v4.2
   - name: docker-builder
     from:
       kind: DockerImage
