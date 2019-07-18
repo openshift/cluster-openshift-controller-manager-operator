@@ -42,7 +42,7 @@ spec:
         - name: RELEASE_VERSION
           value: "0.0.1-snapshot"
         - name: IMAGE
-          value: quay.io/openshift/origin-hypershift:v4.0
+          value: quay.io/openshift/origin-openshift-controller-manager:v4.2
         - name: POD_NAME
           valueFrom:
             fieldRef:
