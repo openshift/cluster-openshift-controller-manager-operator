@@ -12,6 +12,7 @@ type Listers struct {
 	ImageConfigLister  configlistersv1.ImageLister
 	BuildConfigLister  configlistersv1.BuildLister
 	ConfigMapLister    corelistersv1.ConfigMapLister
+	NetworkLister      configlistersv1.NetworkLister
 	PreRunCachesSynced []cache.InformerSynced
 }
 
