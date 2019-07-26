@@ -3,6 +3,7 @@ package configobservation
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -53,8 +54,9 @@ func ObserveField(observedConfig map[string]interface{}, val interface{}, fieldN
 	return err
 }
 
-// ConvertJSON returns the provided object's JSON-encoded representation. The object
-// must support JSON serialization and deserialization.
+// ConvertJSON is a function tailored to convert slices of various types into
+// slices of interface{}, it also works with object os various types, converting
+// them into map[string]interface{}. This function copies the original data.
 func ConvertJSON(o interface{}) (interface{}, error) {
 	if o == nil {
 		return nil, nil
@@ -63,9 +65,20 @@ func ConvertJSON(o interface{}) (interface{}, error) {
 	if err := json.NewEncoder(buf).Encode(o); err != nil {
 		return nil, err
 	}
-	ret := []interface{}{}
-	if err := json.NewDecoder(buf).Decode(&ret); err != nil {
+
+	jsonEncoded, err := ioutil.ReadAll(buf)
+	if err != nil {
 		return nil, err
 	}
-	return ret, nil
+
+	sliceRet := []interface{}{}
+	if err := json.Unmarshal(jsonEncoded, &sliceRet); err == nil {
+		return sliceRet, nil
+	}
+
+	mapRet := map[string]interface{}{}
+	if err := json.Unmarshal(jsonEncoded, &mapRet); err != nil {
+		return nil, err
+	}
+	return mapRet, err
 }
