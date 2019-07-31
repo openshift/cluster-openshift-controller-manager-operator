@@ -84,6 +84,10 @@ func ObserveBuildControllerConfig(genericListers configobserver.Listers, recorde
 		}
 	}
 
+	if err = configobservation.ObserveField(observedConfig, buildConfig.Spec.BuildDefaults.Resources, "build.buildDefaults.resources", true); err != nil {
+		return nil, append(errs, fmt.Errorf("failed to observe %s: %v", "build.buildDefaults.resources", err))
+	}
+
 	// set build overrides
 	if len(buildConfig.Spec.BuildOverrides.ImageLabels) > 0 {
 		if err = configobservation.ObserveField(observedConfig, buildConfig.Spec.BuildOverrides.ImageLabels, "build.buildOverrides.imageLabels", true); err != nil {

@@ -32,6 +32,26 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 			name: "no build config",
 		},
 		{
+			name: "valid build config with resource limits",
+			buildConfig: &configv1.Build{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+				Spec: configv1.BuildSpec{
+					BuildDefaults: configv1.BuildDefaults{
+						Resources: corev1.ResourceRequirements{
+							Limits: corev1.ResourceList{
+								corev1.ResourceMemory: memLimit,
+							},
+							Requests: corev1.ResourceList{
+								corev1.ResourceMemory: memLimit,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "valid build config",
 			buildConfig: &configv1.Build{
 				ObjectMeta: metav1.ObjectMeta{
@@ -211,6 +231,7 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 			expectedEnv := test.buildConfig.Spec.BuildDefaults.Env
 			testNestedField(observed, expectedEnv, "build.buildDefaults.env", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildDefaults.ImageLabels, "build.buildDefaults.imageLabels", false, t)
+			testNestedField(observed, test.buildConfig.Spec.BuildDefaults.Resources, "build.buildDefaults.resources", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.ImageLabels, "build.buildOverrides.imageLabels", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.NodeSelector, "build.buildOverrides.nodeSelector", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.Tolerations, "build.buildOverrides.tolerations", false, t)
