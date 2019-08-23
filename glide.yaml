@@ -21,13 +21,13 @@ import:
     version: origin-4.1-kubernetes-1.13.4
     # openshift second
   - package: github.com/openshift/api
-    version: master
+    version: release-4.1
   - package: github.com/openshift/client-go
-    version: master
+    version: release-4.1
   - package: github.com/openshift/library-go
-    version: master
+    version: release-4.1
     # others last
   - package: github.com/go-bindata/go-bindata
-    version: master
+    version: b97c95f139f1fc4b1f5c57a61068bdd25462594d
   - package: k8s.io/gengo/args
     version: e17681d19d3ac4837a019ece36c2a0ec31ffe985
