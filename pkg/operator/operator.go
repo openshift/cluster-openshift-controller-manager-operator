@@ -6,7 +6,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -22,6 +21,7 @@ import (
 	operatorinformersv1 "github.com/openshift/client-go/operator/informers/externalversions/operator/v1"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/management"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 )
 
@@ -69,6 +69,11 @@ func NewOpenShiftControllerManagerOperator(
 	// we only watch some namespaces
 	kubeInformersForOpenshiftControllerManager.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
 
+	// set this bit so the library-go code knows we opt-out from supporting the "unmanaged" state.
+	management.SetOperatorAlwaysManaged()
+	// set this bit so the library-go code know we do not support removing of the operand
+	management.SetOperatorNotRemovable()
+
 	return c
 }
 
@@ -77,43 +82,34 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 	if err != nil {
 		return err
 	}
+	// manage status
+	originalOperatorConfig := operatorConfig.DeepCopy()
+	reasonString := ""
+	messageString := ""
 	switch operatorConfig.Spec.ManagementState {
-	case operatorapiv1.Unmanaged:
-		// manage status
-		originalOperatorConfig := operatorConfig.DeepCopy()
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:    operatorapiv1.OperatorStatusTypeAvailable,
-			Status:  operatorapiv1.ConditionUnknown,
-			Reason:  "Unmanaged",
-			Message: "the controller manager is in an unmanaged state, therefore its availability is unknown.",
-		})
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:    operatorapiv1.OperatorStatusTypeProgressing,
-			Status:  operatorapiv1.ConditionFalse,
-			Reason:  "Unmanaged",
-			Message: "the controller manager is in an unmanaged state, therefore no changes are being applied.",
-		})
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:    operatorapiv1.OperatorStatusTypeDegraded,
-			Status:  operatorapiv1.ConditionFalse,
-			Reason:  "Unmanaged",
-			Message: "the controller manager is in an unmanaged state, therefore no operator actions are failing.",
-		})
-
-		if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
-			if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(operatorConfig); err != nil {
-				return err
-			}
-		}
-		return nil
-
 	case operatorapiv1.Removed:
-		// TODO probably need to watch until the NS is really gone
-		if err := c.kubeClient.CoreV1().Namespaces().Delete(util.TargetNamespace, nil); err != nil && !apierrors.IsNotFound(err) {
+		fallthrough
+		// we equally do not allow removed/unmanaged
+	case operatorapiv1.Unmanaged:
+		reasonString = fmt.Sprintf("%sUnsupported", string(operatorConfig.Spec.ManagementState))
+		messageString = fmt.Sprintf("the controller manager spec was set to %s state, but that is unsupported, and has no effect on this condition", string(operatorConfig.Spec.ManagementState))
+
+		// as we are ignoring / not supporting unmanaged/removed, we still process any other inputs to the sync/reconciliation
+		// unlike what we used to do
+	case operatorapiv1.Managed:
+		// we want to empty out the reason/message string if transitioning from the other phases so the default setting above is good
+	}
+
+	for _, condition := range operatorConfig.Status.Conditions {
+		// do not change the current status as part of noting that unmanaged/removed are not supported
+		condition.Reason = reasonString
+		condition.Message = messageString
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, condition)
+	}
+	if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
+		if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(operatorConfig); err != nil {
 			return err
 		}
-		// TODO report that we are removing?
-		return nil
 	}
 
 	forceRequeue, err := syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig)
