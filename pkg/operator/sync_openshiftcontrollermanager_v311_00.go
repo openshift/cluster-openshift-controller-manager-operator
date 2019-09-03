@@ -78,8 +78,13 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		errors = append(errors, fmt.Errorf("%q: %v", "openshift-service-ca", err))
 	}
 
+	_, globalCAModified, err := manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder)
+	if err != nil {
+		errors = append(errors, fmt.Errorf("%q: %v", "openshift-global-ca", err))
+	}
+
 	forceRollout = forceRollout || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
-	forceRollout = forceRollout || configMapModified || clientCAModified || serviceCAModified
+	forceRollout = forceRollout || configMapModified || clientCAModified || serviceCAModified || globalCAModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
@@ -224,6 +229,38 @@ func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.I
 		return nil, true, err
 	}
 	recorder.Eventf("ConfigMapUpdated", "Updated %s%s/%s%s", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager")
+	return updated, true, nil
+}
+
+func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-global-ca-cm.yaml"))
+	existing, err := client.ConfigMaps(util.TargetNamespace).Get("openshift-global-ca", metav1.GetOptions{})
+	// Ensure we create the ConfigMap for the global CA, and that it has the right labels
+	// Lifted from library-go for the most part
+	if apierrors.IsNotFound(err) {
+		new, err := client.ConfigMaps(util.TargetNamespace).Create(configMap)
+		if err != nil {
+			recorder.Eventf("ConfigMapCreateFailed", "Failed to create %s%s/%s%s: %v", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager", err)
+			return nil, true, err
+		}
+		recorder.Eventf("ConfigMapCreated", "Created %s%s/%s%s because it was missing", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager")
+		return new, true, nil
+	}
+
+	// Ensure the openshift-global-ca ConfigMap has the config.openshift.io/inject-trusted-cabundle Label
+	// Otherwise ignore the contents of the ConfigMap
+	modified := resourcemerge.BoolPtr(false)
+	existingCopy := existing.DeepCopy()
+	resourcemerge.EnsureObjectMeta(modified, &existingCopy.ObjectMeta, configMap.ObjectMeta)
+	if !*modified {
+		return existing, false, nil
+	}
+	updated, err := client.ConfigMaps(util.TargetNamespace).Update(existingCopy)
+	if err != nil {
+		recorder.Eventf("ConfigMapUpdateFailed", "Failed to update %s%s/%s%s: %v", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager", err)
+		return nil, true, err
+	}
+	recorder.Eventf("ConfigMapUpdated", "Updated %s%s/%s%s", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager")
 	return updated, true, nil
 }
 
