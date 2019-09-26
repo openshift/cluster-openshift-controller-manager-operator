@@ -1,0 +1,18 @@
+# This rolebinding binds role for creation of leader lock configmap for upgrades 4.2-> 4.3
+# cluster-policy-controller is split from openshift-controller-manager in 4.3
+# leader lock in openshift-controller-manager NamespaceSecurityAllocationController and in ClusterPolicyController
+# cluster-policy-controller container runs in ns openshift-kube-controller-manager static pod
+# The locks, role, and rolebinding can be removed in 4.4
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: system:openshift:leader-locking-cluster-policy-controller
+  namespace: openshift-kube-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: namespace-security-allocation-controller
+  namespace: openshift-infra
+roleRef:
+  kind: Role
+  name: system:openshift:leader-locking-cluster-policy-controller
+  apiGroup: rbac.authorization.k8s.io
