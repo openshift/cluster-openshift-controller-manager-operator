@@ -1,9 +1,6 @@
 GO ?=go
 GOPATH ?=$(shell $(GO) env GOPATH)
-gopath_list :=$(subst :, ,$(strip $(GOPATH)))
-# Use every path in GOPATH to try to remove it as a prefix of current dir to determine the package name.
-# If the prefix is not removed on subtitution, filter-out unchanged paths.
-GO_PACKAGE ?=$(strip $(filter-out $(abspath .),$(foreach p,$(gopath_list),$(patsubst $(p)/src/%,%,$(abspath .)))))
+GO_PACKAGE ?=$(shell $(GO) list -e -f '{{ .ImportPath }}' . || echo 'no_package_detected')
 
 GOOS ?=$(shell $(GO) env GOOS)
 GOHOSTOS ?=$(shell $(GO) env GOHOSTOS)
@@ -15,7 +12,7 @@ GOFMT ?=gofmt
 GOFMT_FLAGS ?=-s -l
 GOLINT ?=golint
 
-GO_FILES ?=$(shell find . -name '*.go' -not -path './vendor/*' -print)
+GO_FILES ?=$(shell find . -name '*.go' -not -path '*/vendor/*' -not -path '*/_output/*' -print)
 GO_PACKAGES ?=./...
 GO_TEST_PACKAGES ?=$(GO_PACKAGES)
 
