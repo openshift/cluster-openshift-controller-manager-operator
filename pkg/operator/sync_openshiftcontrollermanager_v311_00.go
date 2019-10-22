@@ -48,8 +48,6 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		"v3.11.0/openshift-controller-manager/svc.yaml",
 		"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
 		"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/cluster-policy-controller-leader-role.yaml",
-		"v3.11.0/openshift-controller-manager/cluster-policy-controller-leader-rolebinding.yaml",
 	)
 	resourcesThatForceRedeployment := sets.NewString("v3.11.0/openshift-controller-manager/sa.yaml")
 	forceRollout := false
