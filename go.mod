@@ -35,9 +35,9 @@ require (
 	github.com/natefinch/lumberjack v2.0.0+incompatible // indirect
 	github.com/onsi/ginkgo v1.10.2 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
-	github.com/openshift/api v0.0.0-20190822120857-58aab2885e38
+	github.com/openshift/api v3.9.1-0.20190927182313-d4a64ec2cbd8+incompatible
 	github.com/openshift/client-go v0.0.0-20190813201236-5a5508328169
-	github.com/openshift/library-go v0.0.0-20191022102319-a308f2050b15
+	github.com/openshift/library-go v0.0.0-20191021215349-3369b6beaedc
 	github.com/pborman/uuid v0.0.0-20150603214016-ca53cad383ca // indirect
 	github.com/pkg/profile v1.3.0 // indirect
 	github.com/prometheus/client_golang v0.9.1

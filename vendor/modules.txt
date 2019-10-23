@@ -82,7 +82,7 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
 github.com/munnerz/goautoneg
-# github.com/openshift/api v0.0.0-20190822120857-58aab2885e38
+# github.com/openshift/api v3.9.1-0.20190927182313-d4a64ec2cbd8+incompatible
 github.com/openshift/api/config/v1
 github.com/openshift/api/operator/v1
 github.com/openshift/api/operator/v1alpha1
@@ -150,7 +150,7 @@ github.com/openshift/client-go/operator/informers/externalversions/operator/v1al
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1alpha1/fake
 github.com/openshift/client-go/operator/listers/operator/v1alpha1
-# github.com/openshift/library-go v0.0.0-20191022102319-a308f2050b15
+# github.com/openshift/library-go v0.0.0-20191021215349-3369b6beaedc
 github.com/openshift/library-go/alpha-build-machinery
 github.com/openshift/library-go/pkg/controller/controllercmd
 github.com/openshift/library-go/pkg/operator/events
