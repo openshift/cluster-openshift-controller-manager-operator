@@ -153,7 +153,8 @@ github.com/openshift/client-go/operator/informers/externalversions/operator/v1al
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1alpha1/fake
 github.com/openshift/client-go/operator/listers/operator/v1alpha1
-# github.com/openshift/library-go v0.0.0-20190815190847-97bb8b699c92 => github.com/openshift/library-go v0.0.0-20190815190847-97bb8b699c92
+# github.com/openshift/library-go v0.0.0-20191021215349-3369b6beaedc
+github.com/openshift/library-go/alpha-build-machinery
 github.com/openshift/library-go/pkg/controller/controllercmd
 github.com/openshift/library-go/pkg/operator/events
 github.com/openshift/library-go/pkg/operator/management
@@ -166,6 +167,13 @@ github.com/openshift/library-go/pkg/operator/v1helpers
 github.com/openshift/library-go/pkg/operator/resourcesynccontroller
 github.com/openshift/library-go/pkg/operator/configobserver
 github.com/openshift/library-go/pkg/operator/configobserver/network
+github.com/openshift/library-go/alpha-build-machinery/make
+github.com/openshift/library-go/alpha-build-machinery/make/lib
+github.com/openshift/library-go/alpha-build-machinery/make/targets
+github.com/openshift/library-go/alpha-build-machinery/make/targets/golang
+github.com/openshift/library-go/alpha-build-machinery/make/targets/openshift
+github.com/openshift/library-go/alpha-build-machinery/make/targets/openshift/operator
+github.com/openshift/library-go/alpha-build-machinery/scripts
 github.com/openshift/library-go/pkg/config/client
 github.com/openshift/library-go/pkg/config/configdefaults
 github.com/openshift/library-go/pkg/config/leaderelection
