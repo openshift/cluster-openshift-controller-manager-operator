@@ -38,7 +38,7 @@ require (
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/openshift/api v0.0.0-20190822120857-58aab2885e38
 	github.com/openshift/client-go v0.0.0-20190813201236-5a5508328169
-	github.com/openshift/library-go v0.0.0-20190815190847-97bb8b699c92
+	github.com/openshift/library-go v0.0.0-20191021215349-3369b6beaedc
 	github.com/pborman/uuid v0.0.0-20150603214016-ca53cad383ca // indirect
 	github.com/pkg/profile v1.3.0 // indirect
 	github.com/prometheus/client_golang v0.9.1
@@ -76,7 +76,6 @@ replace (
 	github.com/jteeuwen/go-bindata => github.com/jteeuwen/go-bindata v0.0.0-20151023091102-a0ff2567cfb7
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20190822120857-58aab2885e38
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20190813201236-5a5508328169
-	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20190815190847-97bb8b699c92
 	k8s.io/api => k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190313205120-d7deff9243b1
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20190313205120-8b27c41bdbb1
