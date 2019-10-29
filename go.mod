@@ -34,7 +34,7 @@ require (
 	k8s.io/client-go v0.0.0-20191016111102-bec269661e48
 	k8s.io/component-base v0.0.0-20191016111319-039242c015a9
 	k8s.io/klog v0.4.0
-	k8s.io/kube-aggregator v0.0.0-20190314000639-da8327669ac5 // indirect
+	k8s.io/kube-aggregator v0.0.0-20191016112429-9587704a8ad4 // indirect
 )
 
 replace (
@@ -49,5 +49,5 @@ replace (
 	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190311093542-50b561225d70
 	k8s.io/component-base => k8s.io/component-base v0.0.0-20191016111319-039242c015a9
 	k8s.io/gengo => k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.0.0-20190314000639-da8327669ac5
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.0.0-20191016112429-9587704a8ad4
 )
