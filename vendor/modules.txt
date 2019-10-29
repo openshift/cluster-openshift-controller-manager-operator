@@ -174,7 +174,7 @@ github.com/openshift/client-go/operator/informers/externalversions/operator/v1al
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1alpha1/fake
 github.com/openshift/client-go/operator/listers/operator/v1alpha1
-# github.com/openshift/library-go v0.0.0-20191021215349-3369b6beaedc
+# github.com/openshift/library-go v0.0.0-20191029093732-d368763acf52
 github.com/openshift/library-go/alpha-build-machinery
 github.com/openshift/library-go/pkg/controller/controllercmd
 github.com/openshift/library-go/pkg/operator/events
