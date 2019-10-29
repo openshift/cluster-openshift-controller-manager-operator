@@ -241,10 +241,10 @@ github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGV
 github.com/onsi/gomega v1.5.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.7.0 h1:XPnZz8VVBHjVsy1vzJmRwIcSwiUO+JFfrv/xGiigmME=
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
-github.com/openshift/api v0.0.0-20190822120857-58aab2885e38 h1:3XmmKC5Tdv7PAj2qMSR+6gjc9Dac5BpjlELEvPrVwJ4=
-github.com/openshift/api v0.0.0-20190822120857-58aab2885e38/go.mod h1:dh9o4Fs58gpFXGSYfnVxGR9PnV53I8TW84pQaJDdGiY=
-github.com/openshift/client-go v0.0.0-20190813201236-5a5508328169 h1:rQZe9w0+xEmsJ7sqWrDLji/9vuMqjamMrhwVkKVGIqc=
-github.com/openshift/client-go v0.0.0-20190813201236-5a5508328169/go.mod h1:6rzn+JTr7+WYS2E1TExP4gByoABxMznR6y2SnUIkmxk=
+github.com/openshift/api v3.9.1-0.20191028134408-abf28f93703b+incompatible h1:1mW1j1mik2++Z+ehEaqm2xcWGiGYJUK8SdbkTgTS+N4=
+github.com/openshift/api v3.9.1-0.20191028134408-abf28f93703b+incompatible/go.mod h1:dh9o4Fs58gpFXGSYfnVxGR9PnV53I8TW84pQaJDdGiY=
+github.com/openshift/client-go v0.0.0-20191022152013-2823239d2298 h1:wg5VfVIEtKI0yaBNeHNM1N01EjwTGg7JW0Gp+jqnYGQ=
+github.com/openshift/client-go v0.0.0-20191022152013-2823239d2298/go.mod h1:6rzn+JTr7+WYS2E1TExP4gByoABxMznR6y2SnUIkmxk=
 github.com/openshift/library-go v0.0.0-20191021215349-3369b6beaedc h1:rooYHkt/+du7P5oBaAJBmWoOVjXVzKf4MSzmqLUIJjw=
 github.com/openshift/library-go v0.0.0-20191021215349-3369b6beaedc/go.mod h1:NBttNjZpWwup/nthuLbPAPSYC8Qyo+BBK5bCtFoyYjo=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
