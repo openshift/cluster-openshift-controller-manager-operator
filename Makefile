@@ -13,7 +13,7 @@ IMAGE_REGISTRY?=registry.svc.ci.openshift.org
 
 # Set crd-schema-gen variables
 CONTROLLER_GEN_VERSION :=v0.2.1
-CRD_SCHEMA_GEN_APIS :=./vendor/github.com/openshift/api/operator/v1
+CRD_APIS :=./vendor/github.com/openshift/api/operator/v1
 
 GO_TEST_PACKAGES :=./pkg/... ./cmd/...
 
