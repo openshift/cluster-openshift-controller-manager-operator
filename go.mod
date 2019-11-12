@@ -15,9 +15,9 @@ require (
 	github.com/jteeuwen/go-bindata v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo v1.10.2 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
-	github.com/openshift/api v3.9.1-0.20191028134408-abf28f93703b+incompatible
+	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
 	github.com/openshift/client-go v0.0.0-20191022152013-2823239d2298
-	github.com/openshift/library-go v0.0.0-20191029093732-d368763acf52
+	github.com/openshift/library-go v0.0.0-20191112105149-ba79521951b5
 	github.com/pkg/profile v1.3.0 // indirect
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/common v0.2.0 // indirect
@@ -39,7 +39,7 @@ require (
 
 replace (
 	github.com/jteeuwen/go-bindata => github.com/jteeuwen/go-bindata v0.0.0-20151023091102-a0ff2567cfb7
-	github.com/openshift/api => github.com/openshift/api v3.9.1-0.20191028134408-abf28f93703b+incompatible
+	github.com/openshift/api => github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20191022152013-2823239d2298
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
