@@ -5,6 +5,8 @@ metadata:
   name: openshift-controller-manager-operator
   labels:
     app: openshift-controller-manager-operator
+  annotations:
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
 spec:
   replicas: 1
   selector:
