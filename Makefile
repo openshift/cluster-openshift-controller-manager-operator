@@ -6,14 +6,9 @@ include $(addprefix ./vendor/github.com/openshift/library-go/alpha-build-machine
 	golang.mk \
 	targets/openshift/bindata.mk \
 	targets/openshift/images.mk \
-	targets/openshift/crd-schema-gen.mk \
 )
 
 IMAGE_REGISTRY?=registry.svc.ci.openshift.org
-
-# Set crd-schema-gen variables
-CONTROLLER_GEN_VERSION :=v0.2.1
-CRD_APIS :=./vendor/github.com/openshift/api/operator/v1
 
 GO_TEST_PACKAGES :=./pkg/... ./cmd/...
 
@@ -36,20 +31,7 @@ $(call build-image,ocp-cluster-openshift-controller-manager-operator,$(IMAGE_REG
 # and also hooked into {update,verify}-generated for broader integration.
 $(call add-bindata,v3.11.0,./bindata/v3.11.0/...,bindata,v311_00_assets,pkg/operator/v311_00_assets/bindata.go)
 
-# This will call a macro called "add-crd-gen" will will generate crd manifests based on the parameters:
-# $1 - target name
-# $2 - apis
-# $3 - manifests
-# $4 - output
-$(call add-crd-gen,manifests,$(CRD_APIS),./manifests,./manifests)
-
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: GO_TEST_FLAGS += -v -count=1
 test-e2e: test-unit
 .PHONY: test-e2e
-
-update-codegen: update-codegen-crds
-.PHONY: update-codegen
-
-verify-codegen: verify-codegen-crds
-.PHONY: verif-codegen
