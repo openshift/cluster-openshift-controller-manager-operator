@@ -4,6 +4,7 @@ metadata:
   name: openshift-controller-manager
   annotations:
     openshift.io/node-selector: ""
+    exclude.release.openshift.io/internal-openshift-hosted: "true"
   labels:
     openshift.io/run-level: "1"
     openshift.io/cluster-monitoring: "true"
