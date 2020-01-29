@@ -33,7 +33,8 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	errors := []error{}
 	var err error
 	operatorConfig := originalOperatorConfig.DeepCopy()
-	directResourceResults := resourceapply.ApplyDirectly(c.kubeClient, c.recorder, v311_00_assets.Asset,
+	clientHolder := resourceapply.NewKubeClientHolder(c.kubeClient)
+	directResourceResults := resourceapply.ApplyDirectly(clientHolder, c.recorder, v311_00_assets.Asset,
 		"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
 		"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
 		"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",

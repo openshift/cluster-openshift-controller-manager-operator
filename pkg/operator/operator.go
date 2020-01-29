@@ -1,6 +1,7 @@
 package operator
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -121,7 +122,7 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 }
 
 // Run starts the openshift-controller-manager and blocks until stopCh is closed.
-func (c *OpenShiftControllerManagerOperator) Run(workers int, stopCh <-chan struct{}) {
+func (c *OpenShiftControllerManagerOperator) Run(ctx context.Context, workers int) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
@@ -129,12 +130,11 @@ func (c *OpenShiftControllerManagerOperator) Run(workers int, stopCh <-chan stru
 	defer klog.Infof("Shutting down OpenShiftControllerManagerOperator")
 
 	// doesn't matter what workers say, only start one.
-	go wait.Until(c.runWorker, time.Second, stopCh)
-
-	<-stopCh
+	go wait.UntilWithContext(ctx, c.runWorker, time.Second)
+	<-ctx.Done()
 }
 
-func (c *OpenShiftControllerManagerOperator) runWorker() {
+func (c *OpenShiftControllerManagerOperator) runWorker(_ context.Context) {
 	for c.processNextWorkItem() {
 	}
 }
