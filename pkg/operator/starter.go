@@ -1,6 +1,7 @@
 package operator
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -21,16 +22,16 @@ import (
 	"github.com/openshift/library-go/pkg/operator/status"
 )
 
-func RunOperator(ctx *controllercmd.ControllerContext) error {
-	kubeClient, err := kubernetes.NewForConfig(ctx.ProtoKubeConfig)
+func RunOperator(ctx context.Context, controllerConfig *controllercmd.ControllerContext) error {
+	kubeClient, err := kubernetes.NewForConfig(controllerConfig.ProtoKubeConfig)
 	if err != nil {
 		return err
 	}
-	operatorClient, err := operatorclient.NewForConfig(ctx.KubeConfig)
+	operatorClient, err := operatorclient.NewForConfig(controllerConfig.KubeConfig)
 	if err != nil {
 		return err
 	}
-	configClient, err := configclient.NewForConfig(ctx.KubeConfig)
+	configClient, err := configclient.NewForConfig(controllerConfig.KubeConfig)
 	if err != nil {
 		return err
 	}
@@ -46,7 +47,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		kubeInformersForOpenshiftControllerManagerNamespace,
 		operatorClient.OperatorV1(),
 		kubeClient,
-		ctx.EventRecorder,
+		controllerConfig.EventRecorder,
 	)
 
 	opClient := &genericClient{
@@ -58,7 +59,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		opClient,
 		configInformers,
 		kubeInformersForOperatorNamespace,
-		ctx.EventRecorder,
+		controllerConfig.EventRecorder,
 	)
 
 	versionGetter := &versionGetter{
@@ -78,7 +79,7 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 		configInformers.Config().V1().ClusterOperators(),
 		opClient,
 		versionGetter,
-		ctx.EventRecorder,
+		controllerConfig.EventRecorder,
 	)
 
 	operatorConfigInformers.Start(ctx.Done())
@@ -86,9 +87,9 @@ func RunOperator(ctx *controllercmd.ControllerContext) error {
 	kubeInformersForOperatorNamespace.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
 
-	go operator.Run(1, ctx.Done())
-	go configObserver.Run(1, ctx.Done())
-	go clusterOperatorStatus.Run(1, ctx.Done())
+	go operator.Run(ctx, 1)
+	go configObserver.Run(ctx, 1)
+	go clusterOperatorStatus.Run(ctx, 1)
 
 	<-ctx.Done()
 	return fmt.Errorf("stopped")
