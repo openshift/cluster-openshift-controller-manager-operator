@@ -143,6 +143,7 @@ spec:
             cpu: 100m
         ports:
         - containerPort: 8443
+        terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
         - mountPath: /var/run/configmaps/config
           name: config
