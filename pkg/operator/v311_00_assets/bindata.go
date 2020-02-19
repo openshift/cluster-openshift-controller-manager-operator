@@ -117,6 +117,8 @@ metadata:
 spec:
   updateStrategy:
     type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 3
   selector:
     matchLabels:
       app: openshift-controller-manager

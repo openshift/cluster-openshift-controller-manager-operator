@@ -108,7 +108,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 			Message: "no daemon pods available on any node.",
 		})
 	}
-	if actualDaemonSet.Status.NumberAvailable > 0 && actualDaemonSet.Status.UpdatedNumberScheduled == actualDaemonSet.Status.CurrentNumberScheduled {
+	if actualDaemonSet.Status.NumberAvailable > 0 && actualDaemonSet.Status.UpdatedNumberScheduled == actualDaemonSet.Status.DesiredNumberScheduled {
 		if len(actualDaemonSet.Annotations[util.VersionAnnotation]) > 0 {
 			operatorConfig.Status.Version = actualDaemonSet.Annotations[util.VersionAnnotation]
 		}
@@ -117,6 +117,12 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	var progressingMessages []string
 	if actualDaemonSet != nil && actualDaemonSet.ObjectMeta.Generation != actualDaemonSet.Status.ObservedGeneration {
 		progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: observed generation is %d, desired generation is %d.", actualDaemonSet.Status.ObservedGeneration, actualDaemonSet.ObjectMeta.Generation))
+	}
+	if actualDaemonSet.Status.NumberAvailable == 0 {
+		progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: number available is %d, desired number available > %d", actualDaemonSet.Status.NumberAvailable, 1))
+	}
+	if actualDaemonSet.Status.UpdatedNumberScheduled != actualDaemonSet.Status.DesiredNumberScheduled {
+		progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: updated number scheduled is %d, desired number scheduled is %d", actualDaemonSet.Status.UpdatedNumberScheduled, actualDaemonSet.Status.DesiredNumberScheduled))
 	}
 	if operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration {
 		progressingMessages = append(progressingMessages, fmt.Sprintf("openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is %d, desired generation is %d.", operatorConfig.Status.ObservedGeneration, operatorConfig.ObjectMeta.Generation))
