@@ -20,6 +20,9 @@ func TestProgressingCondition(t *testing.T) {
 		name                        string
 		daemonSetGeneration         int64
 		daemonSetObservedGeneration int64
+		daemonSetNumAvailable       int32
+		daemonSetNumDesired         int32
+		daemonSetNumUpdated         int32
 		configGeneration            int64
 		configObservedGeneration    int64
 		expectedStatus              operatorv1.ConditionStatus
@@ -29,6 +32,9 @@ func TestProgressingCondition(t *testing.T) {
 			name:                        "HappyPath",
 			daemonSetGeneration:         100,
 			daemonSetObservedGeneration: 100,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
 			configGeneration:            100,
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionFalse,
@@ -37,6 +43,9 @@ func TestProgressingCondition(t *testing.T) {
 			name:                        "DaemonSetObservedAhead",
 			daemonSetGeneration:         100,
 			daemonSetObservedGeneration: 101,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
 			configGeneration:            100,
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionTrue,
@@ -46,6 +55,9 @@ func TestProgressingCondition(t *testing.T) {
 			name:                        "DaemonSetObservedBehind",
 			daemonSetGeneration:         101,
 			daemonSetObservedGeneration: 100,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
 			configGeneration:            100,
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionTrue,
@@ -55,6 +67,9 @@ func TestProgressingCondition(t *testing.T) {
 			name:                        "ConfigObservedAhead",
 			daemonSetGeneration:         100,
 			daemonSetObservedGeneration: 100,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
 			configGeneration:            100,
 			configObservedGeneration:    101,
 			expectedStatus:              operatorv1.ConditionTrue,
@@ -64,6 +79,9 @@ func TestProgressingCondition(t *testing.T) {
 			name:                        "ConfigObservedBehind",
 			daemonSetGeneration:         100,
 			daemonSetObservedGeneration: 100,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
 			configGeneration:            101,
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionTrue,
@@ -73,6 +91,9 @@ func TestProgressingCondition(t *testing.T) {
 			name:                        "MultipleObservedAhead",
 			daemonSetGeneration:         100,
 			daemonSetObservedGeneration: 101,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
 			configGeneration:            100,
 			configObservedGeneration:    101,
 			expectedStatus:              operatorv1.ConditionTrue,
@@ -82,9 +103,36 @@ func TestProgressingCondition(t *testing.T) {
 			name:                        "ConfigAndDaemonSetGenerationMismatch",
 			daemonSetGeneration:         100,
 			daemonSetObservedGeneration: 100,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
 			configGeneration:            101,
 			configObservedGeneration:    101,
 			expectedStatus:              operatorv1.ConditionFalse,
+		},
+		{
+			name:                        "NoneAvailable",
+			daemonSetGeneration:         100,
+			daemonSetObservedGeneration: 100,
+			daemonSetNumAvailable:       0,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
+			configGeneration:            100,
+			configObservedGeneration:    100,
+			expectedStatus:              operatorv1.ConditionTrue,
+			expectedMessage:             "daemonset/controller-manager: number available is 0, desired number available > 1",
+		},
+		{
+			name:                        "UpgradeInProgress",
+			daemonSetGeneration:         100,
+			daemonSetObservedGeneration: 100,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         2,
+			configGeneration:            100,
+			configObservedGeneration:    100,
+			expectedStatus:              operatorv1.ConditionTrue,
+			expectedMessage:             "daemonset/controller-manager: updated number scheduled is 2, desired number scheduled is 3",
 		},
 	}
 
@@ -101,8 +149,11 @@ func TestProgressingCondition(t *testing.T) {
 						Generation: tc.daemonSetGeneration,
 					},
 					Status: appsv1.DaemonSetStatus{
-						NumberAvailable:    100,
-						ObservedGeneration: tc.daemonSetObservedGeneration,
+						NumberAvailable:        tc.daemonSetNumAvailable,
+						CurrentNumberScheduled: tc.daemonSetNumDesired,
+						DesiredNumberScheduled: tc.daemonSetNumDesired,
+						UpdatedNumberScheduled: tc.daemonSetNumUpdated,
+						ObservedGeneration:     tc.daemonSetObservedGeneration,
 					},
 				})
 
