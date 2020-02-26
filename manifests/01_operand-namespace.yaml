@@ -5,5 +5,4 @@ metadata:
   annotations:
     openshift.io/node-selector: ""
   labels:
-    openshift.io/run-level: "1"
     openshift.io/cluster-monitoring: "true"
