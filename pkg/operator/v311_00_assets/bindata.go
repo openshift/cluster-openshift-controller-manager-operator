@@ -153,6 +153,8 @@ spec:
           name: client-ca
         - mountPath: /var/run/secrets/serving-cert
           name: serving-cert
+        - mountPath: /etc/pki/ca-trust/extracted/pem
+          name: proxy-ca-bundles
       volumes:
       - name: config
         configMap:
@@ -163,9 +165,14 @@ spec:
       - name: serving-cert
         secret:
           secretName: serving-cert
+      - name: proxy-ca-bundles
+        configMap:
+          name: openshift-global-ca
+          items:
+            - key: ca-bundle.crt
+              path: tls-ca-bundle.pem
       nodeSelector:
         node-role.kubernetes.io/master: ""
-      priorityClassName: "system-cluster-critical"
       tolerations:
       - operator: Exists
 `)

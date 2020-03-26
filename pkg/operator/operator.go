@@ -18,6 +18,8 @@ import (
 	"k8s.io/klog"
 
 	operatorapiv1 "github.com/openshift/api/operator/v1"
+	configinformerv1 "github.com/openshift/client-go/config/informers/externalversions/config/v1"
+	proxyvclient1 "github.com/openshift/client-go/config/listers/config/v1"
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformersv1 "github.com/openshift/client-go/operator/informers/externalversions/operator/v1"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
@@ -34,6 +36,7 @@ const (
 type OpenShiftControllerManagerOperator struct {
 	targetImagePullSpec  string
 	operatorConfigClient operatorclientv1.OperatorV1Interface
+	proxyLister          proxyvclient1.ProxyLister
 
 	kubeClient kubernetes.Interface
 
@@ -47,6 +50,7 @@ type OpenShiftControllerManagerOperator struct {
 func NewOpenShiftControllerManagerOperator(
 	targetImagePullSpec string,
 	operatorConfigInformer operatorinformersv1.OpenShiftControllerManagerInformer,
+	proxyInformer configinformerv1.ProxyInformer,
 	kubeInformersForOpenshiftControllerManager informers.SharedInformerFactory,
 	operatorConfigClient operatorclientv1.OperatorV1Interface,
 	kubeClient kubernetes.Interface,
@@ -55,6 +59,7 @@ func NewOpenShiftControllerManagerOperator(
 	c := &OpenShiftControllerManagerOperator{
 		targetImagePullSpec:  targetImagePullSpec,
 		operatorConfigClient: operatorConfigClient,
+		proxyLister:          proxyInformer.Lister(),
 		kubeClient:           kubeClient,
 		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
 		rateLimiter:          flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
@@ -62,6 +67,7 @@ func NewOpenShiftControllerManagerOperator(
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
+	proxyInformer.Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForOpenshiftControllerManager.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForOpenshiftControllerManager.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
 	kubeInformersForOpenshiftControllerManager.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())

@@ -44,6 +44,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	operator := NewOpenShiftControllerManagerOperator(
 		os.Getenv("IMAGE"),
 		operatorConfigInformers.Operator().V1().OpenShiftControllerManagers(),
+		configInformers.Config().V1().Proxies(),
 		kubeInformersForOpenshiftControllerManagerNamespace,
 		operatorClient.OperatorV1(),
 		kubeClient,
