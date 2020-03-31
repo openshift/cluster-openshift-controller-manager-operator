@@ -3,6 +3,7 @@ package operator
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,6 +17,9 @@ import (
 	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	operatorapiv1 "github.com/openshift/api/operator/v1"
+
+	proxyvclient1 "github.com/openshift/client-go/config/listers/config/v1"
+
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcehash"
@@ -89,7 +93,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
-	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, forceRollout)
+	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, forceRollout, c.proxyLister)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
 	}
@@ -196,6 +200,7 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 		kubeClient,
 		resourcehash.NewObjectRef().ForConfigMap().InNamespace(util.TargetNamespace).Named("client-ca"),
 		resourcehash.NewObjectRef().ForSecret().InNamespace(util.TargetNamespace).Named("serving-cert"),
+		resourcehash.NewObjectRef().ForConfigMap().InNamespace(util.TargetNamespace).Named("openshift-global-ca"),
 	)
 	if err != nil {
 		return nil, false, err
@@ -271,7 +276,7 @@ func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.In
 	return updated, true, nil
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *operatorapiv1.OpenShiftControllerManager, imagePullSpec string, generationStatus []operatorapiv1.GenerationStatus, forceRollout bool) (*appsv1.DaemonSet, bool, error) {
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *operatorapiv1.OpenShiftControllerManager, imagePullSpec string, generationStatus []operatorapiv1.GenerationStatus, forceRollout bool, proxyLister proxyvclient1.ProxyLister) (*appsv1.DaemonSet, bool, error) {
 	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
 
 	if len(imagePullSpec) > 0 {
@@ -294,6 +299,61 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appscli
 		required.Annotations = map[string]string{}
 	}
 	required.Annotations[util.VersionAnnotation] = os.Getenv("RELEASE_VERSION")
+
+	proxyCfg, err := proxyLister.Get("cluster")
+	if err != nil {
+		recorder.Eventf("ProxyConfigGetFailed", "Error retrieving global proxy config: %s", err.Error())
+		if !apierrors.IsNotFound(err) {
+			// return daemonset since it is still referenced by caller even with errors
+			return required, false, err
+		}
+	} else {
+		for i, c := range required.Spec.Template.Spec.Containers {
+			newEnvs := []corev1.EnvVar{}
+
+			if len(c.Env) == 0 {
+				if len(proxyCfg.Status.NoProxy) > 0 {
+					newEnvs = append(newEnvs, corev1.EnvVar{Name: "NO_PROXY", Value: proxyCfg.Status.NoProxy})
+				}
+				if len(proxyCfg.Status.HTTPProxy) > 0 {
+					newEnvs = append(newEnvs, corev1.EnvVar{Name: "HTTP_PROXY", Value: proxyCfg.Status.HTTPProxy})
+				}
+				if len(proxyCfg.Status.HTTPSProxy) > 0 {
+					newEnvs = append(newEnvs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: proxyCfg.Status.HTTPSProxy})
+				}
+			}
+
+			for _, env := range c.Env {
+				name := strings.TrimSpace(env.Name)
+				switch name {
+				case "HTTPS_PROXY":
+					if len(proxyCfg.Status.HTTPSProxy) == 0 {
+						continue
+					}
+					env.Value = proxyCfg.Status.HTTPSProxy
+
+				case "HTTP_PROXY":
+					if len(proxyCfg.Status.HTTPProxy) == 0 {
+						continue
+					}
+					env.Value = proxyCfg.Status.HTTPProxy
+
+				case "NO_PROXY":
+					if len(proxyCfg.Status.NoProxy) == 0 {
+						continue
+					}
+					env.Value = proxyCfg.Status.NoProxy
+
+				}
+				newEnvs = append(newEnvs, env)
+			}
+			// reflect.DeepEqual does not consider this case equal
+			envsEqual := c.Env == nil && len(newEnvs) == 0
+			envsEqual = envsEqual || !reflect.DeepEqual(newEnvs, c.Env)
+			forceRollout = forceRollout || !envsEqual
+			required.Spec.Template.Spec.Containers[i].Env = newEnvs
+		}
+	}
 
 	return resourceapply.ApplyDaemonSet(client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus), forceRollout)
 }
