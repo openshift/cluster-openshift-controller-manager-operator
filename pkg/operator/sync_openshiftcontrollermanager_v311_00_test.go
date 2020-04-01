@@ -1,17 +1,18 @@
 package operator
 
 import (
-	configv1 "github.com/openshift/api/config/v1"
-	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
-	"k8s.io/client-go/tools/cache"
+	"context"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/cache"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/openshift/library-go/pkg/operator/events"
 	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -188,7 +189,7 @@ func TestProgressingCondition(t *testing.T) {
 
 			_, _ = syncOpenShiftControllerManager_v311_00_to_latest(operator, operatorConfig)
 
-			result, err := controllerManagerOperatorClient.OperatorV1().OpenShiftControllerManagers().Get("cluster", metav1.GetOptions{})
+			result, err := controllerManagerOperatorClient.OperatorV1().OpenShiftControllerManagers().Get(context.TODO(), "cluster", metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

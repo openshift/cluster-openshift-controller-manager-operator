@@ -85,7 +85,7 @@ func NewOpenShiftControllerManagerOperator(
 }
 
 func (c OpenShiftControllerManagerOperator) sync() error {
-	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagers().Get("cluster", metav1.GetOptions{})
+	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagers().Get(context.TODO(), "cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, condition)
 	}
 	if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
-		if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(operatorConfig); err != nil {
+		if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(context.TODO(), operatorConfig, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}

@@ -106,7 +106,7 @@ func (v *versionGetter) SetVersion(operandName, version string) {
 }
 
 func (v *versionGetter) GetVersions() map[string]string {
-	co, err := v.openshiftControllerManagers.Get("cluster", metav1.GetOptions{})
+	co, err := v.openshiftControllerManagers.Get(context.TODO(), "cluster", metav1.GetOptions{})
 	if co == nil || err != nil {
 		return map[string]string{}
 	}
