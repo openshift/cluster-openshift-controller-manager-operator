@@ -1,10 +1,12 @@
 package operator
 
 import (
+	"context"
+	"testing"
+
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"k8s.io/client-go/tools/cache"
-	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -188,7 +190,7 @@ func TestProgressingCondition(t *testing.T) {
 
 			_, _ = syncOpenShiftControllerManager_v311_00_to_latest(operator, operatorConfig)
 
-			result, err := controllerManagerOperatorClient.OperatorV1().OpenShiftControllerManagers().Get("cluster", metav1.GetOptions{})
+			result, err := controllerManagerOperatorClient.OperatorV1().OpenShiftControllerManagers().Get(context.TODO(), "cluster", metav1.GetOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}

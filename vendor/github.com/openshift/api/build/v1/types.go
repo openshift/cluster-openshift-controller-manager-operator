@@ -691,9 +691,9 @@ const (
 
 // DockerBuildStrategy defines input parameters specific to container image build.
 type DockerBuildStrategy struct {
-	// from is reference to an DockerImage, ImageStreamTag, or ImageStreamImage from which
-	// the container image should be pulled
-	// the resulting image will be used in the FROM line of the Dockerfile for this build.
+	// from is a reference to an DockerImage, ImageStreamTag, or ImageStreamImage which overrides
+	// the FROM image in the Dockerfile for the build. If the Dockerfile uses multi-stage builds,
+	// this will replace the image in the last FROM directive of the file.
 	From *corev1.ObjectReference `json:"from,omitempty" protobuf:"bytes,1,opt,name=from"`
 
 	// pullSecret is the name of a Secret that would be used for setting up
@@ -917,7 +917,8 @@ type BuildConfigSpec struct {
 	//triggers determine how new Builds can be launched from a BuildConfig. If
 	//no triggers are defined, a new build can only occur as a result of an
 	//explicit client build creation.
-	Triggers []BuildTriggerPolicy `json:"triggers" protobuf:"bytes,1,rep,name=triggers"`
+	// +optional
+	Triggers []BuildTriggerPolicy `json:"triggers,omitempty" protobuf:"bytes,1,rep,name=triggers"`
 
 	// RunPolicy describes how the new build created from this build
 	// configuration will be scheduled for execution.

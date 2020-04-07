@@ -1,6 +1,7 @@
 package operator
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -167,7 +168,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	}
 
 	if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
-		if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(operatorConfig); err != nil {
+		if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(context.TODO(), operatorConfig, metav1.UpdateOptions{}); err != nil {
 			return false, err
 		}
 	}
@@ -214,11 +215,11 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 
 func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml"))
-	existing, err := client.ConfigMaps(util.TargetNamespace).Get("openshift-service-ca", metav1.GetOptions{})
+	existing, err := client.ConfigMaps(util.TargetNamespace).Get(context.TODO(), "openshift-service-ca", metav1.GetOptions{})
 	// Ensure we create the ConfigMap for the registry CA, and that it has the right annotations
 	// Lifted from library-go for the most part
 	if apierrors.IsNotFound(err) {
-		new, err := client.ConfigMaps(util.TargetNamespace).Create(configMap)
+		new, err := client.ConfigMaps(util.TargetNamespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
 			recorder.Eventf("ConfigMapCreateFailed", "Failed to create %s%s/%s%s: %v", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager", err)
 			return nil, true, err
@@ -235,7 +236,7 @@ func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.I
 	if !*modified {
 		return existing, false, nil
 	}
-	updated, err := client.ConfigMaps(util.TargetNamespace).Update(existingCopy)
+	updated, err := client.ConfigMaps(util.TargetNamespace).Update(context.TODO(), existingCopy, metav1.UpdateOptions{})
 	if err != nil {
 		recorder.Eventf("ConfigMapUpdateFailed", "Failed to update %s%s/%s%s: %v", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager", err)
 		return nil, true, err
@@ -246,11 +247,11 @@ func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.I
 
 func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-global-ca-cm.yaml"))
-	existing, err := client.ConfigMaps(util.TargetNamespace).Get("openshift-global-ca", metav1.GetOptions{})
+	existing, err := client.ConfigMaps(util.TargetNamespace).Get(context.TODO(), "openshift-global-ca", metav1.GetOptions{})
 	// Ensure we create the ConfigMap for the global CA, and that it has the right labels
 	// Lifted from library-go for the most part
 	if apierrors.IsNotFound(err) {
-		new, err := client.ConfigMaps(util.TargetNamespace).Create(configMap)
+		new, err := client.ConfigMaps(util.TargetNamespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
 			recorder.Eventf("ConfigMapCreateFailed", "Failed to create %s%s/%s%s: %v", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager", err)
 			return nil, true, err
@@ -267,7 +268,7 @@ func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.In
 	if !*modified {
 		return existing, false, nil
 	}
-	updated, err := client.ConfigMaps(util.TargetNamespace).Update(existingCopy)
+	updated, err := client.ConfigMaps(util.TargetNamespace).Update(context.TODO(), existingCopy, metav1.UpdateOptions{})
 	if err != nil {
 		recorder.Eventf("ConfigMapUpdateFailed", "Failed to update %s%s/%s%s: %v", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager", err)
 		return nil, true, err
