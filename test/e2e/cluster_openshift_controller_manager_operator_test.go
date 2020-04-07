@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -25,7 +26,7 @@ func TestClusterBuildConfigObservation(t *testing.T) {
 	// make sure the operator is fully up
 	framework.MustEnsureClusterOperatorStatusIsSet(t, client)
 
-	buildConfig, err := client.Builds().Get("cluster", metav1.GetOptions{})
+	buildConfig, err := client.Builds().Get(context.TODO(), "cluster", metav1.GetOptions{})
 	if err != nil {
 		t.Logf("error getting openshift controller manager config: %v", err)
 	}
@@ -49,13 +50,13 @@ func TestClusterBuildConfigObservation(t *testing.T) {
 			},
 		}
 
-		if _, err := client.Builds().Create(buildConfig); err != nil {
+		if _, err := client.Builds().Create(context.TODO(), buildConfig, metav1.CreateOptions{}); err != nil {
 			t.Fatalf("could not create cluster build configuration: %v", err)
 		}
 	} else {
 		buildConfig.Spec.BuildDefaults = buildDefaults
 
-		if _, err := client.Builds().Update(buildConfig); err != nil {
+		if _, err := client.Builds().Update(context.TODO(), buildConfig, metav1.UpdateOptions{}); err != nil {
 			t.Fatalf("could not create cluster build configuration: %v", err)
 		}
 	}
@@ -63,13 +64,13 @@ func TestClusterBuildConfigObservation(t *testing.T) {
 	defer func() {
 		buildConfig.Spec.BuildDefaults.Env = []corev1.EnvVar{}
 
-		if _, err := client.Builds().Update(buildConfig); err != nil {
+		if _, err := client.Builds().Update(context.TODO(), buildConfig, metav1.UpdateOptions{}); err != nil {
 			t.Logf("failed to clean up cluster build config: %v", err)
 		}
 	}()
 
 	err = wait.Poll(5*time.Second, 1*time.Minute, func() (bool, error) {
-		cfg, err := client.OpenShiftControllerManagers().Get("cluster", metav1.GetOptions{})
+		cfg, err := client.OpenShiftControllerManagers().Get(context.TODO(), "cluster", metav1.GetOptions{})
 		if cfg == nil || err != nil {
 			t.Logf("error getting openshift controller manager config: %v", err)
 			return false, nil
@@ -92,7 +93,7 @@ func TestClusterImageConfigObservation(t *testing.T) {
 	framework.MustEnsureClusterOperatorStatusIsSet(t, client)
 
 	err := wait.Poll(5*time.Second, 1*time.Minute, func() (bool, error) {
-		cfg, err := client.OpenShiftControllerManagers().Get("cluster", metav1.GetOptions{})
+		cfg, err := client.OpenShiftControllerManagers().Get(context.TODO(), "cluster", metav1.GetOptions{})
 		if cfg == nil || err != nil {
 			t.Logf("error getting openshift controller manager config: %v", err)
 			return false, nil
