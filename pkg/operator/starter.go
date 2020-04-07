@@ -58,6 +58,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 
 	configObserver := configobservationcontroller.NewConfigObserver(
 		opClient,
+		operatorConfigInformers,
 		configInformers,
 		kubeInformersForOperatorNamespace,
 		controllerConfig.EventRecorder,
