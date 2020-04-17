@@ -7,6 +7,7 @@
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/leader-role.yaml
 // bindata/v3.11.0/openshift-controller-manager/leader-rolebinding.yaml
+// bindata/v3.11.0/openshift-controller-manager/ns.yaml
 // bindata/v3.11.0/openshift-controller-manager/old-leader-role.yaml
 // bindata/v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/openshift-global-ca-cm.yaml
@@ -327,6 +328,31 @@ func v3110OpenshiftControllerManagerLeaderRolebindingYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/leader-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerNsYaml = []byte(`apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-controller-manager
+  annotations:
+    openshift.io/node-selector: ""
+  labels:
+    openshift.io/cluster-monitoring: "true"
+`)
+
+func v3110OpenshiftControllerManagerNsYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerNsYaml, nil
+}
+
+func v3110OpenshiftControllerManagerNsYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerNsYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/ns.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -760,6 +786,7 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml":    v3110OpenshiftControllerManagerInformerClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/leader-role.yaml":                    v3110OpenshiftControllerManagerLeaderRoleYaml,
 	"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml":             v3110OpenshiftControllerManagerLeaderRolebindingYaml,
+	"v3.11.0/openshift-controller-manager/ns.yaml":                             v3110OpenshiftControllerManagerNsYaml,
 	"v3.11.0/openshift-controller-manager/old-leader-role.yaml":                v3110OpenshiftControllerManagerOldLeaderRoleYaml,
 	"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml":         v3110OpenshiftControllerManagerOldLeaderRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/openshift-global-ca-cm.yaml":         v3110OpenshiftControllerManagerOpenshiftGlobalCaCmYaml,
@@ -826,6 +853,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"informer-clusterrolebinding.yaml":    {v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
 			"leader-role.yaml":                    {v3110OpenshiftControllerManagerLeaderRoleYaml, map[string]*bintree{}},
 			"leader-rolebinding.yaml":             {v3110OpenshiftControllerManagerLeaderRolebindingYaml, map[string]*bintree{}},
+			"ns.yaml":                             {v3110OpenshiftControllerManagerNsYaml, map[string]*bintree{}},
 			"old-leader-role.yaml":                {v3110OpenshiftControllerManagerOldLeaderRoleYaml, map[string]*bintree{}},
 			"old-leader-rolebinding.yaml":         {v3110OpenshiftControllerManagerOldLeaderRolebindingYaml, map[string]*bintree{}},
 			"openshift-global-ca-cm.yaml":         {v3110OpenshiftControllerManagerOpenshiftGlobalCaCmYaml, map[string]*bintree{}},
