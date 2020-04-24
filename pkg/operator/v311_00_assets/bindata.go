@@ -3,6 +3,8 @@
 // bindata/v3.11.0/config/defaultconfig.yaml
 // bindata/v3.11.0/openshift-controller-manager/cm.yaml
 // bindata/v3.11.0/openshift-controller-manager/ds.yaml
+// bindata/v3.11.0/openshift-controller-manager/impersonate-clusterrole.yaml
+// bindata/v3.11.0/openshift-controller-manager/impersonate-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrole.yaml
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/leader-role.yaml
@@ -188,6 +190,61 @@ func v3110OpenshiftControllerManagerDsYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/ds.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerImpersonateClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:templateinstance-impersonation
+rules:
+- apiGroups:
+  - template.openshift.io
+  resources:
+  - templateinstances
+  verbs:
+  - assign
+`)
+
+func v3110OpenshiftControllerManagerImpersonateClusterroleYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerImpersonateClusterroleYaml, nil
+}
+
+func v3110OpenshiftControllerManagerImpersonateClusterroleYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerImpersonateClusterroleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/impersonate-clusterrole.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerImpersonateClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:openshift:templateinstance-impersonation
+roleRef:
+  kind: ClusterRole
+  name: system:openshift:templateinstance-impersonation
+subjects:
+  - kind: ServiceAccount
+    namespace: kube-system
+    name: generic-garbage-collector`)
+
+func v3110OpenshiftControllerManagerImpersonateClusterrolebindingYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerImpersonateClusterrolebindingYaml, nil
+}
+
+func v3110OpenshiftControllerManagerImpersonateClusterrolebindingYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerImpersonateClusterrolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/impersonate-clusterrolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -756,6 +813,8 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/config/defaultconfig.yaml":                                        v3110ConfigDefaultconfigYaml,
 	"v3.11.0/openshift-controller-manager/cm.yaml":                             v3110OpenshiftControllerManagerCmYaml,
 	"v3.11.0/openshift-controller-manager/ds.yaml":                             v3110OpenshiftControllerManagerDsYaml,
+	"v3.11.0/openshift-controller-manager/impersonate-clusterrole.yaml":        v3110OpenshiftControllerManagerImpersonateClusterroleYaml,
+	"v3.11.0/openshift-controller-manager/impersonate-clusterrolebinding.yaml": v3110OpenshiftControllerManagerImpersonateClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml":           v3110OpenshiftControllerManagerInformerClusterroleYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml":    v3110OpenshiftControllerManagerInformerClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/leader-role.yaml":                    v3110OpenshiftControllerManagerLeaderRoleYaml,
@@ -822,6 +881,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"openshift-controller-manager": {nil, map[string]*bintree{
 			"cm.yaml":                             {v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
 			"ds.yaml":                             {v3110OpenshiftControllerManagerDsYaml, map[string]*bintree{}},
+			"impersonate-clusterrole.yaml":        {v3110OpenshiftControllerManagerImpersonateClusterroleYaml, map[string]*bintree{}},
+			"impersonate-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerImpersonateClusterrolebindingYaml, map[string]*bintree{}},
 			"informer-clusterrole.yaml":           {v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
 			"informer-clusterrolebinding.yaml":    {v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
 			"leader-role.yaml":                    {v3110OpenshiftControllerManagerLeaderRoleYaml, map[string]*bintree{}},
