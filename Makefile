@@ -6,6 +6,7 @@ include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
 	golang.mk \
 	targets/openshift/bindata.mk \
 	targets/openshift/images.mk \
+	targets/openshift/operator/telepresence.mk \
 )
 
 IMAGE_REGISTRY?=registry.svc.ci.openshift.org
@@ -35,3 +36,8 @@ test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: GO_TEST_FLAGS += -v -count=1
 test-e2e: test-unit
 .PHONY: test-e2e
+
+# Configure the 'telepresence' target
+# See vendor/github.com/openshift/build-machinery-go/scripts/run-telepresence.sh for usage and configuration details
+export TP_DEPLOYMENT_YAML ?=./manifests/09_deployment.yaml
+export TP_CMD_PATH ?=./cmd/cluster-openshift-controller-manager-operator
