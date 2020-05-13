@@ -1,6 +1,8 @@
 package operator
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -10,6 +12,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 	"github.com/openshift/library-go/pkg/operator/events"
 	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 )
@@ -27,6 +30,7 @@ func TestProgressingCondition(t *testing.T) {
 		configObservedGeneration    int64
 		expectedStatus              operatorv1.ConditionStatus
 		expectedMessage             string
+		version                     string
 	}{
 		{
 			name:                        "HappyPath",
@@ -38,6 +42,7 @@ func TestProgressingCondition(t *testing.T) {
 			configGeneration:            100,
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionFalse,
+			version:                     "v1",
 		},
 		{
 			name:                        "DaemonSetObservedAhead",
@@ -50,6 +55,7 @@ func TestProgressingCondition(t *testing.T) {
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionTrue,
 			expectedMessage:             "daemonset/controller-manager: observed generation is 101, desired generation is 100.",
+			version:                     "v1",
 		},
 		{
 			name:                        "DaemonSetObservedBehind",
@@ -62,6 +68,7 @@ func TestProgressingCondition(t *testing.T) {
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionTrue,
 			expectedMessage:             "daemonset/controller-manager: observed generation is 100, desired generation is 101.",
+			version:                     "v1",
 		},
 		{
 			name:                        "ConfigObservedAhead",
@@ -74,6 +81,7 @@ func TestProgressingCondition(t *testing.T) {
 			configObservedGeneration:    101,
 			expectedStatus:              operatorv1.ConditionTrue,
 			expectedMessage:             "openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is 101, desired generation is 100.",
+			version:                     "v1",
 		},
 		{
 			name:                        "ConfigObservedBehind",
@@ -86,6 +94,7 @@ func TestProgressingCondition(t *testing.T) {
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionTrue,
 			expectedMessage:             "openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is 100, desired generation is 101.",
+			version:                     "v1",
 		},
 		{
 			name:                        "MultipleObservedAhead",
@@ -98,6 +107,7 @@ func TestProgressingCondition(t *testing.T) {
 			configObservedGeneration:    101,
 			expectedStatus:              operatorv1.ConditionTrue,
 			expectedMessage:             "daemonset/controller-manager: observed generation is 101, desired generation is 100.\nopenshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is 101, desired generation is 100.",
+			version:                     "v1",
 		},
 		{
 			name:                        "ConfigAndDaemonSetGenerationMismatch",
@@ -109,6 +119,7 @@ func TestProgressingCondition(t *testing.T) {
 			configGeneration:            101,
 			configObservedGeneration:    101,
 			expectedStatus:              operatorv1.ConditionFalse,
+			version:                     "v1",
 		},
 		{
 			name:                        "NoneAvailable",
@@ -121,6 +132,7 @@ func TestProgressingCondition(t *testing.T) {
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionTrue,
 			expectedMessage:             "daemonset/controller-manager: number available is 0, desired number available > 1",
+			version:                     "v1",
 		},
 		{
 			name:                        "UpgradeInProgress",
@@ -133,11 +145,30 @@ func TestProgressingCondition(t *testing.T) {
 			configObservedGeneration:    100,
 			expectedStatus:              operatorv1.ConditionTrue,
 			expectedMessage:             "daemonset/controller-manager: updated number scheduled is 2, desired number scheduled is 3",
+			version:                     "v1",
+		},
+		{
+			name:                        "UpgradeInProgressVersionMissing",
+			daemonSetGeneration:         100,
+			daemonSetObservedGeneration: 100,
+			daemonSetNumAvailable:       3,
+			daemonSetNumDesired:         3,
+			daemonSetNumUpdated:         3,
+			configGeneration:            100,
+			configObservedGeneration:    100,
+			expectedStatus:              operatorv1.ConditionTrue,
+			expectedMessage:             fmt.Sprintf("daemonset/controller-manager: version annotation %s missing.", util.VersionAnnotation),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
+			if len(tc.version) > 0 {
+				os.Setenv("RELEASE_VERSION", tc.version)
+			} else {
+				os.Unsetenv("RELEASE_VERSION")
+			}
 
 			kubeClient := fake.NewSimpleClientset(
 				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "serving-cert", Namespace: "openshift-controller-manager"}},

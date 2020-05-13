@@ -108,13 +108,16 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 			Message: "no daemon pods available on any node.",
 		})
 	}
+
+	var progressingMessages []string
 	if actualDaemonSet.Status.NumberAvailable > 0 && actualDaemonSet.Status.UpdatedNumberScheduled == actualDaemonSet.Status.DesiredNumberScheduled {
 		if len(actualDaemonSet.Annotations[util.VersionAnnotation]) > 0 {
 			operatorConfig.Status.Version = actualDaemonSet.Annotations[util.VersionAnnotation]
+		} else {
+			progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: version annotation %s missing.", util.VersionAnnotation))
 		}
 	}
 
-	var progressingMessages []string
 	if actualDaemonSet != nil && actualDaemonSet.ObjectMeta.Generation != actualDaemonSet.Status.ObservedGeneration {
 		progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: observed generation is %d, desired generation is %d.", actualDaemonSet.Status.ObservedGeneration, actualDaemonSet.ObjectMeta.Generation))
 	}
