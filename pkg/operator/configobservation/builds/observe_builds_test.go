@@ -20,6 +20,8 @@ import (
 
 func TestObserveBuildControllerConfig(t *testing.T) {
 	memLimit, err := resource.ParseQuantity("1G")
+	truePtr := true
+	falsePtr := false
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,6 +106,122 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 								Effect:   corev1.TaintEffectNoSchedule,
 							},
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "valid build config forcePull true",
+			buildConfig: &configv1.Build{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+				Spec: configv1.BuildSpec{
+					BuildDefaults: configv1.BuildDefaults{
+						DefaultProxy: &configv1.ProxySpec{
+							HTTPProxy:  "http://user:pass@someproxy.net",
+							HTTPSProxy: "https://user:pass@someproxy.net",
+							NoProxy:    "image-resgistry.cluster.svc.local",
+						},
+						GitProxy: &configv1.ProxySpec{
+							HTTPProxy:  "http://my-proxy",
+							HTTPSProxy: "https://my-proxy",
+							NoProxy:    "https://no-proxy",
+						},
+						Env: []corev1.EnvVar{
+							{
+								Name:  "FOO",
+								Value: "BAR",
+							},
+						},
+						ImageLabels: []configv1.ImageLabel{
+							{
+								Name:  "build.openshift.io",
+								Value: "test",
+							},
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceMemory: memLimit,
+							},
+						},
+					},
+					BuildOverrides: configv1.BuildOverrides{
+						ImageLabels: []configv1.ImageLabel{
+							{
+								Name:  "build.openshift.io",
+								Value: "teset2",
+							},
+						},
+						NodeSelector: map[string]string{
+							"foo": "bar",
+						},
+						Tolerations: []corev1.Toleration{
+							{
+								Key:      "somekey",
+								Operator: corev1.TolerationOpExists,
+								Effect:   corev1.TaintEffectNoSchedule,
+							},
+						},
+						ForcePull: &truePtr,
+					},
+				},
+			},
+		},
+		{
+			name: "valid build config forcePull false",
+			buildConfig: &configv1.Build{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+				Spec: configv1.BuildSpec{
+					BuildDefaults: configv1.BuildDefaults{
+						DefaultProxy: &configv1.ProxySpec{
+							HTTPProxy:  "http://user:pass@someproxy.net",
+							HTTPSProxy: "https://user:pass@someproxy.net",
+							NoProxy:    "image-resgistry.cluster.svc.local",
+						},
+						GitProxy: &configv1.ProxySpec{
+							HTTPProxy:  "http://my-proxy",
+							HTTPSProxy: "https://my-proxy",
+							NoProxy:    "https://no-proxy",
+						},
+						Env: []corev1.EnvVar{
+							{
+								Name:  "FOO",
+								Value: "BAR",
+							},
+						},
+						ImageLabels: []configv1.ImageLabel{
+							{
+								Name:  "build.openshift.io",
+								Value: "test",
+							},
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceMemory: memLimit,
+							},
+						},
+					},
+					BuildOverrides: configv1.BuildOverrides{
+						ImageLabels: []configv1.ImageLabel{
+							{
+								Name:  "build.openshift.io",
+								Value: "teset2",
+							},
+						},
+						NodeSelector: map[string]string{
+							"foo": "bar",
+						},
+						Tolerations: []corev1.Toleration{
+							{
+								Key:      "somekey",
+								Operator: corev1.TolerationOpExists,
+								Effect:   corev1.TaintEffectNoSchedule,
+							},
+						},
+						ForcePull: &falsePtr,
 					},
 				},
 			},
@@ -235,6 +353,7 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.ImageLabels, "build.buildOverrides.imageLabels", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.NodeSelector, "build.buildOverrides.nodeSelector", false, t)
 			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.Tolerations, "build.buildOverrides.tolerations", false, t)
+			testNestedField(observed, test.buildConfig.Spec.BuildOverrides.ForcePull, "build.buildOverrides.forcePull", false, t)
 
 			testNestedField(observed, nil, "build.buildDefaults.gitHTTPProxy", false, t)
 			testNestedField(observed, nil, "build.buildDefaults.gitHTTPSProxy", false, t)
@@ -246,6 +365,17 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 func testNestedField(obj map[string]interface{}, expectedVal interface{}, field string, existIfEmpty bool, t *testing.T) {
 	nestedField := strings.Split(field, ".")
 	switch expected := expectedVal.(type) {
+	case *bool:
+		value, found, err := unstructured.NestedBool(obj, nestedField...)
+		if err != nil {
+			t.Fatalf("failed to read nested string %s: %v", field, err)
+		}
+		if expected != nil && *expected != value {
+			t.Errorf("expected field %s to be %t, got %v", field, expectedVal, value)
+		}
+		if existIfEmpty && !found {
+			t.Errorf("expected field %s to exist, even if empty", field)
+		}
 	case string:
 		value, found, err := unstructured.NestedString(obj, nestedField...)
 		if err != nil {
@@ -338,7 +468,7 @@ func testNestedField(obj map[string]interface{}, expectedVal interface{}, field 
 			t.Fatalf("unable to test field %s: %v", field, err)
 		}
 		if !equality.Semantic.DeepEqual(rawExpected, value) {
-			t.Errorf("expected %s to be %v; got %v", field, expected, value)
+			t.Errorf("expected %s to be %#v; got %#v", field, expected, value)
 		}
 		if existIfEmpty && !found {
 			t.Errorf("expected field %s to exist, even if empty", field)
