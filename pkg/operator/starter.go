@@ -7,7 +7,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -16,10 +15,14 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
-	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
+	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/usercaobservation"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
 func RunOperator(ctx context.Context, controllerConfig *controllercmd.ControllerContext) error {
@@ -36,16 +39,15 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		return err
 	}
 
+	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient, util.TargetNamespace, util.OperatorNamespace, util.UserSpecifiedGlobalConfigNamespace)
 	operatorConfigInformers := operatorinformers.NewSharedInformerFactory(operatorClient, 10*time.Minute)
-	kubeInformersForOpenshiftControllerManagerNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(util.TargetNamespace))
-	kubeInformersForOperatorNamespace := informers.NewSharedInformerFactoryWithOptions(kubeClient, 10*time.Minute, informers.WithNamespace(util.OperatorNamespace))
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 
 	operator := NewOpenShiftControllerManagerOperator(
 		os.Getenv("IMAGE"),
 		operatorConfigInformers.Operator().V1().OpenShiftControllerManagers(),
 		configInformers.Config().V1().Proxies(),
-		kubeInformersForOpenshiftControllerManagerNamespace,
+		kubeInformers.InformersFor(util.TargetNamespace),
 		operatorClient.OperatorV1(),
 		kubeClient,
 		controllerConfig.EventRecorder,
@@ -56,11 +58,30 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		client:    operatorClient.OperatorV1(),
 	}
 
+	// resourceSyncer synchronizes Secrets and ConfigMaps from one namespace to another.
+	// Bug 1826183: this will sync the proxy trustedCA ConfigMap to the
+	// openshift-controller-manager's user-ca ConfigMap.
+	resourceSyncer := resourcesynccontroller.NewResourceSyncController(
+		opClient,
+		kubeInformers,
+		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformers),
+		v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformers),
+		controllerConfig.EventRecorder,
+	)
+
 	configObserver := configobservationcontroller.NewConfigObserver(
 		opClient,
 		operatorConfigInformers,
 		configInformers,
-		kubeInformersForOperatorNamespace,
+		kubeInformers.InformersFor(util.OperatorNamespace),
+		controllerConfig.EventRecorder,
+	)
+
+	// userCAObserver watches the cluster proxy config and updates the resourceSyncer.
+	userCAObserver := usercaobservation.NewController(
+		opClient,
+		configInformers,
+		resourceSyncer,
 		controllerConfig.EventRecorder,
 	)
 
@@ -85,12 +106,13 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	)
 
 	operatorConfigInformers.Start(ctx.Done())
-	kubeInformersForOpenshiftControllerManagerNamespace.Start(ctx.Done())
-	kubeInformersForOperatorNamespace.Start(ctx.Done())
+	kubeInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
 
 	go operator.Run(ctx, 1)
+	go resourceSyncer.Run(ctx, 1)
 	go configObserver.Run(ctx, 1)
+	go userCAObserver.Run(ctx, 1)
 	go clusterOperatorStatus.Run(ctx, 1)
 
 	<-ctx.Done()
