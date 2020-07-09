@@ -46,6 +46,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
 		"v3.11.0/openshift-controller-manager/leader-role.yaml",
 		"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
+		"v3.11.0/openshift-controller-manager/ns.yaml",
 		"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
 		"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
 		"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
