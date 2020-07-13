@@ -89,9 +89,17 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
+	var progressingMessages []string
 	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, forceRollout)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q: %v", "deployment", err))
+		msg := fmt.Sprintf("%q: %v", "deployment", err)
+		progressingMessages = append(progressingMessages, msg)
+		errors = append(errors, fmt.Errorf(msg))
+	}
+
+	// library-go func called by manageOpenShiftControllerManagerDeployment_v311_00_to_latest can return nil with errors
+	if actualDaemonSet == nil {
+		return syncReturn(c, errors, originalOperatorConfig, operatorConfig)
 	}
 
 	// manage status
@@ -109,7 +117,6 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		})
 	}
 
-	var progressingMessages []string
 	if actualDaemonSet.Status.NumberAvailable > 0 && actualDaemonSet.Status.UpdatedNumberScheduled == actualDaemonSet.Status.DesiredNumberScheduled {
 		if len(actualDaemonSet.Annotations[util.VersionAnnotation]) > 0 {
 			operatorConfig.Status.Version = actualDaemonSet.Annotations[util.VersionAnnotation]
@@ -147,6 +154,11 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	operatorConfig.Status.ObservedGeneration = operatorConfig.ObjectMeta.Generation
 	resourcemerge.SetDaemonSetGeneration(&operatorConfig.Status.Generations, actualDaemonSet)
 
+	return syncReturn(c, errors, originalOperatorConfig, operatorConfig)
+
+}
+
+func syncReturn(c OpenShiftControllerManagerOperator, errors []error, originalOperatorConfig, operatorConfig *operatorapiv1.OpenShiftControllerManager) (bool, error) {
 	if len(errors) > 0 {
 		message := ""
 		for _, err := range errors {
