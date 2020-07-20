@@ -3,6 +3,7 @@ package configobservation
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -21,6 +22,13 @@ func ObserveField(observedConfig map[string]interface{}, val interface{}, fieldN
 	switch v := val.(type) {
 	case int64, bool:
 		err = unstructured.SetNestedField(observedConfig, v, nestedFields...)
+	case *bool:
+		if skipIfEmpty && val == nil {
+			return nil
+		} else if !skipIfEmpty && val == nil {
+			return fmt.Errorf("cannot observe nil value for bool pointer field %s", fieldName)
+		}
+		err = unstructured.SetNestedField(observedConfig, *v, nestedFields...)
 	case string:
 		if skipIfEmpty && len(v) == 0 {
 			return nil

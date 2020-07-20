@@ -104,5 +104,10 @@ func ObserveBuildControllerConfig(genericListers configobserver.Listers, recorde
 			return nil, append(errs, fmt.Errorf("failed to observe %s: %v", "build.buildOverrides.tolerations", err))
 		}
 	}
+	if buildConfig.Spec.BuildOverrides.ForcePull != nil {
+		if err = configobservation.ObserveField(observedConfig, buildConfig.Spec.BuildOverrides.ForcePull, "build.buildOverrides.forcePull", true); err != nil {
+			return nil, append(errs, fmt.Errorf("failed to observe %s: %v", "build.buildOverrides.forcePull", err))
+		}
+	}
 	return observedConfig, errs
 }
