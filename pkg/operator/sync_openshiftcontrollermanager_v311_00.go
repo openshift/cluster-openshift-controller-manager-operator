@@ -218,6 +218,7 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 		resourcehash.NewObjectRef().ForConfigMap().InNamespace(util.TargetNamespace).Named("client-ca"),
 		resourcehash.NewObjectRef().ForSecret().InNamespace(util.TargetNamespace).Named("serving-cert"),
 		resourcehash.NewObjectRef().ForConfigMap().InNamespace(util.TargetNamespace).Named("openshift-global-ca"),
+		resourcehash.NewObjectRef().ForConfigMap().InNamespace(util.TargetNamespace).Named("openshift-user-ca"),
 	)
 	if err != nil {
 		return nil, false, err
@@ -266,6 +267,15 @@ func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.In
 	existing, err := client.ConfigMaps(util.TargetNamespace).Get(context.TODO(), "openshift-global-ca", metav1.GetOptions{})
 	// Ensure we create the ConfigMap for the global CA, and that it has the right labels
 	// Lifted from library-go for the most part
+
+	// Bug 1826183: Build pod containers now run `update-ca-trust extract` on startup if a custom
+	// PKI is added to the cluster. Prior to 4.6, builds used the global CA trust bundle that was
+	// injected into this global-ca configmap. However, the global CA bundle is not intended to be
+	// used with workloads which run `update-ca-trust extract` on their own. Instead, this operator
+	// will directly copy the admin-provided custom PKI via the UserCAObservationController.
+	//
+	// TODO: In 4.6 we need to continue creating this ConfigMap to ensure smooth upgrades.
+	// In 4.7 or beyond this ConfigMap should be deleted.
 	if apierrors.IsNotFound(err) {
 		new, err := client.ConfigMaps(util.TargetNamespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
 		if err != nil {
