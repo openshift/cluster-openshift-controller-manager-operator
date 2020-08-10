@@ -38,6 +38,14 @@ func (p *genericClient) GetOperatorState() (*operatorapiv1.OperatorSpec, *operat
 	return &instance.Spec.OperatorSpec, &instance.Status.OperatorStatus, instance.ResourceVersion, nil
 }
 
+func (p *genericClient) GetObjectMeta() (*metav1.ObjectMeta, error) {
+	resource, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
+	if err != nil {
+		return nil, err
+	}
+	return &resource.ObjectMeta, nil
+}
+
 func (p *genericClient) UpdateOperatorSpec(resourceVersion string, spec *operatorapiv1.OperatorSpec) (*operatorapiv1.OperatorSpec, string, error) {
 	resource, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {

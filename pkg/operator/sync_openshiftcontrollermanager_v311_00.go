@@ -382,5 +382,5 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appscli
 		}
 	}
 
-	return resourceapply.ApplyDaemonSet(client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus), forceRollout)
+	return resourceapply.ApplyDaemonSetWithForce(client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus), forceRollout)
 }
