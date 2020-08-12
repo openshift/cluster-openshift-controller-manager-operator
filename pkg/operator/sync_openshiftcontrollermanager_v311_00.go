@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/klog"
 
 	operatorapiv1 "github.com/openshift/api/operator/v1"
 
@@ -90,7 +91,14 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		errors = append(errors, fmt.Errorf("%q: %v", "openshift-global-ca", err))
 	}
 
-	forceRollout = forceRollout || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
+	klog.Infof("Modified resources: clientCA=%v, serviceCA=%v, globalCA=%v", clientCAModified, serviceCAModified, globalCAModified)
+	klog.Infof("Observed generation '%d', current configuration generation '%d'", operatorConfig.Status.ObservedGeneration, operatorConfig.ObjectMeta.Generation)
+
+	// Bug 1809892: setting force-rollout only when management status is "managed", to avoid
+	// comparing observed generation with current. When "unmanaged", the observed generation is not
+	// incremented, while changing management status does.
+	isManaged := operatorConfig.Spec.ManagementState == operatorapiv1.Managed
+	forceRollout = forceRollout || (isManaged && operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration)
 	forceRollout = forceRollout || configMapModified || clientCAModified || serviceCAModified || globalCAModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
