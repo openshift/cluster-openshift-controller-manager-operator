@@ -76,7 +76,7 @@ func TestFindProxyCASource(t *testing.T) {
 			expectedSource: "/",
 		},
 		{
-			name:           "no found",
+			name:           "not found",
 			expectedSource: "/",
 		},
 		{
