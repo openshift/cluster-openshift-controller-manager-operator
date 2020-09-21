@@ -42,6 +42,8 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	directResourceResults := resourceapply.ApplyDirectly(clientHolder, c.recorder, v311_00_assets.Asset,
 		"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
 		"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
+		"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml",
+		"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml",
 		"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
 		"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
 		"v3.11.0/openshift-controller-manager/leader-role.yaml",
