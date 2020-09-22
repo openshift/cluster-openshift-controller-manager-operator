@@ -84,6 +84,7 @@ func (c *Controller) Sync(ctx context.Context, syncCtx factory.SyncContext) erro
 	destination := resourcesynccontroller.ResourceLocation{
 		Namespace: util.TargetNamespace,
 		Name:      "openshift-user-ca",
+		Provider:  "openshift-controller-manager-operator",
 	}
 	err = c.resourceSyncer.SyncConfigMap(destination, source)
 	return err
