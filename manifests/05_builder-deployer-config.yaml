@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   namespace: openshift-controller-manager-operator
   name: openshift-controller-manager-images
+  annotations:
+    include.release.openshift.io/self-managed-high-availability: "true"
 data:
   builderImage: quay.io/openshift/origin-docker-builder:v4.0
   deployerImage: quay.io/openshift/origin-deployer:v4.0
