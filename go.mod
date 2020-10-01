@@ -20,7 +20,7 @@ require (
 	k8s.io/apimachinery v0.19.0
 	k8s.io/client-go v0.19.0
 	k8s.io/component-base v0.19.0
-	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.3.0
 )
 
 replace vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
