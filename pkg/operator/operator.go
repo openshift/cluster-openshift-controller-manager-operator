@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	operatorapiv1 "github.com/openshift/api/operator/v1"
 	configinformerv1 "github.com/openshift/client-go/config/informers/externalversions/config/v1"
