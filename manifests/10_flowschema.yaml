@@ -3,6 +3,7 @@ kind: FlowSchema
 metadata:
   name: openshift-controller-manager
   annotations:
+    include.release.openshift.io/ibm-cloud-managed: "true"
     include.release.openshift.io/self-managed-high-availability: "true"
 spec:
   distinguisherMethod:
