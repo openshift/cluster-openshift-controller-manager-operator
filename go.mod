@@ -22,8 +22,9 @@ require (
 	golang.org/x/text v0.3.4 // indirect
 	k8s.io/api v0.19.4
 	k8s.io/apimachinery v0.19.4
-	k8s.io/client-go v0.19.2
-	k8s.io/component-base v0.19.2
+	k8s.io/apiserver v0.19.4
+	k8s.io/client-go v0.19.4
+	k8s.io/component-base v0.19.4
 	k8s.io/klog/v2 v2.4.0
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.2 // indirect
 )
