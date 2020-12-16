@@ -20,6 +20,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/healthz"
 	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/usercaobservation"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
@@ -104,6 +105,13 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		versionGetter,
 		controllerConfig.EventRecorder,
 	)
+
+	if controllerConfig.Server != nil {
+		err = controllerConfig.Server.AddHealthChecks(healthz.NewLivenessChecker(ctx))
+		if err != nil {
+			return err
+		}
+	}
 
 	operatorConfigInformers.Start(ctx.Done())
 	kubeInformers.Start(ctx.Done())
