@@ -5,6 +5,7 @@ metadata:
   namespace: openshift-controller-manager
   annotations:
     include.release.openshift.io/self-managed-high-availability: "true"
+    include.release.openshift.io/single-node-developer: "true"
 rules:
 - apiGroups:
   - ""
@@ -24,6 +25,7 @@ metadata:
   namespace: openshift-controller-manager
   annotations:
     include.release.openshift.io/self-managed-high-availability: "true"
+    include.release.openshift.io/single-node-developer: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -40,6 +42,7 @@ metadata:
   namespace: openshift-controller-manager
   annotations:
     include.release.openshift.io/self-managed-high-availability: "true"
+    include.release.openshift.io/single-node-developer: "true"
     exclude.release.openshift.io/internal-openshift-hosted: "true"
 spec:
   endpoints:
