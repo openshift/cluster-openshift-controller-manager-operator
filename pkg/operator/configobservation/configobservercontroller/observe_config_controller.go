@@ -44,6 +44,7 @@ func NewConfigObserver(
 		},
 		[]factory.Informer{operatorConfigInformers.Operator().V1().OpenShiftControllerManagers().Informer()},
 		images.ObserveInternalRegistryHostname,
+		images.ObserveExternalRegistryHostnames,
 		builds.ObserveBuildControllerConfig,
 		network.ObserveExternalIPAutoAssignCIDRs,
 		deployimages.ObserveControllerManagerImagesConfig,
