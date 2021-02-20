@@ -52,3 +52,50 @@ func ObserveInternalRegistryHostname(genericListers configobserver.Listers, reco
 
 	return observedConfig, errs
 }
+
+// ObserveExternalRegistryHostnames observers information about registry external URLs,
+// aka Routes. It retrieves this information from cluster's Image config.
+func ObserveExternalRegistryHostnames(
+	genericListers configobserver.Listers,
+	recorder events.Recorder,
+	existingConfig map[string]interface{},
+) (map[string]interface{}, []error) {
+	var errs []error
+	prevObservedConfig := map[string]interface{}{}
+	listers := genericListers.(configobservation.Listers)
+
+	// first observe all the existing config values so that if we get any errors
+	// we can at least return those.
+	cfgpath := []string{"dockerPullSecret", "registryURLs"}
+	currentURLs, _, err := unstructured.NestedStringSlice(existingConfig, cfgpath...)
+	if err != nil {
+		return prevObservedConfig, append(errs, err)
+	}
+	if len(currentURLs) > 0 {
+		if err := unstructured.SetNestedStringSlice(
+			prevObservedConfig, currentURLs, cfgpath...,
+		); err != nil {
+			return prevObservedConfig, append(errs, err)
+		}
+	}
+
+	observedConfig := map[string]interface{}{}
+	configImage, err := listers.ImageConfigLister.Get("cluster")
+	if errors.IsNotFound(err) {
+		klog.V(2).Infof("images.config.openshift.io/cluster: not found")
+		return observedConfig, errs
+	} else if err != nil {
+		return prevObservedConfig, append(errs, err)
+	}
+
+	if len(configImage.Status.ExternalRegistryHostnames) == 0 {
+		return observedConfig, errs
+	}
+
+	if err := unstructured.SetNestedStringSlice(
+		observedConfig, configImage.Status.ExternalRegistryHostnames, cfgpath...,
+	); err != nil {
+		return prevObservedConfig, append(errs, err)
+	}
+	return observedConfig, errs
+}
