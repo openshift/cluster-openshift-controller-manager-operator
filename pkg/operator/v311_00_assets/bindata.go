@@ -1,6 +1,8 @@
 // Code generated for package v311_00_assets by go-bindata DO NOT EDIT. (@generated)
 // sources:
 // bindata/v3.11.0/config/defaultconfig.yaml
+// bindata/v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml
+// bindata/v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/cm.yaml
 // bindata/v3.11.0/openshift-controller-manager/ds.yaml
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrole.yaml
@@ -90,6 +92,63 @@ func v3110ConfigDefaultconfigYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v3.11.0/config/defaultconfig.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:openshift-controller-manager:update-buildconfig-status
+rules:
+- apiGroups:
+  - build.openshift.io
+  resources:
+  - buildconfigs/status
+  verbs:
+  - "*"`)
+
+func v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml, nil
+}
+
+func v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:openshift:openshift-controller-manager:update-buildconfig-status
+roleRef:
+  kind: ClusterRole
+  name: system:openshift:openshift-controller-manager:update-buildconfig-status
+subjects:
+- kind: ServiceAccount
+  namespace: openshift-controller-manager
+  name: openshift-controller-manager-sa
+- kind: ServiceAccount
+  namespace: openshift-infra
+  name: build-config-change-controller`)
+
+func v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml, nil
+}
+
+func v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -891,6 +950,8 @@ func AssetNames() []string {
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/config/defaultconfig.yaml":                                                        v3110ConfigDefaultconfigYaml,
+	"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml":                  v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml,
+	"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml":           v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/cm.yaml":                                             v3110OpenshiftControllerManagerCmYaml,
 	"v3.11.0/openshift-controller-manager/ds.yaml":                                             v3110OpenshiftControllerManagerDsYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml":                           v3110OpenshiftControllerManagerInformerClusterroleYaml,
@@ -960,6 +1021,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"defaultconfig.yaml": {v3110ConfigDefaultconfigYaml, map[string]*bintree{}},
 		}},
 		"openshift-controller-manager": {nil, map[string]*bintree{
+			"buildconfigstatus-clusterrole.yaml":        {v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml, map[string]*bintree{}},
+			"buildconfigstatus-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml, map[string]*bintree{}},
 			"cm.yaml":                          {v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
 			"ds.yaml":                          {v3110OpenshiftControllerManagerDsYaml, map[string]*bintree{}},
 			"informer-clusterrole.yaml":        {v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
