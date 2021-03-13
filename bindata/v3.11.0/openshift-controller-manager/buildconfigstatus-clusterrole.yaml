@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:openshift-controller-manager:update-buildconfig-status
+rules:
+- apiGroups:
+  - build.openshift.io
+  resources:
+  - buildconfigs/status
+  verbs:
+  - "*"
