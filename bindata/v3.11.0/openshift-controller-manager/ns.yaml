@@ -4,5 +4,6 @@ metadata:
   name: openshift-controller-manager
   annotations:
     openshift.io/node-selector: ""
+    workload.openshift.io/allowed: "management"
   labels:
     openshift.io/cluster-monitoring: "true"

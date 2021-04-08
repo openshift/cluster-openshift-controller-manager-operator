@@ -197,6 +197,8 @@ spec:
   template:
     metadata:
       name: openshift-controller-manager
+      annotations:
+        workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
       labels:
         app: openshift-controller-manager
         controller-manager: "true"
@@ -508,6 +510,7 @@ metadata:
   name: openshift-controller-manager
   annotations:
     openshift.io/node-selector: ""
+    workload.openshift.io/allowed: "management"
   labels:
     openshift.io/cluster-monitoring: "true"
 `)
