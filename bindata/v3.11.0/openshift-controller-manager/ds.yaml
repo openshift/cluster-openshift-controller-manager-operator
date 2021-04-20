@@ -19,7 +19,7 @@ spec:
     metadata:
       name: openshift-controller-manager
       annotations:
-        workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+        target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
       labels:
         app: openshift-controller-manager
         controller-manager: "true"
