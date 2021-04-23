@@ -9,7 +9,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.11.3 // indirect
 	github.com/openshift/api v0.0.0-20210416130433-86964261530c
-	github.com/openshift/build-machinery-go v0.0.0-20210209125900-0da259a2c359
+	github.com/openshift/build-machinery-go v0.0.0-20210423112049-9415d7ebd33e
 	github.com/openshift/client-go v0.0.0-20201020074620-f8fd44879f7c
 	github.com/openshift/library-go v0.0.0-20201102091359-c4fa0f5b3a08
 	github.com/prometheus/client_golang v1.7.1
