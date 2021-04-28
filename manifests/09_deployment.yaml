@@ -17,6 +17,8 @@ spec:
   template:
     metadata:
       name: openshift-controller-manager-operator
+      annotations:
+        target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
       labels:
         app: openshift-controller-manager-operator
     spec:
