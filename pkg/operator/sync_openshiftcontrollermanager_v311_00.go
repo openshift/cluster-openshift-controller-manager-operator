@@ -161,6 +161,11 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		})
 	}
 
+	v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+		Type:   operatorapiv1.OperatorStatusTypeUpgradeable,
+		Status: operatorapiv1.ConditionTrue,
+	})
+
 	operatorConfig.Status.ObservedGeneration = operatorConfig.ObjectMeta.Generation
 	resourcemerge.SetDaemonSetGeneration(&operatorConfig.Status.Generations, actualDaemonSet)
 
