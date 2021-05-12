@@ -31,6 +31,8 @@ $(call build-image,ocp-cluster-openshift-controller-manager-operator,$(IMAGE_REG
 # and also hooked into {update,verify}-generated for broader integration.
 $(call add-bindata,v3.11.0,./bindata/v3.11.0/...,bindata,v311_00_assets,pkg/operator/v311_00_assets/bindata.go)
 
+$(call verify-golang-versions,Dockerfile)
+
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: GO_TEST_FLAGS += -v -count=1
 test-e2e: test-unit
