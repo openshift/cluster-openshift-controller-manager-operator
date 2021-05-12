@@ -16,12 +16,15 @@ import (
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
+	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/usercaobservation"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
@@ -39,7 +42,11 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		return err
 	}
 
-	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient, util.TargetNamespace, util.OperatorNamespace, util.UserSpecifiedGlobalConfigNamespace)
+	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient,
+		util.TargetNamespace,
+		util.OperatorNamespace,
+		util.UserSpecifiedGlobalConfigNamespace,
+		util.InfraNamespace)
 	operatorConfigInformers := operatorinformers.NewSharedInformerFactory(operatorClient, 10*time.Minute)
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 
@@ -105,10 +112,40 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		controllerConfig.EventRecorder,
 	)
 
+	staticResourceController := staticresourcecontroller.NewStaticResourceController(
+		"OpenshiftControllerManagerStaticResources",
+		v311_00_assets.Asset,
+		[]string{
+			"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/leader-role.yaml",
+			"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/ns.yaml",
+			"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
+			"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
+			"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/sa.yaml",
+			"v3.11.0/openshift-controller-manager/svc.yaml",
+			"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
+			"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml",
+		},
+		resourceapply.NewKubeClientHolder(kubeClient),
+		opClient,
+		controllerConfig.EventRecorder,
+	).AddKubeInformers(kubeInformers)
+
 	operatorConfigInformers.Start(ctx.Done())
 	kubeInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
 
+	go staticResourceController.Run(ctx, 1)
 	go operator.Run(ctx, 1)
 	go resourceSyncer.Run(ctx, 1)
 	go configObserver.Run(ctx, 1)
