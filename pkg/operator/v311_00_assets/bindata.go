@@ -690,6 +690,12 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - serviceaccounts/token
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   - get
