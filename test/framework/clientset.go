@@ -9,6 +9,7 @@ import (
 
 	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	clientrbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -20,6 +21,7 @@ import (
 type Clientset struct {
 	clientcorev1.CoreV1Interface
 	clientappsv1.AppsV1Interface
+	clientrbacv1.RbacV1Interface
 	clientconfigv1.ConfigV1Interface
 	operatorclientv1.OperatorV1Interface
 }
@@ -40,6 +42,10 @@ func NewClientset(kubeconfig *restclient.Config) (clientset *Clientset, err erro
 		return
 	}
 	clientset.AppsV1Interface, err = clientappsv1.NewForConfig(kubeconfig)
+	if err != nil {
+		return
+	}
+	clientset.RbacV1Interface, err = clientrbacv1.NewForConfig(kubeconfig)
 	if err != nil {
 		return
 	}
