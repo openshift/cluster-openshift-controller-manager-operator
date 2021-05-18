@@ -64,6 +64,11 @@ func TestOpenshiftControllersRBAC(t *testing.T) {
 				"v3.11.0/openshift-controller-manager/template-instance-finalizer-controller-clusterrolebinding-admin.yaml",
 			},
 		},
+		{
+			name:                     "origin-namespace-controller",
+			expectedRolesYAML:        []string{"v3.11.0/openshift-controller-manager/origin-namespace-controller-clusterrole.yaml"},
+			expectedRoleBindingsYAML: []string{"v3.11.0/openshift-controller-manager/origin-namespace-controller-clusterrolebinding.yaml"},
+		},
 	}
 
 	for _, tc := range expectedRBACs {
