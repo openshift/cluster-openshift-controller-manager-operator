@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:openshift:openshift-controller-manager:build-config-change-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:openshift-controller-manager:build-config-change-controller
+subjects:
+- kind: ServiceAccount
+  name: build-config-change-controller
+  namespace: openshift-infra
