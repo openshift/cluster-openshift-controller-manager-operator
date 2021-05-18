@@ -38,6 +38,11 @@ func TestOpenshiftControllersRBAC(t *testing.T) {
 			expectedRolesYAML:        []string{"v3.11.0/openshift-controller-manager/build-config-change-controller-clusterrole.yaml"},
 			expectedRoleBindingsYAML: []string{"v3.11.0/openshift-controller-manager/build-config-change-controller-clusterrolebinding.yaml"},
 		},
+		{
+			name:                     "deployer-controller",
+			expectedRolesYAML:        []string{"v3.11.0/openshift-controller-manager/deployer-controller-clusterrole.yaml"},
+			expectedRoleBindingsYAML: []string{"v3.11.0/openshift-controller-manager/deployer-controller-clusterrolebinding.yaml"},
+		},
 	}
 
 	for _, tc := range expectedRBACs {
