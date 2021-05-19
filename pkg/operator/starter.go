@@ -153,6 +153,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"v3.11.0/openshift-controller-manager/template-instance-finalizer-controller-clusterrolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/origin-namespace-controller-clusterrole.yaml",
 			"v3.11.0/openshift-controller-manager/origin-namespace-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/serviceaccount-pull-secrets-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/serviceaccount-pull-secrets-controller-clusterrolebinding.yaml",
 		},
 		resourceapply.NewKubeClientHolder(kubeClient),
 		opClient,
