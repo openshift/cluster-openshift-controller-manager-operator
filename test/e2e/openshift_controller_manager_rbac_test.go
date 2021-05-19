@@ -94,6 +94,16 @@ func TestOpenshiftControllersRBAC(t *testing.T) {
 			expectedRolesYAML:        []string{"v3.11.0/openshift-controller-manager/service-ingress-ip-controller-clusterrole.yaml"},
 			expectedRoleBindingsYAML: []string{"v3.11.0/openshift-controller-manager/service-ingress-ip-controller-clusterrolebinding.yaml"},
 		},
+		{
+			name:              "default-rolebindings-controller",
+			expectedRolesYAML: []string{"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrole.yaml"},
+			expectedRoleBindingsYAML: []string{
+				"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrolebinding.yaml",
+				"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrolebinding-deployer.yaml",
+				"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrolebinding-image-builder.yaml",
+				"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrolebinding-image-puller.yaml",
+			},
+		},
 	}
 
 	for _, tc := range expectedRBACs {
