@@ -161,6 +161,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"v3.11.0/openshift-controller-manager/image-import-controller-clusterrolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/unidling-controller-clusterrole.yaml",
 			"v3.11.0/openshift-controller-manager/unidling-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/service-ingress-ip-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/service-ingress-ip-controller-clusterrolebinding.yaml",
 		},
 		resourceapply.NewKubeClientHolder(kubeClient),
 		opClient,
