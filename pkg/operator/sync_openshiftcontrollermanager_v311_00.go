@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -38,41 +37,9 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	errors := []error{}
 	var err error
 	operatorConfig := originalOperatorConfig.DeepCopy()
-	clientHolder := resourceapply.NewKubeClientHolder(c.kubeClient)
-	directResourceResults := resourceapply.ApplyDirectly(clientHolder, c.recorder, v311_00_assets.Asset,
-		"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/leader-role.yaml",
-		"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/ns.yaml",
-		"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
-		"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
-		"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/sa.yaml",
-		"v3.11.0/openshift-controller-manager/svc.yaml",
-		"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
-		"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml",
-	)
-	resourcesThatForceRedeployment := sets.NewString("v3.11.0/openshift-controller-manager/sa.yaml")
+
+	// TODO - why does a change to a ServiceAccount force redeployment of the daemonset?
 	forceRollout := false
-
-	for _, currResult := range directResourceResults {
-		if currResult.Error != nil {
-			errors = append(errors, fmt.Errorf("%q (%T): %v", currResult.File, currResult.Type, currResult.Error))
-			continue
-		}
-
-		if currResult.Changed && resourcesThatForceRedeployment.Has(currResult.File) {
-			forceRollout = true
-		}
-	}
 
 	_, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder, operatorConfig)
 	if err != nil {

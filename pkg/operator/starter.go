@@ -16,12 +16,15 @@ import (
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
+	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/usercaobservation"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
@@ -39,7 +42,13 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		return err
 	}
 
-	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient, util.TargetNamespace, util.OperatorNamespace, util.UserSpecifiedGlobalConfigNamespace)
+	// Empty namespace provides informers for cluster-scoped resources
+	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient,
+		"",
+		util.TargetNamespace,
+		util.OperatorNamespace,
+		util.UserSpecifiedGlobalConfigNamespace,
+		util.InfraNamespace)
 	operatorConfigInformers := operatorinformers.NewSharedInformerFactory(operatorClient, 10*time.Minute)
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 
@@ -105,10 +114,73 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		controllerConfig.EventRecorder,
 	)
 
+	staticResourceController := staticresourcecontroller.NewStaticResourceController(
+		"OpenshiftControllerManagerStaticResources",
+		v311_00_assets.Asset,
+		[]string{
+			"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/leader-role.yaml",
+			"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/ns.yaml",
+			"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
+			"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
+			"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/sa.yaml",
+			"v3.11.0/openshift-controller-manager/svc.yaml",
+			"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
+			"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/serviceaccount-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/serviceaccount-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/build-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/build-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/build-config-change-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/build-config-change-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/deployer-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/deployer-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/deploymentconfig-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/deploymentconfig-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/template-instance-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/template-instance-controller-clusterrolebinding-admin.yaml",
+			"v3.11.0/openshift-controller-manager/template-instance-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/template-instance-finalizer-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/template-instance-finalizer-controller-clusterrolebinding-admin.yaml",
+			"v3.11.0/openshift-controller-manager/template-instance-finalizer-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/origin-namespace-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/origin-namespace-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/serviceaccount-pull-secrets-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/serviceaccount-pull-secrets-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/image-import-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/image-import-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/unidling-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/unidling-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/service-ingress-ip-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/service-ingress-ip-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrolebinding-deployer.yaml",
+			"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrolebinding-image-builder.yaml",
+			"v3.11.0/openshift-controller-manager/default-rolebindings-controller-clusterrolebinding-image-puller.yaml",
+		},
+		resourceapply.NewKubeClientHolder(kubeClient),
+		opClient,
+		controllerConfig.EventRecorder,
+	).AddKubeInformers(kubeInformers)
+
 	operatorConfigInformers.Start(ctx.Done())
 	kubeInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
 
+	go staticResourceController.Run(ctx, 1)
 	go operator.Run(ctx, 1)
 	go resourceSyncer.Run(ctx, 1)
 	go configObserver.Run(ctx, 1)
