@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:image-import-controller
+  name: system:openshift:controller:image-import-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:image-import-controller
+  name: system:openshift:controller:image-import-controller
 subjects:
 - kind: ServiceAccount
   name: image-import-controller

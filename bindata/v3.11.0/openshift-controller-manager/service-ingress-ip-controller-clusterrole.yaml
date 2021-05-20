@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:service-ingress-ip-controller
+  name: system:openshift:controller:service-ingress-ip-controller
 rules:
 - apiGroups:
   - ""

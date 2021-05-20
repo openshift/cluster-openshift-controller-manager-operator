@@ -132,7 +132,7 @@ func v3110ConfigDefaultconfigYaml() (*asset, error) {
 var _v3110OpenshiftControllerManagerBuildConfigChangeControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:build-config-change-controller
+  name: system:openshift:controller:build-config-change-controller
 rules:
 - apiGroups:
   - ""
@@ -185,11 +185,11 @@ func v3110OpenshiftControllerManagerBuildConfigChangeControllerClusterroleYaml()
 var _v3110OpenshiftControllerManagerBuildConfigChangeControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:build-config-change-controller
+  name: system:openshift:controller:build-config-change-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:build-config-change-controller
+  name: system:openshift:controller:build-config-change-controller
 subjects:
 - kind: ServiceAccount
   name: build-config-change-controller
@@ -214,7 +214,7 @@ func v3110OpenshiftControllerManagerBuildConfigChangeControllerClusterrolebindin
 var _v3110OpenshiftControllerManagerBuildControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:build-controller
+  name: system:openshift:controller:build-controller
 rules:
 - apiGroups:
   - ""
@@ -340,11 +340,11 @@ func v3110OpenshiftControllerManagerBuildControllerClusterroleYaml() (*asset, er
 var _v3110OpenshiftControllerManagerBuildControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:build-controller
+  name: system:openshift:controller:build-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:build-controller
+  name: system:openshift:controller:build-controller
 subjects:
 - kind: ServiceAccount
   name: build-controller
@@ -369,7 +369,7 @@ func v3110OpenshiftControllerManagerBuildControllerClusterrolebindingYaml() (*as
 var _v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:update-buildconfig-status
+  name: system:openshift:controller:update-buildconfig-status
 rules:
 - apiGroups:
   - build.openshift.io
@@ -396,10 +396,10 @@ func v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml() (*asset, 
 var _v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:update-buildconfig-status
+  name: system:openshift:controller:update-buildconfig-status
 roleRef:
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:update-buildconfig-status
+  name: system:openshift:controller:update-buildconfig-status
 subjects:
 - kind: ServiceAccount
   namespace: openshift-controller-manager
@@ -450,7 +450,7 @@ func v3110OpenshiftControllerManagerCmYaml() (*asset, error) {
 var _v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:default-rolebindings-controller
+  name: system:openshift:controller:default-rolebindings-controller
 rules:
 - apiGroups:
   - rbac.authorization.k8s.io
@@ -502,7 +502,7 @@ func v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterroleYaml
 var _v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterrolebindingDeployerYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:deployer
+  name: system:deployer
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -531,7 +531,7 @@ func v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterrolebind
 var _v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterrolebindingImageBuilderYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:image-builder
+  name: system:image-builder
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -560,7 +560,7 @@ func v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterrolebind
 var _v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterrolebindingImagePullerYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:image-puller
+  name: system:image-puller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -589,11 +589,11 @@ func v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterrolebind
 var _v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:default-rolebindings-controller
+  name: system:openshift:controller:default-rolebindings-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:default-rolebindings-controller
+  name: system:openshift:controller:default-rolebindings-controller
 subjects:
 - kind: ServiceAccount
   name: default-rolebindings-controller
@@ -618,7 +618,7 @@ func v3110OpenshiftControllerManagerDefaultRolebindingsControllerClusterrolebind
 var _v3110OpenshiftControllerManagerDeployerControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:deployer-controller
+  name: system:openshift:controller:deployer-controller
 rules:
 - apiGroups:
   - ""
@@ -681,11 +681,11 @@ func v3110OpenshiftControllerManagerDeployerControllerClusterroleYaml() (*asset,
 var _v3110OpenshiftControllerManagerDeployerControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:deployer-controller
+  name: system:openshift:controller:deployer-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:deployer-controller
+  name: system:openshift:controller:deployer-controller
 subjects:
 - kind: ServiceAccount
   name: deployer-controller
@@ -710,7 +710,7 @@ func v3110OpenshiftControllerManagerDeployerControllerClusterrolebindingYaml() (
 var _v3110OpenshiftControllerManagerDeploymentconfigControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:deploymentconfig-controller
+  name: system:openshift:controller:deploymentconfig-controller
 rules:
 - apiGroups:
   - ""
@@ -782,11 +782,11 @@ func v3110OpenshiftControllerManagerDeploymentconfigControllerClusterroleYaml() 
 var _v3110OpenshiftControllerManagerDeploymentconfigControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:deploymentconfig-controller
+  name: system:openshift:controller:deploymentconfig-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:deploymentconfig-controller
+  name: system:openshift:controller:deploymentconfig-controller
 subjects:
 - kind: ServiceAccount
   name: deploymentconfig-controller
@@ -899,7 +899,7 @@ func v3110OpenshiftControllerManagerDsYaml() (*asset, error) {
 var _v3110OpenshiftControllerManagerImageImportControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:image-import-controller
+  name: system:openshift:controller:image-import-controller
 rules:
 - apiGroups:
   - ""
@@ -960,11 +960,11 @@ func v3110OpenshiftControllerManagerImageImportControllerClusterroleYaml() (*ass
 var _v3110OpenshiftControllerManagerImageImportControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:image-import-controller
+  name: system:openshift:controller:image-import-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:image-import-controller
+  name: system:openshift:controller:image-import-controller
 subjects:
 - kind: ServiceAccount
   name: image-import-controller
@@ -989,7 +989,7 @@ func v3110OpenshiftControllerManagerImageImportControllerClusterrolebindingYaml(
 var _v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:image-trigger-controller
+  name: system:openshift:controller:image-trigger-controller
 rules:
 - apiGroups:
   - ""
@@ -1082,11 +1082,11 @@ func v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml() (*as
 var _v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:image-trigger-controller
+  name: system:openshift:controller:image-trigger-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:image-trigger-controller
+  name: system:openshift:controller:image-trigger-controller
 subjects:
 - kind: ServiceAccount
   name: image-trigger-controller
@@ -1496,7 +1496,7 @@ func v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml() (*asset, error) {
 var _v3110OpenshiftControllerManagerOriginNamespaceControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:origin-namespace-controller
+  name: system:openshift:controller:origin-namespace-controller
 rules:
 - apiGroups:
   - ""
@@ -1544,11 +1544,11 @@ metadata:
   annotations:
     rbac.authorization.kubernetes.io/autoupdate: "true"
   creationTimestamp: null
-  name: system:openshift:openshift-controller-manager:origin-namespace-controller
+  name: system:openshift:controller:origin-namespace-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:origin-namespace-controller
+  name: system:openshift:controller:origin-namespace-controller
 subjects:
 - kind: ServiceAccount
   name: origin-namespace-controller
@@ -1671,7 +1671,7 @@ func v3110OpenshiftControllerManagerSeparateSaRolebindingYaml() (*asset, error) 
 var _v3110OpenshiftControllerManagerServiceIngressIpControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:service-ingress-ip-controller
+  name: system:openshift:controller:service-ingress-ip-controller
 rules:
 - apiGroups:
   - ""
@@ -1715,11 +1715,11 @@ func v3110OpenshiftControllerManagerServiceIngressIpControllerClusterroleYaml() 
 var _v3110OpenshiftControllerManagerServiceIngressIpControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:service-ingress-ip-controller
+  name: system:openshift:controller:service-ingress-ip-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:service-ingress-ip-controller
+  name: system:openshift:controller:service-ingress-ip-controller
 subjects:
 - kind: ServiceAccount
   name: service-ingress-ip-controller
@@ -1744,7 +1744,7 @@ func v3110OpenshiftControllerManagerServiceIngressIpControllerClusterrolebinding
 var _v3110OpenshiftControllerManagerServiceaccountControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:serviceaccount-controller
+  name: system:openshift:controller:serviceaccount-controller
 rules:
 - apiGroups:
   - ""
@@ -1792,10 +1792,10 @@ func v3110OpenshiftControllerManagerServiceaccountControllerClusterroleYaml() (*
 var _v3110OpenshiftControllerManagerServiceaccountControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:serviceaccount-controller
+  name: system:openshift:controller:serviceaccount-controller
 roleRef:
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:serviceaccount-controller
+  name: system:openshift:controller:serviceaccount-controller
 subjects:
 - kind: ServiceAccount
   namespace: openshift-infra
@@ -1820,7 +1820,7 @@ func v3110OpenshiftControllerManagerServiceaccountControllerClusterrolebindingYa
 var _v3110OpenshiftControllerManagerServiceaccountPullSecretsControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:serviceaccount-pull-secrets-controller
+  name: system:openshift:controller:serviceaccount-pull-secrets-controller
 rules:
 - apiGroups:
   - ""
@@ -1880,11 +1880,11 @@ func v3110OpenshiftControllerManagerServiceaccountPullSecretsControllerClusterro
 var _v3110OpenshiftControllerManagerServiceaccountPullSecretsControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:serviceaccount-pull-secrets-controller
+  name: system:openshift:controller:serviceaccount-pull-secrets-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:serviceaccount-pull-secrets-controller
+  name: system:openshift:controller:serviceaccount-pull-secrets-controller
 subjects:
 - kind: ServiceAccount
   name: serviceaccount-pull-secrets-controller
@@ -2005,7 +2005,7 @@ func v3110OpenshiftControllerManagerSvcYaml() (*asset, error) {
 var _v3110OpenshiftControllerManagerTemplateInstanceControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:template-instance-controller
+  name: system:openshift:controller:template-instance-controller
 rules:
 - apiGroups:
   - authorization.k8s.io
@@ -2039,7 +2039,7 @@ func v3110OpenshiftControllerManagerTemplateInstanceControllerClusterroleYaml() 
 var _v3110OpenshiftControllerManagerTemplateInstanceControllerClusterrolebindingAdminYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:template-instance-controller:admin
+  name: system:openshift:controller:template-instance-controller-admin
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2068,11 +2068,16 @@ func v3110OpenshiftControllerManagerTemplateInstanceControllerClusterrolebinding
 var _v3110OpenshiftControllerManagerTemplateInstanceControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:template-instance-controller
+  name: system:openshift:controller:template-instance-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:template-instance-controller`)
+  name: system:openshift:controller:template-instance-controller
+subjects:
+- kind: ServiceAccount
+  name: template-instance-controller
+  namespace: openshift-infra
+`)
 
 func v3110OpenshiftControllerManagerTemplateInstanceControllerClusterrolebindingYamlBytes() ([]byte, error) {
 	return _v3110OpenshiftControllerManagerTemplateInstanceControllerClusterrolebindingYaml, nil
@@ -2092,7 +2097,7 @@ func v3110OpenshiftControllerManagerTemplateInstanceControllerClusterrolebinding
 var _v3110OpenshiftControllerManagerTemplateInstanceFinalizerControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:template-instance-finalizer-controller
+  name: system:openshift:controller:template-instance-finalizer-controller
 rules:
 - apiGroups:
   - template.openshift.io
@@ -2120,7 +2125,7 @@ func v3110OpenshiftControllerManagerTemplateInstanceFinalizerControllerClusterro
 var _v3110OpenshiftControllerManagerTemplateInstanceFinalizerControllerClusterrolebindingAdminYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:template-instance-finalizer-controller:admin
+  name: system:openshift:controller:template-instance-finalizer-controller-admin
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -2149,11 +2154,11 @@ func v3110OpenshiftControllerManagerTemplateInstanceFinalizerControllerClusterro
 var _v3110OpenshiftControllerManagerTemplateInstanceFinalizerControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:template-instance-finalizer-controller
+  name: system:openshift:controller:template-instance-finalizer-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:template-instance-finalizer-controller
+  name: system:openshift:controller:template-instance-finalizer-controller
 subjects:
 - kind: ServiceAccount
   name: template-instance-finalizer-controller
@@ -2240,7 +2245,7 @@ func v3110OpenshiftControllerManagerTokenreviewClusterrolebindingYaml() (*asset,
 var _v3110OpenshiftControllerManagerUnidlingControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:unidling-controller
+  name: system:openshift:controller:unidling-controller
 rules:
 - apiGroups:
   - ""
@@ -2320,11 +2325,11 @@ func v3110OpenshiftControllerManagerUnidlingControllerClusterroleYaml() (*asset,
 var _v3110OpenshiftControllerManagerUnidlingControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:unidling-controller
+  name: system:openshift:controller:unidling-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:unidling-controller
+  name: system:openshift:controller:unidling-controller
 subjects:
 - kind: ServiceAccount
   name: unidling-controller

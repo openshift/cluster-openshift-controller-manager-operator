@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:build-config-change-controller
+  name: system:openshift:controller:build-config-change-controller
 rules:
 - apiGroups:
   - ""

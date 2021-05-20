@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: system:openshift:openshift-controller-manager:default-rolebindings-controller
+  name: system:openshift:controller:default-rolebindings-controller
 rules:
 - apiGroups:
   - rbac.authorization.k8s.io

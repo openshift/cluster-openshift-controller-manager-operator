@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:openshift:openshift-controller-manager:image-trigger-controller
+  name: system:openshift:controller:image-trigger-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:openshift-controller-manager:image-trigger-controller
+  name: system:openshift:controller:image-trigger-controller
 subjects:
 - kind: ServiceAccount
   name: image-trigger-controller
