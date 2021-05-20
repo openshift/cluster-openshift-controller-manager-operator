@@ -1790,7 +1790,7 @@ func v3110OpenshiftControllerManagerServiceaccountControllerClusterroleYaml() (*
 }
 
 var _v3110OpenshiftControllerManagerServiceaccountControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: ClusterRoleBinding
 metadata:
   name: system:openshift:controller:serviceaccount-controller
 roleRef:
