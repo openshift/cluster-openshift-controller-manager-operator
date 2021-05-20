@@ -42,7 +42,9 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		return err
 	}
 
+	// Empty namespace provides informers for cluster-scoped resources
 	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient,
+		"",
 		util.TargetNamespace,
 		util.OperatorNamespace,
 		util.UserSpecifiedGlobalConfigNamespace,
