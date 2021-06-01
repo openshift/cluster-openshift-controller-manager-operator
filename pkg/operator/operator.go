@@ -6,18 +6,16 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	operatorapiv1 "github.com/openshift/api/operator/v1"
 	configinformerv1 "github.com/openshift/client-go/config/informers/externalversions/config/v1"
 	proxyvclient1 "github.com/openshift/client-go/config/listers/config/v1"
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
@@ -38,7 +36,8 @@ type OpenShiftControllerManagerOperator struct {
 	operatorConfigClient operatorclientv1.OperatorV1Interface
 	proxyLister          proxyvclient1.ProxyLister
 
-	kubeClient kubernetes.Interface
+	kubeClient       kubernetes.Interface
+	configMapsGetter coreclientv1.ConfigMapsGetter
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -51,7 +50,7 @@ func NewOpenShiftControllerManagerOperator(
 	targetImagePullSpec string,
 	operatorConfigInformer operatorinformersv1.OpenShiftControllerManagerInformer,
 	proxyInformer configinformerv1.ProxyInformer,
-	kubeInformersForOpenshiftControllerManager informers.SharedInformerFactory,
+	kubeInformers v1helpers.KubeInformersForNamespaces,
 	operatorConfigClient operatorclientv1.OperatorV1Interface,
 	kubeClient kubernetes.Interface,
 	recorder events.Recorder,
@@ -61,6 +60,7 @@ func NewOpenShiftControllerManagerOperator(
 		operatorConfigClient: operatorConfigClient,
 		proxyLister:          proxyInformer.Lister(),
 		kubeClient:           kubeClient,
+		configMapsGetter:     v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformers),
 		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
 		rateLimiter:          flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
 		recorder:             recorder,
@@ -68,13 +68,16 @@ func NewOpenShiftControllerManagerOperator(
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
 	proxyInformer.Informer().AddEventHandler(c.eventHandler())
-	kubeInformersForOpenshiftControllerManager.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
-	kubeInformersForOpenshiftControllerManager.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
-	kubeInformersForOpenshiftControllerManager.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
-	kubeInformersForOpenshiftControllerManager.Apps().V1().Deployments().Informer().AddEventHandler(c.eventHandler())
+
+	targetInformers := kubeInformers.InformersFor(util.TargetNamespace)
+
+	targetInformers.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	targetInformers.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
+	targetInformers.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
+	targetInformers.Apps().V1().Deployments().Informer().AddEventHandler(c.eventHandler())
 
 	// we only watch some namespaces
-	kubeInformersForOpenshiftControllerManager.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
+	targetInformers.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
 
 	// set this bit so the library-go code knows we opt-out from supporting the "unmanaged" state.
 	management.SetOperatorAlwaysManaged()
@@ -88,35 +91,6 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 	operatorConfig, err := c.operatorConfigClient.OpenShiftControllerManagers().Get(context.TODO(), "cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
-	}
-	// manage status
-	originalOperatorConfig := operatorConfig.DeepCopy()
-	reasonString := ""
-	messageString := ""
-	switch operatorConfig.Spec.ManagementState {
-	case operatorapiv1.Removed:
-		fallthrough
-		// we equally do not allow removed/unmanaged
-	case operatorapiv1.Unmanaged:
-		reasonString = fmt.Sprintf("%sUnsupported", string(operatorConfig.Spec.ManagementState))
-		messageString = fmt.Sprintf("the controller manager spec was set to %s state, but that is unsupported, and has no effect on this condition", string(operatorConfig.Spec.ManagementState))
-
-		// as we are ignoring / not supporting unmanaged/removed, we still process any other inputs to the sync/reconciliation
-		// unlike what we used to do
-	case operatorapiv1.Managed:
-		// we want to empty out the reason/message string if transitioning from the other phases so the default setting above is good
-	}
-
-	for _, condition := range operatorConfig.Status.Conditions {
-		// do not change the current status as part of noting that unmanaged/removed are not supported
-		condition.Reason = reasonString
-		condition.Message = messageString
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, condition)
-	}
-	if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
-		if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(context.TODO(), operatorConfig, metav1.UpdateOptions{}); err != nil {
-			return err
-		}
 	}
 
 	forceRequeue, err := syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig)

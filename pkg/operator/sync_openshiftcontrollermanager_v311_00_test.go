@@ -214,6 +214,7 @@ func TestProgressingCondition(t *testing.T) {
 
 			operator := OpenShiftControllerManagerOperator{
 				kubeClient:           kubeClient,
+				configMapsGetter:     kubeClient.CoreV1(),
 				proxyLister:          proxyLister,
 				recorder:             events.NewInMemoryRecorder(""),
 				operatorConfigClient: controllerManagerOperatorClient.OperatorV1(),

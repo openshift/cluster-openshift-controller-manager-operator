@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -38,43 +37,11 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 	errors := []error{}
 	var err error
 	operatorConfig := originalOperatorConfig.DeepCopy()
-	clientHolder := resourceapply.NewKubeClientHolder(c.kubeClient)
-	directResourceResults := resourceapply.ApplyDirectly(clientHolder, c.recorder, v311_00_assets.Asset,
-		"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/leader-role.yaml",
-		"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/ns.yaml",
-		"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
-		"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
-		"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/sa.yaml",
-		"v3.11.0/openshift-controller-manager/svc.yaml",
-		"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
-		"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
-		"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml",
-		"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml",
-	)
-	resourcesThatForceRedeployment := sets.NewString("v3.11.0/openshift-controller-manager/sa.yaml")
+
+	// TODO - use labels/annotations to force a daemonset rollout
 	forceRollout := false
 
-	for _, currResult := range directResourceResults {
-		if currResult.Error != nil {
-			errors = append(errors, fmt.Errorf("%q (%T): %v", currResult.File, currResult.Type, currResult.Error))
-			continue
-		}
-
-		if currResult.Changed && resourcesThatForceRedeployment.Has(currResult.File) {
-			forceRollout = true
-		}
-	}
-
-	_, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder, operatorConfig)
+	_, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "configmap", err))
 	}
@@ -84,12 +51,12 @@ func syncOpenShiftControllerManager_v311_00_to_latest(c OpenShiftControllerManag
 		errors = append(errors, fmt.Errorf("%q: %v", "client-ca", err))
 	}
 
-	_, serviceCAModified, err := manageOpenShiftServiceCAConfigMap_v311_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder)
+	_, serviceCAModified, err := manageOpenShiftServiceCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "openshift-service-ca", err))
 	}
 
-	_, globalCAModified, err := manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(c.kubeClient, c.kubeClient.CoreV1(), c.recorder)
+	_, globalCAModified, err := manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q: %v", "openshift-global-ca", err))
 	}
