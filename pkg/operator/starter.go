@@ -8,6 +8,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -16,20 +17,33 @@ import (
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
+	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/usercaobservation"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
 func RunOperator(ctx context.Context, controllerConfig *controllercmd.ControllerContext) error {
-	kubeClient, err := kubernetes.NewForConfig(controllerConfig.ProtoKubeConfig)
+	// Increase QPS and burst to avoid client-side rate limits when reconciling RBAC API objects.
+	// See TODO below for the StaticResourceController
+	highRateLimitProtoKubeConfig := rest.CopyConfig(controllerConfig.ProtoKubeConfig)
+	if highRateLimitProtoKubeConfig.QPS < 50 {
+		highRateLimitProtoKubeConfig.QPS = 50
+	}
+	if highRateLimitProtoKubeConfig.Burst < 100 {
+		highRateLimitProtoKubeConfig.Burst = 100
+	}
+	kubeClient, err := kubernetes.NewForConfig(highRateLimitProtoKubeConfig)
 	if err != nil {
 		return err
 	}
+
 	operatorClient, err := operatorclient.NewForConfig(controllerConfig.KubeConfig)
 	if err != nil {
 		return err
@@ -39,15 +53,26 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		return err
 	}
 
-	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient, util.TargetNamespace, util.OperatorNamespace, util.UserSpecifiedGlobalConfigNamespace)
+	// Create kube informers for namespaces that the operator reconciles content from or to.
+	// The empty string "" adds informers for cluster-scoped resources.
+	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient,
+		"",
+		util.TargetNamespace,
+		util.OperatorNamespace,
+		util.UserSpecifiedGlobalConfigNamespace,
+		util.InfraNamespace,
+		metav1.NamespaceSystem,
+	)
 	operatorConfigInformers := operatorinformers.NewSharedInformerFactory(operatorClient, 10*time.Minute)
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 
+	// OpenShiftControlllerManagerOperator reconciles the state of the openshift-controller-manager
+	// DaemonSet and associated ConfigMaps.
 	operator := NewOpenShiftControllerManagerOperator(
 		os.Getenv("IMAGE"),
 		operatorConfigInformers.Operator().V1().OpenShiftControllerManagers(),
 		configInformers.Config().V1().Proxies(),
-		kubeInformers.InformersFor(util.TargetNamespace),
+		kubeInformers,
 		operatorClient.OperatorV1(),
 		kubeClient,
 		controllerConfig.EventRecorder,
@@ -69,6 +94,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		controllerConfig.EventRecorder,
 	)
 
+	// ConfigObserver observes the configuration state from cluster config objects and transforms
+	// them into configuration used by openshift-controller-manager
 	configObserver := configobservationcontroller.NewConfigObserver(
 		opClient,
 		operatorConfigInformers,
@@ -89,6 +116,9 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		openshiftControllerManagers: operatorClient.OperatorV1().OpenShiftControllerManagers(),
 		version:                     os.Getenv("RELEASE_VERSION"),
 	}
+
+	// ClusterOperatorStatusController aggregates the conditions in our openshiftcontrollermanager
+	// object to the corresponding ClusterOperator object.
 	clusterOperatorStatus := status.NewClusterOperatorStatusController(
 		util.ClusterOperatorName,
 		[]configv1.ObjectReference{
@@ -105,10 +135,43 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		controllerConfig.EventRecorder,
 	)
 
+	// StaticResourceController uses library-go's resourceapply package to reconcile a set of YAML
+	// manifests against a cluster.
+	// TODO: enhance resourceapply to use listers for RBAC APIs.
+	staticResourceController := staticresourcecontroller.NewStaticResourceController(
+		"OpenshiftControllerManagerStaticResources",
+		v311_00_assets.Asset,
+		[]string{
+			"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/leader-role.yaml",
+			"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/ns.yaml",
+			"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
+			"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
+			"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/sa.yaml",
+			"v3.11.0/openshift-controller-manager/svc.yaml",
+			"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
+			"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml",
+		},
+		resourceapply.NewKubeClientHolder(kubeClient),
+		opClient,
+		controllerConfig.EventRecorder,
+	).AddKubeInformers(kubeInformers)
+
 	operatorConfigInformers.Start(ctx.Done())
 	kubeInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
 
+	go staticResourceController.Run(ctx, 1)
 	go operator.Run(ctx, 1)
 	go resourceSyncer.Run(ctx, 1)
 	go configObserver.Run(ctx, 1)
