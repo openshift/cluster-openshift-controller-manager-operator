@@ -14,9 +14,12 @@ const (
 // +kubebuilder:resource:scope="Cluster"
 // +kubebuilder:subresource:status
 // +genclient:nonNamespaced
+// +openshift:compatibility-gen:level=1
 
 // APIRequestCount tracks requests made to an API. The instance name must
 // be of the form `resource.version.group`, matching the resource.
+//
+// Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).
 type APIRequestCount struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -47,13 +50,14 @@ type APIRequestCountStatus struct {
 	// conditions contains details of the current status of this API Resource.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []metav1.Condition `json:"conditions"`
+	Conditions []metav1.Condition `json:"conditions" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// removedInRelease is when the API will be removed.
+	// +kubebuilder:validation:MinLength=0
 	// +kubebuilder:validation:Pattern=^[0-9][0-9]*\.[0-9][0-9]*$
 	// +kubebuilder:validation:MaxLength=64
 	// +optional
-	RemovedInRelease string `json:"removedInRelease"`
+	RemovedInRelease string `json:"removedInRelease,omitempty"`
 
 	// requestCount is a sum of all requestCounts across all current hours, nodes, and users.
 	// +kubebuilder:validation:Minimum=0
@@ -148,8 +152,11 @@ type PerVerbAPIRequestCount struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +openshift:compatibility-gen:level=1
 
 // APIRequestCountList is a list of APIRequestCount resources.
+//
+// Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).
 type APIRequestCountList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
