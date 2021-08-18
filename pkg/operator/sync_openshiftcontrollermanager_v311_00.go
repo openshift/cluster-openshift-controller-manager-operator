@@ -171,9 +171,9 @@ func syncReturn(c OpenShiftControllerManagerOperator, errors []error, originalOp
 	return false, nil
 }
 
-func manageOpenShiftControllerManagerClientCA_v311_00_to_latest(client coreclientv1.CoreV1Interface, recorder events.Recorder) (bool, error) {
+func manageOpenShiftControllerManagerClientCA_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (bool, error) {
 	const apiserverClientCA = "client-ca"
-	_, caChanged, err := resourceapply.SyncConfigMap(client, recorder, util.KubeAPIServerNamespace, apiserverClientCA, util.TargetNamespace, apiserverClientCA, []metav1.OwnerReference{})
+	_, caChanged, err := resourceapply.SyncConfigMap(context.Background(), client, recorder, util.KubeAPIServerNamespace, apiserverClientCA, util.TargetNamespace, apiserverClientCA, []metav1.OwnerReference{})
 	if err != nil {
 		return false, err
 	}
@@ -203,7 +203,7 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 		requiredConfigMap.Data[k] = v
 	}
 
-	return resourceapply.ApplyConfigMap(client, recorder, requiredConfigMap)
+	return resourceapply.ApplyConfigMap(context.Background(), client, recorder, requiredConfigMap)
 }
 
 func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
@@ -358,5 +358,5 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appscli
 		}
 	}
 
-	return resourceapply.ApplyDaemonSetWithForce(client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus), forceRollout)
+	return resourceapply.ApplyDaemonSetWithForce(context.Background(), client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus), forceRollout)
 }
