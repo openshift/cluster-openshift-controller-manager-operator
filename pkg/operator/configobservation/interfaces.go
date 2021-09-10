@@ -13,6 +13,7 @@ type Listers struct {
 	BuildConfigLister  configlistersv1.BuildLister
 	ConfigMapLister    corelistersv1.ConfigMapLister
 	NetworkLister      configlistersv1.NetworkLister
+	FeatureGateLister_ configlistersv1.FeatureGateLister
 	PreRunCachesSynced []cache.InformerSynced
 }
 
@@ -22,4 +23,8 @@ func (l Listers) ResourceSyncer() resourcesynccontroller.ResourceSyncer {
 
 func (l Listers) PreRunHasSynced() []cache.InformerSynced {
 	return l.PreRunCachesSynced
+}
+
+func (l Listers) FeatureGateLister() configlistersv1.FeatureGateLister {
+	return l.FeatureGateLister_
 }
