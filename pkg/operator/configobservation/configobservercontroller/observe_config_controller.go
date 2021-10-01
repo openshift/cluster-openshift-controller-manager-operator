@@ -1,6 +1,7 @@
 package configobservercontroller
 
 import (
+	"k8s.io/apimachinery/pkg/util/sets"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/deployimages"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/images"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/network"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 )
 
 // NewConfigObserver initializes a new configuration observer.
@@ -30,10 +32,11 @@ func NewConfigObserver(
 		operatorClient,
 		eventRecorder,
 		configobservation.Listers{
-			ImageConfigLister: configInformers.Config().V1().Images().Lister(),
-			BuildConfigLister: configInformers.Config().V1().Builds().Lister(),
-			NetworkLister:     configInformers.Config().V1().Networks().Lister(),
-			ConfigMapLister:   kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Lister(),
+			ImageConfigLister:  configInformers.Config().V1().Images().Lister(),
+			BuildConfigLister:  configInformers.Config().V1().Builds().Lister(),
+			NetworkLister:      configInformers.Config().V1().Networks().Lister(),
+			FeatureGateLister_: configInformers.Config().V1().FeatureGates().Lister(),
+			ConfigMapLister:    kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Lister(),
 			PreRunCachesSynced: []cache.InformerSynced{
 				configInformers.Config().V1().Builds().Informer().HasSynced,
 				configInformers.Config().V1().Images().Informer().HasSynced,
@@ -48,6 +51,7 @@ func NewConfigObserver(
 		builds.ObserveBuildControllerConfig,
 		network.ObserveExternalIPAutoAssignCIDRs,
 		deployimages.ObserveControllerManagerImagesConfig,
+		featuregates.NewObserveFeatureFlagsFunc(sets.NewString("BuildCSIVolumes"), sets.String{}, []string{"featureGates"}),
 	)
 
 	return c
