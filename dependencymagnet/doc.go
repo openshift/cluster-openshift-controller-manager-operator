@@ -1,3 +1,4 @@
+//go:build tools
 // +build tools
 
 // dependencymagnet imports code that is not an explicit go dependency, but is used in things
