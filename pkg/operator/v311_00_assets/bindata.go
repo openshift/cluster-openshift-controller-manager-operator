@@ -818,8 +818,8 @@ metadata:
   name: controller-manager
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: serving-cert
-    prometheus.io/scrape: "true"
-    prometheus.io/scheme: https
+  labels:
+    prometheus: openshift-controller-manager
 spec:
   selector:
     controller-manager: "true"
