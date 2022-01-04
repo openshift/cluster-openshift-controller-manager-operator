@@ -190,6 +190,7 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 
 	// we can embed input hashes on our main configmap to drive rollouts when they change.
 	inputHashes, err := resourcehash.MultipleObjectHashStringMapForObjectReferences(
+		context.TODO(),
 		kubeClient,
 		resourcehash.NewObjectRef().ForConfigMap().InNamespace(util.TargetNamespace).Named("client-ca"),
 		resourcehash.NewObjectRef().ForSecret().InNamespace(util.TargetNamespace).Named("serving-cert"),

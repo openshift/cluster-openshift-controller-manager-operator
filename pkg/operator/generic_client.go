@@ -46,7 +46,7 @@ func (p *genericClient) GetObjectMeta() (*metav1.ObjectMeta, error) {
 	return &resource.ObjectMeta, nil
 }
 
-func (p *genericClient) UpdateOperatorSpec(resourceVersion string, spec *operatorapiv1.OperatorSpec) (*operatorapiv1.OperatorSpec, string, error) {
+func (p *genericClient) UpdateOperatorSpec(ctx context.Context, resourceVersion string, spec *operatorapiv1.OperatorSpec) (*operatorapiv1.OperatorSpec, string, error) {
 	resource, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return nil, "", err
@@ -62,7 +62,7 @@ func (p *genericClient) UpdateOperatorSpec(resourceVersion string, spec *operato
 
 	return &ret.Spec.OperatorSpec, ret.ResourceVersion, nil
 }
-func (p *genericClient) UpdateOperatorStatus(resourceVersion string, status *operatorapiv1.OperatorStatus) (*operatorapiv1.OperatorStatus, error) {
+func (p *genericClient) UpdateOperatorStatus(ctx context.Context, resourceVersion string, status *operatorapiv1.OperatorStatus) (*operatorapiv1.OperatorStatus, error) {
 	resource, err := p.informers.Operator().V1().OpenShiftControllerManagers().Lister().Get("cluster")
 	if err != nil {
 		return nil, err

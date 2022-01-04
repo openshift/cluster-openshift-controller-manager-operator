@@ -6,18 +6,17 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/openshift/api v0.0.0-20210927171657-636513e97fda
-	github.com/openshift/build-machinery-go v0.0.0-20210806203541-4ea9b6da3a37
-	github.com/openshift/client-go v0.0.0-20210916133943-9acee1a0fb83
-	github.com/openshift/library-go v0.0.0-20210929123655-f91754363286
+	github.com/openshift/api v0.0.0-20211209135129-c58d9f695577
+	github.com/openshift/build-machinery-go v0.0.0-20211213093930-7e33a7eb4ce3
+	github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
+	github.com/openshift/library-go v0.0.0-20211220195323-eca2c467c492
 	github.com/prometheus/client_golang v1.11.0
-	github.com/spf13/cobra v1.1.3
-	github.com/spf13/pflag v1.0.5
-	k8s.io/api v0.22.1
-	k8s.io/apimachinery v0.22.1
-	k8s.io/client-go v0.22.1
-	k8s.io/component-base v0.22.1
-	k8s.io/klog/v2 v2.9.0
+	github.com/spf13/cobra v1.2.1
+	k8s.io/api v0.23.0
+	k8s.io/apimachinery v0.23.0
+	k8s.io/client-go v0.23.0
+	k8s.io/component-base v0.23.0
+	k8s.io/klog/v2 v2.30.0
 )
 
 replace vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
