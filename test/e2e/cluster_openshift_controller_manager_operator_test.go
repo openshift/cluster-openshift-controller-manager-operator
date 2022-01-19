@@ -12,13 +12,29 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/test/framework"
 )
 
 func TestClusterOpenshiftControllerManagerOperator(t *testing.T) {
+	ctx := context.Background()
 	client := framework.MustNewClientset(t, nil)
 	// make sure the operator is fully up
 	framework.MustEnsureClusterOperatorStatusIsSet(t, client)
+	// make sure the global trust bundle is injected
+	globalCAConfigMap, err := client.ConfigMaps(util.TargetNamespace).Get(ctx, "openshift-global-ca", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error getting configMap %s/%s: %v", util.TargetNamespace, "openshift-global-ca", err)
+	}
+	if val, ok := globalCAConfigMap.Labels["config.openshift.io/inject-trusted-cabundle"]; !ok || val != "true" {
+		t.Errorf(
+			"expected ConfigMap %s/%s to have label %q:%q; got %q",
+			util.TargetNamespace,
+			"openshift-global-ca",
+			"config.openshift.io/inject-trusted-cabundle",
+			"true",
+			val)
+	}
 }
 
 func TestClusterBuildConfigObservation(t *testing.T) {
