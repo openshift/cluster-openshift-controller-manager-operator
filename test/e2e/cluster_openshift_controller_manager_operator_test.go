@@ -12,13 +12,56 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/test/framework"
 )
 
 func TestClusterOpenshiftControllerManagerOperator(t *testing.T) {
+	ctx := context.Background()
 	client := framework.MustNewClientset(t, nil)
 	// make sure the operator is fully up
 	framework.MustEnsureClusterOperatorStatusIsSet(t, client)
+
+	// make sure that we synced the cluster's service serving CA
+	serviceCAConfigMap, err := client.ConfigMaps(util.TargetNamespace).Get(ctx, "openshift-service-ca", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error getting openshift-service-ca ConfigMap: %v", err)
+	}
+	verifyInjectedConfigMap(
+		t,
+		nil,
+		map[string]string{
+			"service.beta.openshift.io/inject-cabundle": "true",
+		},
+		"service-ca.crt",
+		serviceCAConfigMap)
+
+}
+
+func verifyInjectedConfigMap(t *testing.T, requiredLabels map[string]string, requiredAnnotations map[string]string, requiredKey string, configMap *corev1.ConfigMap) {
+	for label, expectedValue := range requiredLabels {
+		actual, exists := configMap.Labels[label]
+		if !exists {
+			t.Errorf("%s/%s: expected label %s does not exist", configMap.Namespace, configMap.Name, label)
+		}
+		if expectedValue != actual {
+			t.Errorf("%s/%s: expected label %s to have value %q, got %q", configMap.Namespace, configMap.Name, label, expectedValue, actual)
+		}
+	}
+	for annotation, expectedValue := range requiredAnnotations {
+		actual, exists := configMap.Annotations[annotation]
+		if !exists {
+			t.Errorf("%s/%s: expected annotation %s does not exist", configMap.Namespace, configMap.Name, annotation)
+		}
+		if expectedValue != actual {
+			t.Errorf("%s/%s: expected annotation %s to have value %q, got %q", configMap.Namespace, configMap.Name, annotation, expectedValue, actual)
+		}
+	}
+	if requiredKey != "" {
+		if _, ok := configMap.Data[requiredKey]; !ok {
+			t.Errorf("%s/%s: required key %q is missing", configMap.Namespace, configMap.Name, requiredKey)
+		}
+	}
 }
 
 func TestClusterBuildConfigObservation(t *testing.T) {

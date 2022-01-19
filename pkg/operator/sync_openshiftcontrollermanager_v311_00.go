@@ -207,36 +207,15 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 	return resourceapply.ApplyConfigMap(context.Background(), client, recorder, requiredConfigMap)
 }
 
+// manageOpenShiftServiceCAConfigMap_v311_00_to_latest syncs a ConfigMap that is injected with the
+// cluster's service CA certificate. This allows openshift-controller-manager to trust services
+// within the cluster, most notably the internal registry.
 func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml"))
-	existing, err := client.ConfigMaps(util.TargetNamespace).Get(context.TODO(), "openshift-service-ca", metav1.GetOptions{})
-	// Ensure we create the ConfigMap for the registry CA, and that it has the right annotations
-	// Lifted from library-go for the most part
-	if apierrors.IsNotFound(err) {
-		new, err := client.ConfigMaps(util.TargetNamespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
-		if err != nil {
-			recorder.Eventf("ConfigMapCreateFailed", "Failed to create %s%s/%s%s: %v", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager", err)
-			return nil, true, err
-		}
-		recorder.Eventf("ConfigMapCreated", "Created %s%s/%s%s because it was missing", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager")
-		return new, true, nil
-	}
-
-	// Ensure the openshift-service-ca ConfigMap has the service.beta.openshift.io/inject-cabundle annotation
-	// Otherwise ignore the contents of the ConfigMap
-	modified := resourcemerge.BoolPtr(false)
-	existingCopy := existing.DeepCopy()
-	resourcemerge.EnsureObjectMeta(modified, &existingCopy.ObjectMeta, configMap.ObjectMeta)
-	if !*modified {
-		return existing, false, nil
-	}
-	updated, err := client.ConfigMaps(util.TargetNamespace).Update(context.TODO(), existingCopy, metav1.UpdateOptions{})
-	if err != nil {
-		recorder.Eventf("ConfigMapUpdateFailed", "Failed to update %s%s/%s%s: %v", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager", err)
-		return nil, true, err
-	}
-	recorder.Eventf("ConfigMapUpdated", "Updated %s%s/%s%s", "configmap", "", "openshift-service-ca", "-n openshift-controller-manager")
-	return updated, true, nil
+	// The service-ca ConfigMap uses the service.beta.openshift.io/inject-cabundle: "true
+	// annotation to inject data into the "service-ca.crt" key of the ConfigMap.
+	// See also: https://docs.openshift.com/container-platform/4.9/security/certificate_types_descriptions/service-ca-certificates.html
+	return resourceapply.ApplyInjectableConfigMap(context.TODO(), kubeClient.CoreV1(), recorder, configMap, resourceapply.NewResourceCache(), "service-ca.crt")
 }
 
 func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
