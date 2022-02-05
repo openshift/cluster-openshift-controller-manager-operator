@@ -4,7 +4,7 @@ metadata:
   namespace: openshift-controller-manager
   name: controller-manager
   annotations:
-    service.alpha.openshift.io/serving-cert-secret-name: serving-cert
+    service.beta.openshift.io/serving-cert-secret-name: serving-cert
   labels:
     prometheus: openshift-controller-manager
 spec:
