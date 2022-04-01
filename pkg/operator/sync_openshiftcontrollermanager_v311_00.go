@@ -239,45 +239,15 @@ func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.I
 	return updated, true, nil
 }
 
+// manageOpenShiftGlobalCAConfigMap_v311_00_to_latest syncs a ConfigMap that has the cluster's
+// global trust bundle injected. This CA is used by ocm to communicate with external services,
+// such as container registries that the image signature import controller downloads data from.
+// The global trust bundle is needed in the event the service uses a custom PKI certificate, or
+// OpenShift is run behind a proxy that uses a custom PKI certificate.
 func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-global-ca-cm.yaml"))
-	existing, err := client.ConfigMaps(util.TargetNamespace).Get(context.TODO(), "openshift-global-ca", metav1.GetOptions{})
-	// Ensure we create the ConfigMap for the global CA, and that it has the right labels
-	// Lifted from library-go for the most part
-
-	// Bug 1826183: Build pod containers now run `update-ca-trust extract` on startup if a custom
-	// PKI is added to the cluster. Prior to 4.6, builds used the global CA trust bundle that was
-	// injected into this global-ca configmap. However, the global CA bundle is not intended to be
-	// used with workloads which run `update-ca-trust extract` on their own. Instead, this operator
-	// will directly copy the admin-provided custom PKI via the UserCAObservationController.
-	//
-	// TODO: In 4.6 we need to continue creating this ConfigMap to ensure smooth upgrades.
-	// In 4.7 or beyond this ConfigMap should be deleted.
-	if apierrors.IsNotFound(err) {
-		new, err := client.ConfigMaps(util.TargetNamespace).Create(context.TODO(), configMap, metav1.CreateOptions{})
-		if err != nil {
-			recorder.Eventf("ConfigMapCreateFailed", "Failed to create %s%s/%s%s: %v", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager", err)
-			return nil, true, err
-		}
-		recorder.Eventf("ConfigMapCreated", "Created %s%s/%s%s because it was missing", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager")
-		return new, true, nil
-	}
-
-	// Ensure the openshift-global-ca ConfigMap has the config.openshift.io/inject-trusted-cabundle Label
-	// Otherwise ignore the contents of the ConfigMap
-	modified := resourcemerge.BoolPtr(false)
-	existingCopy := existing.DeepCopy()
-	resourcemerge.EnsureObjectMeta(modified, &existingCopy.ObjectMeta, configMap.ObjectMeta)
-	if !*modified {
-		return existing, false, nil
-	}
-	updated, err := client.ConfigMaps(util.TargetNamespace).Update(context.TODO(), existingCopy, metav1.UpdateOptions{})
-	if err != nil {
-		recorder.Eventf("ConfigMapUpdateFailed", "Failed to update %s%s/%s%s: %v", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager", err)
-		return nil, true, err
-	}
-	recorder.Eventf("ConfigMapUpdated", "Updated %s%s/%s%s", "configmap", "", "openshift-global-ca", "-n openshift-controller-manager")
-	return updated, true, nil
+	// ApplyConfigMap now handles the injection of CA certificates.
+	return resourceapply.ApplyConfigMap(context.TODO(), client, recorder, configMap)
 }
 
 func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *operatorapiv1.OpenShiftControllerManager, imagePullSpec string, generationStatus []operatorapiv1.GenerationStatus, forceRollout bool, proxyLister proxyvclient1.ProxyLister) (*appsv1.DaemonSet, bool, error) {
