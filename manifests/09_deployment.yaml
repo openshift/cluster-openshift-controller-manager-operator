@@ -22,9 +22,18 @@ spec:
       labels:
         app: openshift-controller-manager-operator
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: openshift-controller-manager-operator
       containers:
       - name: openshift-controller-manager-operator
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         image: docker.io/openshift/origin-cluster-openshift-controller-manager-operator:v4.0
         imagePullPolicy: IfNotPresent
         ports:
@@ -57,12 +66,10 @@ spec:
       volumes:
       - name: serving-cert
         secret:
-          defaultMode: 400
           secretName: openshift-controller-manager-operator-serving-cert
           optional: true
       - name: config
         configMap:
-          defaultMode: 440
           name: openshift-controller-manager-operator-config
       nodeSelector:
         node-role.kubernetes.io/master: ""
