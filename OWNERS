@@ -13,8 +13,8 @@ approvers:
   - deads2k
   - sttts
   - mfojtik
-  - adambkaplan
   - soltysh
   - ingvagabund
   - damemi
+  - coreydaley
 component: openshift-controller-manager
