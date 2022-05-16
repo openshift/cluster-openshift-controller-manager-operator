@@ -24,10 +24,19 @@ spec:
         app: openshift-controller-manager
         controller-manager: "true"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       priorityClassName: system-node-critical 
       serviceAccountName: openshift-controller-manager-sa
       containers:
       - name: controller-manager
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         image: ${IMAGE}
         imagePullPolicy: IfNotPresent
         command: ["openshift-controller-manager", "start"]
