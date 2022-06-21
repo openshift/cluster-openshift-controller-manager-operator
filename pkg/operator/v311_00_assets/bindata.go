@@ -5,6 +5,8 @@
 // bindata/v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/cm.yaml
 // bindata/v3.11.0/openshift-controller-manager/ds.yaml
+// bindata/v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrole.yaml
+// bindata/v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrole.yaml
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml
@@ -287,6 +289,94 @@ func v3110OpenshiftControllerManagerDsYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/ds.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:openshift-controller-manager:image-trigger-controller
+rules:
+- apiGroups:
+  - apps.openshift.io
+  resources:
+  - deploymentconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - build.openshift.io
+  resources:
+  - buildconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+`)
+
+func v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml, nil
+}
+
+func v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrole.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:openshift:openshift-controller-manager:image-trigger-controller
+roleRef:
+  kind: ClusterRole
+  name: system:openshift:openshift-controller-manager:image-trigger-controller
+subjects:
+- kind: ServiceAccount
+  namespace: openshift-infra
+  name: image-trigger-controller
+`)
+
+func v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYaml, nil
+}
+
+func v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1657,6 +1747,8 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml":            v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/cm.yaml":                                              v3110OpenshiftControllerManagerCmYaml,
 	"v3.11.0/openshift-controller-manager/ds.yaml":                                              v3110OpenshiftControllerManagerDsYaml,
+	"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrole.yaml":            v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml,
+	"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml":     v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml":                            v3110OpenshiftControllerManagerInformerClusterroleYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml":                     v3110OpenshiftControllerManagerInformerClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml":         v3110OpenshiftControllerManagerIngressToRouteControllerClusterroleYaml,
@@ -1743,14 +1835,16 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"openshift-controller-manager": {nil, map[string]*bintree{
 			"buildconfigstatus-clusterrole.yaml":        {v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml, map[string]*bintree{}},
 			"buildconfigstatus-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml, map[string]*bintree{}},
-			"cm.yaml":                          {v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
-			"ds.yaml":                          {v3110OpenshiftControllerManagerDsYaml, map[string]*bintree{}},
-			"informer-clusterrole.yaml":        {v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
-			"informer-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
-			"ingress-to-route-controller-clusterrole.yaml":        {v3110OpenshiftControllerManagerIngressToRouteControllerClusterroleYaml, map[string]*bintree{}},
-			"ingress-to-route-controller-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerIngressToRouteControllerClusterrolebindingYaml, map[string]*bintree{}},
-			"leader-ingress-to-route-controller-role.yaml":        {v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYaml, map[string]*bintree{}},
-			"leader-ingress-to-route-controller-rolebinding.yaml": {v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYaml, map[string]*bintree{}},
+			"cm.yaml": {v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
+			"ds.yaml": {v3110OpenshiftControllerManagerDsYaml, map[string]*bintree{}},
+			"image-trigger-controller-clusterrole.yaml":            {v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml, map[string]*bintree{}},
+			"image-trigger-controller-clusterrolebinding.yaml":     {v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYaml, map[string]*bintree{}},
+			"informer-clusterrole.yaml":                            {v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
+			"informer-clusterrolebinding.yaml":                     {v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
+			"ingress-to-route-controller-clusterrole.yaml":         {v3110OpenshiftControllerManagerIngressToRouteControllerClusterroleYaml, map[string]*bintree{}},
+			"ingress-to-route-controller-clusterrolebinding.yaml":  {v3110OpenshiftControllerManagerIngressToRouteControllerClusterrolebindingYaml, map[string]*bintree{}},
+			"leader-ingress-to-route-controller-role.yaml":         {v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYaml, map[string]*bintree{}},
+			"leader-ingress-to-route-controller-rolebinding.yaml":  {v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYaml, map[string]*bintree{}},
 			"leader-role.yaml":                                     {v3110OpenshiftControllerManagerLeaderRoleYaml, map[string]*bintree{}},
 			"leader-rolebinding.yaml":                              {v3110OpenshiftControllerManagerLeaderRolebindingYaml, map[string]*bintree{}},
 			"ns.yaml":                                              {v3110OpenshiftControllerManagerNsYaml, map[string]*bintree{}},
