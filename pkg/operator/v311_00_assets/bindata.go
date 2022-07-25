@@ -522,6 +522,7 @@ metadata:
     workload.openshift.io/allowed: "management"
   labels:
     openshift.io/cluster-monitoring: "true"
+    openshift.io/run-level: "" # specify no run-level turns it off on install and upgrades
 `)
 
 func v3110OpenshiftControllerManagerNsYamlBytes() ([]byte, error) {
