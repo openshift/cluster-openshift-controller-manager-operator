@@ -530,6 +530,14 @@ rules:
   - create
   - update
   - patch
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
 `)
 
 func v3110OpenshiftControllerManagerLeaderRoleYamlBytes() ([]byte, error) {
