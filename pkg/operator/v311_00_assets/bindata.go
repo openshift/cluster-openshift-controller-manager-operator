@@ -809,6 +809,14 @@ rules:
   - get
   - list
   - create
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+    - leases
+  verbs:
+    - get
+    - create
+    - update
 `)
 
 func v3110OpenshiftControllerManagerSeparateSaRoleYamlBytes() ([]byte, error) {
