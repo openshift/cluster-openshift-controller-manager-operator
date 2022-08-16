@@ -362,7 +362,8 @@ rules:
 - apiGroups:
   - networking.k8s.io
   resources:
-  - ingress
+  - ingresses
+  - ingressclasses
   verbs:
   - get
   - list
@@ -394,6 +395,7 @@ rules:
   - update
 - apiGroups:
   - ""
+  - events.k8s.io
   resources:
   - events
   verbs:
