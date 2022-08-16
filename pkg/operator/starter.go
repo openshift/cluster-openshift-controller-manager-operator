@@ -17,6 +17,7 @@ import (
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
@@ -75,6 +76,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		configInformers.Config().V1().Proxies(),
 		kubeInformers,
 		operatorClient.OperatorV1(),
+		workloadcontroller.CountNodesFuncWrapper(kubeInformers.InformersFor("").Core().V1().Nodes().Lister()),
+		workloadcontroller.EnsureAtMostOnePodPerNode,
 		kubeClient,
 		controllerConfig.EventRecorder,
 	)
@@ -128,6 +131,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			{Resource: "namespaces", Name: util.MachineSpecifiedGlobalConfigNamespace},
 			{Resource: "namespaces", Name: util.OperatorNamespace},
 			{Resource: "namespaces", Name: util.TargetNamespace},
+			{Resource: "namespaces", Name: util.RouteControllerTargetNamespace},
 		},
 		configClient.ConfigV1(),
 		configInformers.Config().V1().ClusterOperators(),

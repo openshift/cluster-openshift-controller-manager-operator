@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -31,6 +32,13 @@ const (
 	workloadDegradedCondition = "WorkloadDegraded"
 )
 
+// nodeCountFunction a function to return count of nodes
+type nodeCountFunc func(nodeSelector map[string]string) (*int32, error)
+
+// ensureAtMostOnePodPerNode a function that updates the deployment spec to prevent more than
+// one pod of a given replicaset from landing on a node.
+type ensureAtMostOnePodPerNodeFunc func(spec *appsv1.DeploymentSpec, component string) error
+
 type OpenShiftControllerManagerOperator struct {
 	targetImagePullSpec  string
 	operatorConfigClient operatorclientv1.OperatorV1Interface
@@ -38,6 +46,13 @@ type OpenShiftControllerManagerOperator struct {
 
 	kubeClient       kubernetes.Interface
 	configMapsGetter coreclientv1.ConfigMapsGetter
+
+	// countNodes a function to return count of nodes on which the workload will be installed
+	countNodes nodeCountFunc
+
+	// ensureAtMostOnePodPerNode a function that updates the deployment spec to prevent more than
+	// one pod of a given replicaset from landing on a node.
+	ensureAtMostOnePodPerNode ensureAtMostOnePodPerNodeFunc
 
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
@@ -52,18 +67,22 @@ func NewOpenShiftControllerManagerOperator(
 	proxyInformer configinformerv1.ProxyInformer,
 	kubeInformers v1helpers.KubeInformersForNamespaces,
 	operatorConfigClient operatorclientv1.OperatorV1Interface,
+	countNodes nodeCountFunc,
+	ensureAtMostOnePodPerNode ensureAtMostOnePodPerNodeFunc,
 	kubeClient kubernetes.Interface,
 	recorder events.Recorder,
 ) *OpenShiftControllerManagerOperator {
 	c := &OpenShiftControllerManagerOperator{
-		targetImagePullSpec:  targetImagePullSpec,
-		operatorConfigClient: operatorConfigClient,
-		proxyLister:          proxyInformer.Lister(),
-		kubeClient:           kubeClient,
-		configMapsGetter:     v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformers),
-		queue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
-		rateLimiter:          flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
-		recorder:             recorder,
+		targetImagePullSpec:       targetImagePullSpec,
+		operatorConfigClient:      operatorConfigClient,
+		countNodes:                countNodes,
+		ensureAtMostOnePodPerNode: ensureAtMostOnePodPerNode,
+		proxyLister:               proxyInformer.Lister(),
+		kubeClient:                kubeClient,
+		configMapsGetter:          v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformers),
+		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
+		rateLimiter:               flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
+		recorder:                  recorder,
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
@@ -77,7 +96,17 @@ func NewOpenShiftControllerManagerOperator(
 	targetInformers.Apps().V1().Deployments().Informer().AddEventHandler(c.eventHandler())
 
 	// we only watch some namespaces
-	targetInformers.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler())
+	targetInformers.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler(util.TargetNamespace))
+
+	rcTargetInformers := kubeInformers.InformersFor(util.RouteControllerTargetNamespace)
+
+	rcTargetInformers.Core().V1().ConfigMaps().Informer().AddEventHandler(c.eventHandler())
+	rcTargetInformers.Core().V1().ServiceAccounts().Informer().AddEventHandler(c.eventHandler())
+	rcTargetInformers.Core().V1().Services().Informer().AddEventHandler(c.eventHandler())
+	rcTargetInformers.Apps().V1().Deployments().Informer().AddEventHandler(c.eventHandler())
+
+	// we only watch some namespaces
+	rcTargetInformers.Core().V1().Namespaces().Informer().AddEventHandler(c.namespaceEventHandler(util.RouteControllerTargetNamespace))
 
 	// set this bit so the library-go code knows we opt-out from supporting the "unmanaged" state.
 	management.SetOperatorAlwaysManaged()
@@ -93,7 +122,7 @@ func (c OpenShiftControllerManagerOperator) sync() error {
 		return err
 	}
 
-	forceRequeue, err := syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig)
+	forceRequeue, err := syncOpenShiftControllerManager_v311_00_to_latest(c, operatorConfig, c.countNodes, c.ensureAtMostOnePodPerNode)
 	if forceRequeue && err != nil {
 		c.queue.AddRateLimited(workQueueKey)
 	}
@@ -150,14 +179,14 @@ func (c *OpenShiftControllerManagerOperator) eventHandler() cache.ResourceEventH
 	}
 }
 
-func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.ResourceEventHandler {
+func (c *OpenShiftControllerManagerOperator) namespaceEventHandler(targetNamespace string) cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ns, ok := obj.(*corev1.Namespace)
 			if !ok {
 				c.queue.Add(workQueueKey)
 			}
-			if ns.Name == util.TargetNamespace {
+			if ns.Name == targetNamespace {
 				c.queue.Add(workQueueKey)
 			}
 		},
@@ -166,7 +195,7 @@ func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.Resou
 			if !ok {
 				c.queue.Add(workQueueKey)
 			}
-			if ns.Name == util.TargetNamespace {
+			if ns.Name == targetNamespace {
 				c.queue.Add(workQueueKey)
 			}
 		},
@@ -184,7 +213,7 @@ func (c *OpenShiftControllerManagerOperator) namespaceEventHandler() cache.Resou
 					return
 				}
 			}
-			if ns.Name == util.TargetNamespace {
+			if ns.Name == targetNamespace {
 				c.queue.Add(workQueueKey)
 			}
 		},
