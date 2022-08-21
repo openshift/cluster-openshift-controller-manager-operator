@@ -99,7 +99,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 		errors = append(errors, fmt.Errorf(msg))
 	}
 
-	actualRCDeployment, _, routerControllerManagerError := manageRouteControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), countNodes, ensureAtMostOnePodPerNodeFn, c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, rcForceRollout)
+	actualRCDeployment, _, routerControllerManagerError := manageRouteControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), countNodes, ensureAtMostOnePodPerNodeFn, c.recorder, operatorConfig, c.routeControllerManagerTargetImagePullSpec, operatorConfig.Status.Generations, rcForceRollout)
 	if routerControllerManagerError != nil {
 		msg := fmt.Sprintf("%q %q: %v", rcOperandName, "deployment", routerControllerManagerError)
 		progressingMessages = append(progressingMessages, msg)

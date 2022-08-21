@@ -58,6 +58,8 @@ spec:
           value: "0.0.1-snapshot"
         - name: IMAGE
           value: quay.io/openshift/origin-openshift-controller-manager:v4.2
+        - name: ROUTE_CONTROLLER_MANAGER_IMAGE
+          value: quay.io/openshift/origin-openshift-route-controller-manager:v4.12
         - name: POD_NAME
           valueFrom:
             fieldRef:
