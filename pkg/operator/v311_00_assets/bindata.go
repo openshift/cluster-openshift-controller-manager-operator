@@ -9,6 +9,8 @@
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml
 // bindata/v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml
+// bindata/v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml
+// bindata/v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/leader-role.yaml
 // bindata/v3.11.0/openshift-controller-manager/leader-rolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/ns.yaml
@@ -16,6 +18,7 @@
 // bindata/v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/openshift-global-ca-cm.yaml
 // bindata/v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml
+// bindata/v3.11.0/openshift-controller-manager/route-controller-ns.yaml
 // bindata/v3.11.0/openshift-controller-manager/sa.yaml
 // bindata/v3.11.0/openshift-controller-manager/separate-sa-role.yaml
 // bindata/v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml
@@ -442,6 +445,67 @@ func v3110OpenshiftControllerManagerIngressToRouteControllerClusterrolebindingYa
 	return a, nil
 }
 
+var _v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: system:openshift:openshift-controller-manager:leader-locking-ingress-to-route-controller
+  namespace: openshift-route-controller-manager
+rules:
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
+`)
+
+func v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYaml, nil
+}
+
+func v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYaml = []byte(`apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: system:openshift:openshift-controller-manager:leader-locking-ingress-to-route-controller
+  namespace: openshift-route-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: system:openshift:openshift-controller-manager:leader-locking-ingress-to-route-controller
+subjects:
+- kind: ServiceAccount
+  namespace: openshift-infra
+  name: ingress-to-route-controller
+`)
+
+func v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYaml, nil
+}
+
+func v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _v3110OpenshiftControllerManagerLeaderRoleYaml = []byte(`# needed to get the legacy lock that we used to use
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -664,6 +728,32 @@ func v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _v3110OpenshiftControllerManagerRouteControllerNsYaml = []byte(`apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-route-controller-manager
+  annotations:
+    openshift.io/node-selector: ""
+    workload.openshift.io/allowed: "management"
+  labels:
+    openshift.io/cluster-monitoring: "true"
+`)
+
+func v3110OpenshiftControllerManagerRouteControllerNsYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerRouteControllerNsYaml, nil
+}
+
+func v3110OpenshiftControllerManagerRouteControllerNsYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerRouteControllerNsYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/route-controller-ns.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -985,6 +1075,8 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml":                    v3110OpenshiftControllerManagerInformerClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml":        v3110OpenshiftControllerManagerIngressToRouteControllerClusterroleYaml,
 	"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml": v3110OpenshiftControllerManagerIngressToRouteControllerClusterrolebindingYaml,
+	"v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml":        v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYaml,
+	"v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml": v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/leader-role.yaml":                                    v3110OpenshiftControllerManagerLeaderRoleYaml,
 	"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml":                             v3110OpenshiftControllerManagerLeaderRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/ns.yaml":                                             v3110OpenshiftControllerManagerNsYaml,
@@ -992,6 +1084,7 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml":                         v3110OpenshiftControllerManagerOldLeaderRolebindingYaml,
 	"v3.11.0/openshift-controller-manager/openshift-global-ca-cm.yaml":                         v3110OpenshiftControllerManagerOpenshiftGlobalCaCmYaml,
 	"v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml":                        v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml,
+	"v3.11.0/openshift-controller-manager/route-controller-ns.yaml":                            v3110OpenshiftControllerManagerRouteControllerNsYaml,
 	"v3.11.0/openshift-controller-manager/sa.yaml":                                             v3110OpenshiftControllerManagerSaYaml,
 	"v3.11.0/openshift-controller-manager/separate-sa-role.yaml":                               v3110OpenshiftControllerManagerSeparateSaRoleYaml,
 	"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml":                        v3110OpenshiftControllerManagerSeparateSaRolebindingYaml,
@@ -1056,6 +1149,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"informer-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerInformerClusterrolebindingYaml, map[string]*bintree{}},
 			"ingress-to-route-controller-clusterrole.yaml":        {v3110OpenshiftControllerManagerIngressToRouteControllerClusterroleYaml, map[string]*bintree{}},
 			"ingress-to-route-controller-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerIngressToRouteControllerClusterrolebindingYaml, map[string]*bintree{}},
+			"leader-ingress-to-route-controller-role.yaml":        {v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRoleYaml, map[string]*bintree{}},
+			"leader-ingress-to-route-controller-rolebinding.yaml": {v3110OpenshiftControllerManagerLeaderIngressToRouteControllerRolebindingYaml, map[string]*bintree{}},
 			"leader-role.yaml":                    {v3110OpenshiftControllerManagerLeaderRoleYaml, map[string]*bintree{}},
 			"leader-rolebinding.yaml":             {v3110OpenshiftControllerManagerLeaderRolebindingYaml, map[string]*bintree{}},
 			"ns.yaml":                             {v3110OpenshiftControllerManagerNsYaml, map[string]*bintree{}},
@@ -1063,6 +1158,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"old-leader-rolebinding.yaml":         {v3110OpenshiftControllerManagerOldLeaderRolebindingYaml, map[string]*bintree{}},
 			"openshift-global-ca-cm.yaml":         {v3110OpenshiftControllerManagerOpenshiftGlobalCaCmYaml, map[string]*bintree{}},
 			"openshift-service-ca-cm.yaml":        {v3110OpenshiftControllerManagerOpenshiftServiceCaCmYaml, map[string]*bintree{}},
+			"route-controller-ns.yaml":            {v3110OpenshiftControllerManagerRouteControllerNsYaml, map[string]*bintree{}},
 			"sa.yaml":                             {v3110OpenshiftControllerManagerSaYaml, map[string]*bintree{}},
 			"separate-sa-role.yaml":               {v3110OpenshiftControllerManagerSeparateSaRoleYaml, map[string]*bintree{}},
 			"separate-sa-rolebinding.yaml":        {v3110OpenshiftControllerManagerSeparateSaRolebindingYaml, map[string]*bintree{}},
