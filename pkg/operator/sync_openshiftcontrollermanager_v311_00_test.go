@@ -6,6 +6,7 @@ import (
 	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
 	"k8s.io/apimachinery/pkg/runtime"
 	"os"
+	"strconv"
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -430,6 +431,7 @@ func TestProgressingCondition(t *testing.T) {
 			objects := []runtime.Object{
 				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "serving-cert", Namespace: "openshift-controller-manager"}},
 				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: "kube-system"}},
+				&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "client-ca", Namespace: "openshift-kube-apiserver"}},
 			}
 			if tc.daemonSet != nil {
 				objects = append(objects, tc.daemonSet)
@@ -539,7 +541,15 @@ func TestDeploymentWithProxy(t *testing.T) {
 		},
 	}
 
-	ds, rcBool, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(dsClient, recorder, operatorConfig, "my.co/repo/img:latest", operatorConfig.Status.Generations, false, proxyLister)
+	specAnnotations := map[string]string{
+		"openshiftcontrollermanagers.operator.openshift.io/cluster": strconv.FormatInt(operatorConfig.ObjectMeta.Generation, 10),
+		"configmaps/config":               "54587",
+		"configmaps/client-ca":            "12515",
+		"configmaps/openshift-service-ca": "45789",
+		"configmaps/openshift-global-ca":  "56784",
+	}
+
+	ds, rcBool, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(dsClient, recorder, operatorConfig, "my.co/repo/img:latest", operatorConfig.Status.Generations, proxyLister, specAnnotations)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
