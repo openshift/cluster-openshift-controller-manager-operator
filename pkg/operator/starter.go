@@ -17,6 +17,7 @@ import (
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
@@ -58,6 +59,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient,
 		"",
 		util.TargetNamespace,
+		util.RouteControllerTargetNamespace,
 		util.OperatorNamespace,
 		util.UserSpecifiedGlobalConfigNamespace,
 		util.InfraNamespace,
@@ -74,6 +76,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		configInformers.Config().V1().Proxies(),
 		kubeInformers,
 		operatorClient.OperatorV1(),
+		workloadcontroller.CountNodesFuncWrapper(kubeInformers.InformersFor("").Core().V1().Nodes().Lister()),
+		workloadcontroller.EnsureAtMostOnePodPerNode,
 		kubeClient,
 		controllerConfig.EventRecorder,
 	)
@@ -127,6 +131,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			{Resource: "namespaces", Name: util.MachineSpecifiedGlobalConfigNamespace},
 			{Resource: "namespaces", Name: util.OperatorNamespace},
 			{Resource: "namespaces", Name: util.TargetNamespace},
+			{Resource: "namespaces", Name: util.RouteControllerTargetNamespace},
 		},
 		configClient.ConfigV1(),
 		configInformers.Config().V1().ClusterOperators(),
@@ -153,7 +158,20 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"v3.11.0/openshift-controller-manager/leader-role.yaml",
 			"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/ns.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-informer-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-informer-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-leader-role.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-leader-rolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/route-controller-ns.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-sa.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-separate-sa-role.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-separate-sa-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-servicemonitor-role.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-servicemonitor-rolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-svc.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-tokenreview-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-tokenreview-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/route-controller-svc.yaml",
 			"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
 			"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",

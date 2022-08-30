@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: openshift-route-controller-manager
+  name: route-controller-manager
+  labels:
+    app: route-controller-manager
+    route-controller-manager: "true"
+spec:
+  # The number of replicas will be set in code to the number of master nodes.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  selector:
+    matchLabels:
+      app: route-controller-manager
+      route-controller-manager: "true"
+  template:
+    metadata:
+      name: route-controller-manager
+      annotations:
+        target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+      labels:
+        app: route-controller-manager
+        route-controller-manager: "true"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      priorityClassName: system-node-critical
+      serviceAccountName: route-controller-manager-sa
+      containers:
+      - name: route-controller-manager
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        image: ${IMAGE}
+        imagePullPolicy: IfNotPresent
+        command: [ "openshift-controller-manager", "route-controller-manager-start" ]
+        args:
+        - "--config=/var/run/configmaps/config/config.yaml"
+        resources:
+          requests:
+            memory: 100Mi
+            cpu: 100m
+        ports:
+          - containerPort: 8443
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /var/run/configmaps/config
+          name: config
+        - mountPath: /var/run/configmaps/client-ca
+          name: client-ca
+        - mountPath: /var/run/secrets/serving-cert
+          name: serving-cert
+        livenessProbe:
+          initialDelaySeconds: 30
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            path: healthz
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            path: healthz
+      volumes:
+      - name: config
+        configMap:
+          name: config
+      - name: client-ca
+        configMap:
+          name: client-ca
+      - name: serving-cert
+        secret:
+          secretName: serving-cert
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      # Ensure pod can be scheduled on master nodes
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+        # Ensure pod can be evicted if the node is unreachable
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 120
+        # Ensure scheduling is delayed until node readiness
+        # (i.e. network operator configures CNI on the node)
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 120
+      affinity:
+        podAntiAffinity:
+          # Ensure that at most one controller pod will be scheduled on a node.
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: "kubernetes.io/hostname"
+              labelSelector:
+                matchLabels:
+                  app: route-controller-manager
+                  route-controller-manager: "true"
