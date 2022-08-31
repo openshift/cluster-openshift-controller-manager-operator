@@ -170,7 +170,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	if actualRCDeployment.Status.AvailableReplicas == 0 {
 		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/route-controller-manager: available replicas is %d, desired available replicas > %d", actualRCDeployment.Status.AvailableReplicas, 1))
 	}
-	if actualRCDeployment.Status.UpdatedReplicas != *actualRCDeployment.Spec.Replicas {
+	if actualRCDeployment.Spec.Replicas != nil && actualRCDeployment.Status.UpdatedReplicas != *actualRCDeployment.Spec.Replicas {
 		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/route-controller-manager: updated replicas is %d, desired replicas is %d", actualRCDeployment.Status.UpdatedReplicas, *actualRCDeployment.Spec.Replicas))
 	}
 	if operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration {
