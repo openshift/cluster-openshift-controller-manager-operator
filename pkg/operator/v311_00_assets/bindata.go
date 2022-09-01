@@ -782,6 +782,7 @@ metadata:
     route-controller-manager: "true"
 spec:
   # The number of replicas will be set in code to the number of master nodes.
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
