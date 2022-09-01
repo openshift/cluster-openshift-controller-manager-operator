@@ -92,24 +92,26 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
 	var progressingMessages []string
-	actualDaemonSet, _, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, forceRollout, c.proxyLister)
-	if err != nil {
-		msg := fmt.Sprintf("%q %q: %v", operandName, "deployment", err)
+	actualDaemonSet, _, openshiftControllerManagerError := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, forceRollout, c.proxyLister)
+	if openshiftControllerManagerError != nil {
+		msg := fmt.Sprintf("%q %q: %v", operandName, "deployment", openshiftControllerManagerError)
 		progressingMessages = append(progressingMessages, msg)
 		errors = append(errors, fmt.Errorf(msg))
 	}
 
-	actualRCDeployment, _, err := manageRouteControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), countNodes, ensureAtMostOnePodPerNodeFn, c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, rcForceRollout)
-	if err != nil {
-		msg := fmt.Sprintf("%q %q: %v", rcOperandName, "deployment", err)
+	actualRCDeployment, _, routerControllerManagerError := manageRouteControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), countNodes, ensureAtMostOnePodPerNodeFn, c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, rcForceRollout)
+	if routerControllerManagerError != nil {
+		msg := fmt.Sprintf("%q %q: %v", rcOperandName, "deployment", routerControllerManagerError)
 		progressingMessages = append(progressingMessages, msg)
 		errors = append(errors, fmt.Errorf(msg))
 	}
 
 	// library-go func called by manageOpenShiftControllerManagerDeployment_v311_00_to_latest can return nil with errors
-	if actualDaemonSet == nil || actualRCDeployment == nil {
+	if openshiftControllerManagerError != nil || routerControllerManagerError != nil {
 		return syncReturn(c, errors, originalOperatorConfig, operatorConfig)
 	}
+
+	// at this point we know that the actualDaemonSet and actualRCDeployment are both non-nil and non-empty
 	available := actualDaemonSet.Status.NumberAvailable > 0
 	rcAvailable := actualRCDeployment.Status.AvailableReplicas > 0
 
