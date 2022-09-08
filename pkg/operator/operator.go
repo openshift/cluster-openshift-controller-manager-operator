@@ -80,7 +80,7 @@ func NewOpenShiftControllerManagerOperator(
 		proxyLister:               proxyInformer.Lister(),
 		kubeClient:                kubeClient,
 		configMapsGetter:          v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformers),
-		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "KubeApiserverOperator"),
+		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "OpenshiftControllerManagerOperator"),
 		rateLimiter:               flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
 		recorder:                  recorder,
 	}
