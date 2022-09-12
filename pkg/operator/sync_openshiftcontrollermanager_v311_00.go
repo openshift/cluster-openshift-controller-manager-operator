@@ -66,7 +66,11 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "client-ca", err))
 	} else {
-		specAnnotations["configmaps/client-ca"] = clientCAConfigMap.ObjectMeta.ResourceVersion
+		resourceVersion := "0"
+		if clientCAConfigMap != nil { // SyncConfigMap can return nil
+			resourceVersion = clientCAConfigMap.ObjectMeta.ResourceVersion
+		}
+		specAnnotations["configmaps/client-ca"] = resourceVersion
 	}
 
 	serviceCAConfigMap, _, err := manageOpenShiftServiceCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
@@ -96,7 +100,11 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q %q: %v", rcOperandName, "client-ca", err))
 	} else {
-		rcSpecAnnotations["configmaps/client-ca"] = rcClientCAConfigMap.ObjectMeta.ResourceVersion
+		resourceVersion := "0"
+		if rcClientCAConfigMap != nil { // SyncConfigMap can return nil
+			resourceVersion = rcClientCAConfigMap.ObjectMeta.ResourceVersion
+		}
+		rcSpecAnnotations["configmaps/client-ca"] = resourceVersion
 	}
 
 	// our configmaps and secrets are in order, now it is time to create the DS
@@ -498,6 +506,9 @@ func manageRouteControllerManagerDeployment_v311_00_to_latest(
 	required.Spec.Replicas = masterNodeCount
 
 	err = ensureAtMostOnePodPerNodeFn(&required.Spec, util.RouteControllerTargetNamespace)
+	if err != nil {
+		return nil, false, fmt.Errorf("unable to ensure at most one pod per node: %v", err)
+	}
 
 	return resourceapply.ApplyDeployment(context.Background(), client, recorder, required, resourcemerge.ExpectedDeploymentGeneration(required, generationStatus))
 }
