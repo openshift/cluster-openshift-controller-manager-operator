@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   namespace: openshift-controller-manager
   name: controller-manager
@@ -7,13 +7,26 @@ metadata:
     app: openshift-controller-manager
     controller-manager: "true"
 spec:
-  updateStrategy:
+  # The number of replicas will be set in code to the number of master nodes.
+  replicas: 1
+  strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 3
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
-      app: openshift-controller-manager
+      # Need to vary the app label from that used by the legacy
+      # daemonset ('openshift-controller-manager') to avoid the legacy
+      # daemonset and its replacement deployment trying to try to
+      # manage the same pods.
+      #
+      # It's also necessary to use different labeling to ensure, via
+      # anti-affinity, at most one deployment-managed pod on each
+      # master node. Without label differentiation, anti-affinity
+      # would prevent a deployment-managed pod from running on a node
+      # that was already running a daemonset-managed pod.
+      app: openshift-controller-manager-a
       controller-manager: "true"
   template:
     metadata:
@@ -21,14 +34,14 @@ spec:
       annotations:
         target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
       labels:
-        app: openshift-controller-manager
+        app: openshift-controller-manager-a
         controller-manager: "true"
     spec:
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
-      priorityClassName: system-node-critical 
+      priorityClassName: system-node-critical
       serviceAccountName: openshift-controller-manager-sa
       containers:
       - name: controller-manager
@@ -49,6 +62,18 @@ spec:
         ports:
         - containerPort: 8443
         terminationMessagePolicy: FallbackToLogsOnError
+        livenessProbe:
+          initialDelaySeconds: 30
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            path: healthz
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            path: healthz
         volumeMounts:
         - mountPath: /var/run/configmaps/config
           name: config
@@ -77,4 +102,27 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
-      - operator: Exists
+        # Ensure pod can be scheduled on master nodes
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+          # Ensure pod can be evicted if the node is unreachable
+        - key: "node.kubernetes.io/unreachable"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 120
+          # Ensure scheduling is delayed until node readiness
+          # (i.e. network operator configures CNI on the node)
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 120
+      affinity:
+        podAntiAffinity:
+          # Ensure that at most one controller pod will be scheduled on a node.
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: "kubernetes.io/hostname"
+              labelSelector:
+                matchLabels:
+                  app: openshift-controller-manager-a
+                  controller-manager: "true"
