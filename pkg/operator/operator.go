@@ -40,9 +40,10 @@ type nodeCountFunc func(nodeSelector map[string]string) (*int32, error)
 type ensureAtMostOnePodPerNodeFunc func(spec *appsv1.DeploymentSpec, component string) error
 
 type OpenShiftControllerManagerOperator struct {
-	targetImagePullSpec  string
-	operatorConfigClient operatorclientv1.OperatorV1Interface
-	proxyLister          proxyvclient1.ProxyLister
+	targetImagePullSpec                       string
+	routeControllerManagerTargetImagePullSpec string
+	operatorConfigClient                      operatorclientv1.OperatorV1Interface
+	proxyLister                               proxyvclient1.ProxyLister
 
 	kubeClient       kubernetes.Interface
 	configMapsGetter coreclientv1.ConfigMapsGetter
@@ -63,6 +64,7 @@ type OpenShiftControllerManagerOperator struct {
 
 func NewOpenShiftControllerManagerOperator(
 	targetImagePullSpec string,
+	routeControllerManagerTargetImagePullSpec string,
 	operatorConfigInformer operatorinformersv1.OpenShiftControllerManagerInformer,
 	proxyInformer configinformerv1.ProxyInformer,
 	kubeInformers v1helpers.KubeInformersForNamespaces,
@@ -73,16 +75,17 @@ func NewOpenShiftControllerManagerOperator(
 	recorder events.Recorder,
 ) *OpenShiftControllerManagerOperator {
 	c := &OpenShiftControllerManagerOperator{
-		targetImagePullSpec:       targetImagePullSpec,
-		operatorConfigClient:      operatorConfigClient,
-		countNodes:                countNodes,
-		ensureAtMostOnePodPerNode: ensureAtMostOnePodPerNode,
-		proxyLister:               proxyInformer.Lister(),
-		kubeClient:                kubeClient,
-		configMapsGetter:          v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformers),
-		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "OpenshiftControllerManagerOperator"),
-		rateLimiter:               flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
-		recorder:                  recorder,
+		targetImagePullSpec:                       targetImagePullSpec,
+		routeControllerManagerTargetImagePullSpec: routeControllerManagerTargetImagePullSpec,
+		operatorConfigClient:                      operatorConfigClient,
+		countNodes:                                countNodes,
+		ensureAtMostOnePodPerNode:                 ensureAtMostOnePodPerNode,
+		proxyLister:                               proxyInformer.Lister(),
+		kubeClient:                                kubeClient,
+		configMapsGetter:                          v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformers),
+		queue:                                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "OpenshiftControllerManagerOperator"),
+		rateLimiter:                               flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
+		recorder:                                  recorder,
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
