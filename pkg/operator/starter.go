@@ -72,7 +72,6 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	// DaemonSet and associated ConfigMaps.
 	operator := NewOpenShiftControllerManagerOperator(
 		os.Getenv("IMAGE"),
-		os.Getenv("ROUTE_CONTROLLER_MANAGER_IMAGE"),
 		operatorConfigInformers.Operator().V1().OpenShiftControllerManagers(),
 		configInformers.Config().V1().Proxies(),
 		kubeInformers,
