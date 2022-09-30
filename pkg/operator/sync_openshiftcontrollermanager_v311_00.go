@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
+	"reflect"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -43,98 +43,63 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	var err error
 	operatorConfig := originalOperatorConfig.DeepCopy()
 
+	// TODO - use labels/annotations to force a daemonset and deployment rollout
+	forceRollout := false
+	rcForceRollout := false
+
 	operandName := "openshift-controller-manager"
 	rcOperandName := "route-controller-manager"
 
-	specAnnotations := map[string]string{
-		"openshiftcontrollermanagers.operator.openshift.io/cluster": strconv.FormatInt(operatorConfig.ObjectMeta.Generation, 10),
-	}
-
-	rcSpecAnnotations := map[string]string{
-		"openshiftcontrollermanagers.operator.openshift.io/cluster": strconv.FormatInt(operatorConfig.ObjectMeta.Generation, 10),
-	}
-
 	// OpenShift Controller Manager
-	configMap, _, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
+	_, configMapModified, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "config", err))
-	} else {
-		specAnnotations["configmaps/config"] = configMap.ObjectMeta.ResourceVersion
+		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "configmap", err))
 	}
 	// the kube-apiserver is the source of truth for client CA bundles
-	clientCAConfigMap, _, err := manageOpenShiftControllerManagerClientCA_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
+	clientCAModified, err := manageOpenShiftControllerManagerClientCA_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "client-ca", err))
-	} else {
-		resourceVersion := "0"
-		if clientCAConfigMap != nil { // SyncConfigMap can return nil
-			resourceVersion = clientCAConfigMap.ObjectMeta.ResourceVersion
-		}
-		specAnnotations["configmaps/client-ca"] = resourceVersion
 	}
 
-	serviceCAConfigMap, _, err := manageOpenShiftServiceCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
+	_, serviceCAModified, err := manageOpenShiftServiceCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "openshift-service-ca", err))
-	} else {
-		specAnnotations["configmaps/openshift-service-ca"] = serviceCAConfigMap.ObjectMeta.ResourceVersion
 	}
 
-	globalCAConfigMap, _, err := manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
+	_, globalCAModified, err := manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "openshift-global-ca", err))
-	} else {
-		specAnnotations["configmaps/openshift-global-ca"] = globalCAConfigMap.ObjectMeta.ResourceVersion
 	}
 
 	// Route Controller Manager
-	rcConfigMap, _, err := manageRouteControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
+	_, rcConfigMapModified, err := manageRouteControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q %q: %v", rcOperandName, "configmap", err))
-	} else {
-		rcSpecAnnotations["configmaps/config"] = rcConfigMap.ObjectMeta.ResourceVersion
 	}
 
 	// the kube-apiserver is the source of truth for client CA bundles
-	rcClientCAConfigMap, _, err := manageRouteControllerManagerClientCA_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
+	rcClientCAModified, err := manageRouteControllerManagerClientCA_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q %q: %v", rcOperandName, "client-ca", err))
-	} else {
-		resourceVersion := "0"
-		if rcClientCAConfigMap != nil { // SyncConfigMap can return nil
-			resourceVersion = rcClientCAConfigMap.ObjectMeta.ResourceVersion
-		}
-		rcSpecAnnotations["configmaps/client-ca"] = resourceVersion
 	}
+
+	forceRollout = forceRollout || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
+	forceRollout = forceRollout || configMapModified || clientCAModified || serviceCAModified || globalCAModified
+
+	rcForceRollout = rcForceRollout || operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration
+	rcForceRollout = rcForceRollout || rcConfigMapModified || rcClientCAModified
 
 	// our configmaps and secrets are in order, now it is time to create the DS
 	// TODO check basic preconditions here
 	var progressingMessages []string
-	actualDaemonSet, _, openshiftControllerManagerError := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
-		c.kubeClient.AppsV1(),
-		c.recorder,
-		operatorConfig,
-		c.targetImagePullSpec,
-		operatorConfig.Status.Generations,
-		c.proxyLister,
-		specAnnotations,
-	)
+	actualDaemonSet, _, openshiftControllerManagerError := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, forceRollout, c.proxyLister)
 	if openshiftControllerManagerError != nil {
 		msg := fmt.Sprintf("%q %q: %v", operandName, "deployment", openshiftControllerManagerError)
 		progressingMessages = append(progressingMessages, msg)
 		errors = append(errors, fmt.Errorf(msg))
 	}
 
-	actualRCDeployment, _, routerControllerManagerError := manageRouteControllerManagerDeployment_v311_00_to_latest(
-		c.kubeClient.AppsV1(),
-		countNodes,
-		ensureAtMostOnePodPerNodeFn,
-		c.recorder,
-		operatorConfig,
-		c.routeControllerManagerTargetImagePullSpec,
-		operatorConfig.Status.Generations,
-		rcSpecAnnotations,
-	)
+	actualRCDeployment, _, routerControllerManagerError := manageRouteControllerManagerDeployment_v311_00_to_latest(c.kubeClient.AppsV1(), countNodes, ensureAtMostOnePodPerNodeFn, c.recorder, operatorConfig, c.targetImagePullSpec, operatorConfig.Status.Generations, rcForceRollout)
 	if routerControllerManagerError != nil {
 		msg := fmt.Sprintf("%q %q: %v", rcOperandName, "deployment", routerControllerManagerError)
 		progressingMessages = append(progressingMessages, msg)
@@ -270,14 +235,22 @@ func syncReturn(c OpenShiftControllerManagerOperator, errors []error, originalOp
 	return false, nil
 }
 
-func manageOpenShiftControllerManagerClientCA_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+func manageOpenShiftControllerManagerClientCA_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (bool, error) {
 	const apiserverClientCA = "client-ca"
-	return resourceapply.SyncConfigMap(context.Background(), client, recorder, util.KubeAPIServerNamespace, apiserverClientCA, util.TargetNamespace, apiserverClientCA, []metav1.OwnerReference{})
+	_, caChanged, err := resourceapply.SyncConfigMap(context.Background(), client, recorder, util.KubeAPIServerNamespace, apiserverClientCA, util.TargetNamespace, apiserverClientCA, []metav1.OwnerReference{})
+	if err != nil {
+		return false, err
+	}
+	return caChanged, nil
 }
 
-func manageRouteControllerManagerClientCA_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
+func manageRouteControllerManagerClientCA_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (bool, error) {
 	const apiserverClientCA = "client-ca"
-	return resourceapply.SyncConfigMap(context.Background(), client, recorder, util.KubeAPIServerNamespace, apiserverClientCA, util.RouteControllerTargetNamespace, apiserverClientCA, []metav1.OwnerReference{})
+	_, caChanged, err := resourceapply.SyncConfigMap(context.Background(), client, recorder, util.KubeAPIServerNamespace, apiserverClientCA, util.RouteControllerTargetNamespace, apiserverClientCA, []metav1.OwnerReference{})
+	if err != nil {
+		return false, err
+	}
+	return caChanged, nil
 }
 
 // similar logic for route-controller-manager in manageRouteControllerManagerConfigMap_v311_00_to_latest
@@ -377,15 +350,7 @@ func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.In
 	return resourceapply.ApplyConfigMap(context.TODO(), client, recorder, configMap)
 }
 
-func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
-	client appsclientv1.DaemonSetsGetter,
-	recorder events.Recorder,
-	options *operatorapiv1.OpenShiftControllerManager,
-	imagePullSpec string,
-	generationStatus []operatorapiv1.GenerationStatus,
-	proxyLister proxyvclient1.ProxyLister,
-	specAnnotations map[string]string,
-) (*appsv1.DaemonSet, bool, error) {
+func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(client appsclientv1.DaemonSetsGetter, recorder events.Recorder, options *operatorapiv1.OpenShiftControllerManager, imagePullSpec string, generationStatus []operatorapiv1.GenerationStatus, forceRollout bool, proxyLister proxyvclient1.ProxyLister) (*appsv1.DaemonSet, bool, error) {
 	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
 
 	if len(imagePullSpec) > 0 {
@@ -408,7 +373,6 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 		required.Annotations = map[string]string{}
 	}
 	required.Annotations[util.VersionAnnotation] = os.Getenv("RELEASE_VERSION")
-	resourcemerge.MergeMap(resourcemerge.BoolPtr(false), &required.Spec.Template.Annotations, specAnnotations)
 
 	proxyCfg, err := proxyLister.Get("cluster")
 	if err != nil {
@@ -457,11 +421,16 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 				}
 				newEnvs = append(newEnvs, env)
 			}
+			// reflect.DeepEqual does not consider this case equal
+			envsEqual := c.Env == nil && len(newEnvs) == 0
+			envsEqual = envsEqual || !reflect.DeepEqual(newEnvs, c.Env)
+			forceRollout = forceRollout || !envsEqual
 			required.Spec.Template.Spec.Containers[i].Env = newEnvs
 		}
 	}
 
-	return resourceapply.ApplyDaemonSet(context.Background(), client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus))
+	// TODO change to ApplyDeployment
+	return resourceapply.ApplyDaemonSetWithForce(context.Background(), client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus), forceRollout)
 }
 
 func manageRouteControllerManagerDeployment_v311_00_to_latest(
@@ -472,7 +441,7 @@ func manageRouteControllerManagerDeployment_v311_00_to_latest(
 	options *operatorapiv1.OpenShiftControllerManager,
 	imagePullSpec string,
 	generationStatus []operatorapiv1.GenerationStatus,
-	specAnnotations map[string]string,
+	forceRollout bool,
 ) (*appsv1.Deployment, bool, error) {
 	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/route-controller-deploy.yaml"))
 
@@ -496,7 +465,6 @@ func manageRouteControllerManagerDeployment_v311_00_to_latest(
 		required.Annotations = map[string]string{}
 	}
 	required.Annotations[util.VersionAnnotation] = os.Getenv("RELEASE_VERSION")
-	resourcemerge.MergeMap(resourcemerge.BoolPtr(false), &required.Spec.Template.Annotations, specAnnotations)
 
 	// Set the replica count to the number of master nodes.
 	masterNodeCount, err := countNodes(required.Spec.Template.Spec.NodeSelector)
@@ -506,9 +474,7 @@ func manageRouteControllerManagerDeployment_v311_00_to_latest(
 	required.Spec.Replicas = masterNodeCount
 
 	err = ensureAtMostOnePodPerNodeFn(&required.Spec, util.RouteControllerTargetNamespace)
-	if err != nil {
-		return nil, false, fmt.Errorf("unable to ensure at most one pod per node: %v", err)
-	}
 
-	return resourceapply.ApplyDeployment(context.Background(), client, recorder, required, resourcemerge.ExpectedDeploymentGeneration(required, generationStatus))
+	// TODO change to ApplyDeployment
+	return resourceapply.ApplyDeploymentWithForce(context.Background(), client, recorder, required, resourcemerge.ExpectedDeploymentGeneration(required, generationStatus), forceRollout)
 }

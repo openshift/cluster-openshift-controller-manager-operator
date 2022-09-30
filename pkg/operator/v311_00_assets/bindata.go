@@ -816,7 +816,7 @@ spec:
             - ALL
         image: ${IMAGE}
         imagePullPolicy: IfNotPresent
-        command: [ "route-controller-manager", "start" ]
+        command: [ "openshift-controller-manager", "route-controller-manager-start" ]
         args:
         - "--config=/var/run/configmaps/config/config.yaml"
         resources:
