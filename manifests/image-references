@@ -18,3 +18,7 @@ spec:
     from:
       kind: DockerImage
       name: quay.io/openshift/origin-deployer:v4.0
+  - name: route-controller-manager
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-route-controller-manager:v4.12
