@@ -107,11 +107,12 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 		rcSpecAnnotations["configmaps/client-ca"] = resourceVersion
 	}
 
-	// our configmaps and secrets are in order, now it is time to create the DS
-	// TODO check basic preconditions here
+	// our configmaps and secrets are in order, now it is time to create the Deployment
 	var progressingMessages []string
-	actualDaemonSet, _, openshiftControllerManagerError := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
+	actualDeployment, _, openshiftControllerManagerError := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 		c.kubeClient.AppsV1(),
+		countNodes,
+		ensureAtMostOnePodPerNodeFn,
 		c.recorder,
 		operatorConfig,
 		c.targetImagePullSpec,
@@ -146,8 +147,8 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 		return syncReturn(c, errors, originalOperatorConfig, operatorConfig)
 	}
 
-	// at this point we know that the actualDaemonSet and actualRCDeployment are both non-nil and non-empty
-	available := actualDaemonSet.Status.NumberAvailable > 0
+	// at this point we know that the actualDeployment and actualRCDeployment are both non-nil and non-empty
+	available := actualDeployment.Status.AvailableReplicas > 0
 	rcAvailable := actualRCDeployment.Status.AvailableReplicas > 0
 
 	// manage status
@@ -173,11 +174,11 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 		})
 	}
 
-	if available && actualDaemonSet.Status.UpdatedNumberScheduled == actualDaemonSet.Status.DesiredNumberScheduled {
-		if len(actualDaemonSet.Annotations[util.VersionAnnotation]) > 0 {
-			operatorConfig.Status.Version = actualDaemonSet.Annotations[util.VersionAnnotation]
+	if available && actualDeployment.Status.UpdatedReplicas == actualDeployment.Status.Replicas {
+		if len(actualDeployment.Annotations[util.VersionAnnotation]) > 0 {
+			operatorConfig.Status.Version = actualDeployment.Annotations[util.VersionAnnotation]
 		} else {
-			progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: version annotation %s missing.", util.VersionAnnotation))
+			progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/controller-manager: version annotation %s missing.", util.VersionAnnotation))
 		}
 	}
 
@@ -192,14 +193,14 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 		}
 	}
 
-	if actualDaemonSet != nil && actualDaemonSet.ObjectMeta.Generation != actualDaemonSet.Status.ObservedGeneration {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: observed generation is %d, desired generation is %d.", actualDaemonSet.Status.ObservedGeneration, actualDaemonSet.ObjectMeta.Generation))
+	if actualDeployment != nil && actualDeployment.ObjectMeta.Generation != actualDeployment.Status.ObservedGeneration {
+		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/controller-manager: observed generation is %d, desired generation is %d.", actualDeployment.Status.ObservedGeneration, actualDeployment.ObjectMeta.Generation))
 	}
-	if actualDaemonSet.Status.NumberAvailable == 0 {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: number available is %d, desired number available > %d", actualDaemonSet.Status.NumberAvailable, 1))
+	if actualDeployment.Status.AvailableReplicas == 0 {
+		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/controller-manager: available replicas is %d, desired available replicas > %d", actualDeployment.Status.AvailableReplicas, 1))
 	}
-	if actualDaemonSet.Status.UpdatedNumberScheduled != actualDaemonSet.Status.DesiredNumberScheduled {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("daemonset/controller-manager: updated number scheduled is %d, desired number scheduled is %d", actualDaemonSet.Status.UpdatedNumberScheduled, actualDaemonSet.Status.DesiredNumberScheduled))
+	if actualDeployment.Status.UpdatedReplicas != *actualDeployment.Spec.Replicas {
+		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/controller-manager: updated replicas is %d, desired replicas is %d", actualDeployment.Status.UpdatedReplicas, *actualDeployment.Spec.Replicas))
 	}
 	if actualRCDeployment != nil && actualRCDeployment.ObjectMeta.Generation != actualRCDeployment.Status.ObservedGeneration {
 		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/route-controller-manager: observed generation is %d, desired generation is %d.", actualRCDeployment.Status.ObservedGeneration, actualRCDeployment.ObjectMeta.Generation))
@@ -233,7 +234,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	})
 
 	operatorConfig.Status.ObservedGeneration = operatorConfig.ObjectMeta.Generation
-	resourcemerge.SetDaemonSetGeneration(&operatorConfig.Status.Generations, actualDaemonSet)
+	resourcemerge.SetDeploymentGeneration(&operatorConfig.Status.Generations, actualDeployment)
 	resourcemerge.SetDeploymentGeneration(&operatorConfig.Status.Generations, actualRCDeployment)
 
 	return syncReturn(c, errors, originalOperatorConfig, operatorConfig)
@@ -378,15 +379,17 @@ func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.In
 }
 
 func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
-	client appsclientv1.DaemonSetsGetter,
+	client appsclientv1.DeploymentsGetter,
+	countNodes nodeCountFunc,
+	ensureAtMostOnePodPerNodeFn ensureAtMostOnePodPerNodeFunc,
 	recorder events.Recorder,
 	options *operatorapiv1.OpenShiftControllerManager,
 	imagePullSpec string,
 	generationStatus []operatorapiv1.GenerationStatus,
 	proxyLister proxyvclient1.ProxyLister,
 	specAnnotations map[string]string,
-) (*appsv1.DaemonSet, bool, error) {
-	required := resourceread.ReadDaemonSetV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/ds.yaml"))
+) (*appsv1.Deployment, bool, error) {
+	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/deploy.yaml"))
 
 	if len(imagePullSpec) > 0 {
 		required.Spec.Template.Spec.Containers[0].Image = imagePullSpec
@@ -410,11 +413,23 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 	required.Annotations[util.VersionAnnotation] = os.Getenv("RELEASE_VERSION")
 	resourcemerge.MergeMap(resourcemerge.BoolPtr(false), &required.Spec.Template.Annotations, specAnnotations)
 
+	// Set the replica count to the number of master nodes.
+	masterNodeCount, err := countNodes(required.Spec.Template.Spec.NodeSelector)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to determine number of master nodes: %v", err)
+	}
+	required.Spec.Replicas = masterNodeCount
+
+	err = ensureAtMostOnePodPerNodeFn(&required.Spec, util.RouteControllerTargetNamespace)
+	if err != nil {
+		return nil, false, fmt.Errorf("unable to ensure at most one pod per node: %v", err)
+	}
+
 	proxyCfg, err := proxyLister.Get("cluster")
 	if err != nil {
 		recorder.Eventf("ProxyConfigGetFailed", "Error retrieving global proxy config: %s", err.Error())
 		if !apierrors.IsNotFound(err) {
-			// return daemonset since it is still referenced by caller even with errors
+			// return deployment since it is still referenced by caller even with errors
 			return required, false, err
 		}
 	} else {
@@ -461,7 +476,7 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 		}
 	}
 
-	return resourceapply.ApplyDaemonSet(context.Background(), client, recorder, required, resourcemerge.ExpectedDaemonSetGeneration(required, generationStatus))
+	return resourceapply.ApplyDeployment(context.Background(), client, recorder, required, resourcemerge.ExpectedDeploymentGeneration(required, generationStatus))
 }
 
 func manageRouteControllerManagerDeployment_v311_00_to_latest(

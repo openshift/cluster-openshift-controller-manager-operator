@@ -6,9 +6,12 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -18,6 +21,7 @@ import (
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
+	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
@@ -191,6 +195,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		controllerConfig.EventRecorder,
 	).AddKubeInformers(kubeInformers)
 
+	ensureDaemonSetCleanup(ctx, kubeClient, controllerConfig.EventRecorder)
+
 	operatorConfigInformers.Start(ctx.Done())
 	kubeInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
@@ -229,4 +235,63 @@ func (v *versionGetter) GetVersions() map[string]string {
 func (v *versionGetter) VersionChangedChannel() <-chan struct{} {
 	// this versionGetter never notifies of a version change, getVersion always returns the new version.
 	return make(chan struct{})
+}
+
+// ensureDaemonSetCleanup continually ensures the removal of the daemonset
+// used to manage controller-manager pods in releases prior to 4.12. The daemonset is
+// removed once the deployment now managing controller-manager pods reports at least
+// one pod available.
+// TODO: remove this function in later releases
+func ensureDaemonSetCleanup(ctx context.Context, kubeClient *kubernetes.Clientset, eventRecorder events.Recorder) {
+	// daemonset and deployment both use the same name
+	resourceName := "controller-manager"
+
+	dsClient := kubeClient.AppsV1().DaemonSets(util.TargetNamespace)
+	deployClient := kubeClient.AppsV1().Deployments(util.TargetNamespace)
+
+	go wait.PollImmediateUntilWithContext(ctx, time.Minute, func(_ context.Context) (done bool, err error) {
+		// This function isn't expected to take long enough to suggest
+		// checking that the context is done. The wait method will do that
+		// checking.
+
+		// Check whether the legacy daemonset exists and is not marked for deletion
+		ds, err := dsClient.Get(ctx, resourceName, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			// Done - daemonset does not exist
+			return true, nil
+		}
+		if err != nil {
+			klog.Warningf("Error retrieving legacy daemonset: %v", err)
+			return false, nil
+		}
+		if ds.ObjectMeta.DeletionTimestamp != nil {
+			// Done - daemonset has been marked for deletion
+			return true, nil
+		}
+
+		// Check that the deployment managing the controller-manager pods has at last one available replica
+		deploy, err := deployClient.Get(ctx, resourceName, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			// No available replicas if the deployment doesn't exist
+			return false, nil
+		}
+		if err != nil {
+			klog.Warningf("Error retrieving the deployment that manages controller-manager pods: %v", err)
+			return false, nil
+		}
+		if deploy.Status.AvailableReplicas == 0 {
+			eventRecorder.Warning("LegacyDaemonSetCleanup", "the deployment replacing the daemonset does not have available replicas yet")
+			return false, nil
+		}
+
+		// Safe to remove legacy daemonset since the deployment has at least one available replica
+		err = dsClient.Delete(ctx, resourceName, metav1.DeleteOptions{})
+		if err != nil && !errors.IsNotFound(err) {
+			klog.Warningf("Failed to delete legacy daemonset: %v", err)
+			return false, nil
+		}
+		eventRecorder.Event("LegacyDaemonSetCleanup", "legacy daemonset has been removed")
+
+		return false, nil
+	})
 }

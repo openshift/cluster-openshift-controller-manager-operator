@@ -4,7 +4,7 @@
 // bindata/v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml
 // bindata/v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/cm.yaml
-// bindata/v3.11.0/openshift-controller-manager/ds.yaml
+// bindata/v3.11.0/openshift-controller-manager/deploy.yaml
 // bindata/v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrole.yaml
 // bindata/v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml
 // bindata/v3.11.0/openshift-controller-manager/informer-clusterrole.yaml
@@ -196,8 +196,8 @@ func v3110OpenshiftControllerManagerCmYaml() (*asset, error) {
 	return a, nil
 }
 
-var _v3110OpenshiftControllerManagerDsYaml = []byte(`apiVersion: apps/v1
-kind: DaemonSet
+var _v3110OpenshiftControllerManagerDeployYaml = []byte(`apiVersion: apps/v1
+kind: Deployment
 metadata:
   namespace: openshift-controller-manager
   name: controller-manager
@@ -205,13 +205,26 @@ metadata:
     app: openshift-controller-manager
     controller-manager: "true"
 spec:
-  updateStrategy:
+  # The number of replicas will be set in code to the number of master nodes.
+  replicas: 1
+  strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 3
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
-      app: openshift-controller-manager
+      # Need to vary the app label from that used by the legacy
+      # daemonset ('openshift-controller-manager') to avoid the legacy
+      # daemonset and its replacement deployment trying to try to
+      # manage the same pods.
+      #
+      # It's also necessary to use different labeling to ensure, via
+      # anti-affinity, at most one deployment-managed pod on each
+      # master node. Without label differentiation, anti-affinity
+      # would prevent a deployment-managed pod from running on a node
+      # that was already running a daemonset-managed pod.
+      app: openshift-controller-manager-a
       controller-manager: "true"
   template:
     metadata:
@@ -219,14 +232,14 @@ spec:
       annotations:
         target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
       labels:
-        app: openshift-controller-manager
+        app: openshift-controller-manager-a
         controller-manager: "true"
     spec:
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
-      priorityClassName: system-node-critical 
+      priorityClassName: system-node-critical
       serviceAccountName: openshift-controller-manager-sa
       containers:
       - name: controller-manager
@@ -247,6 +260,18 @@ spec:
         ports:
         - containerPort: 8443
         terminationMessagePolicy: FallbackToLogsOnError
+        livenessProbe:
+          initialDelaySeconds: 30
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            path: healthz
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            scheme: HTTPS
+            port: 8443
+            path: healthz
         volumeMounts:
         - mountPath: /var/run/configmaps/config
           name: config
@@ -275,20 +300,43 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
-      - operator: Exists
+        # Ensure pod can be scheduled on master nodes
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+          # Ensure pod can be evicted if the node is unreachable
+        - key: "node.kubernetes.io/unreachable"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 120
+          # Ensure scheduling is delayed until node readiness
+          # (i.e. network operator configures CNI on the node)
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 120
+      affinity:
+        podAntiAffinity:
+          # Ensure that at most one controller pod will be scheduled on a node.
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: "kubernetes.io/hostname"
+              labelSelector:
+                matchLabels:
+                  app: openshift-controller-manager-a
+                  controller-manager: "true"
 `)
 
-func v3110OpenshiftControllerManagerDsYamlBytes() ([]byte, error) {
-	return _v3110OpenshiftControllerManagerDsYaml, nil
+func v3110OpenshiftControllerManagerDeployYamlBytes() ([]byte, error) {
+	return _v3110OpenshiftControllerManagerDeployYaml, nil
 }
 
-func v3110OpenshiftControllerManagerDsYaml() (*asset, error) {
-	bytes, err := v3110OpenshiftControllerManagerDsYamlBytes()
+func v3110OpenshiftControllerManagerDeployYaml() (*asset, error) {
+	bytes, err := v3110OpenshiftControllerManagerDeployYamlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/ds.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "v3.11.0/openshift-controller-manager/deploy.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1746,7 +1794,7 @@ var _bindata = map[string]func() (*asset, error){
 	"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml":                   v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml,
 	"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml":            v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/cm.yaml":                                              v3110OpenshiftControllerManagerCmYaml,
-	"v3.11.0/openshift-controller-manager/ds.yaml":                                              v3110OpenshiftControllerManagerDsYaml,
+	"v3.11.0/openshift-controller-manager/deploy.yaml":                                          v3110OpenshiftControllerManagerDeployYaml,
 	"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrole.yaml":            v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml,
 	"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml":     v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYaml,
 	"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml":                            v3110OpenshiftControllerManagerInformerClusterroleYaml,
@@ -1835,8 +1883,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"openshift-controller-manager": {nil, map[string]*bintree{
 			"buildconfigstatus-clusterrole.yaml":        {v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml, map[string]*bintree{}},
 			"buildconfigstatus-clusterrolebinding.yaml": {v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml, map[string]*bintree{}},
-			"cm.yaml": {v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
-			"ds.yaml": {v3110OpenshiftControllerManagerDsYaml, map[string]*bintree{}},
+			"cm.yaml":     {v3110OpenshiftControllerManagerCmYaml, map[string]*bintree{}},
+			"deploy.yaml": {v3110OpenshiftControllerManagerDeployYaml, map[string]*bintree{}},
 			"image-trigger-controller-clusterrole.yaml":            {v3110OpenshiftControllerManagerImageTriggerControllerClusterroleYaml, map[string]*bintree{}},
 			"image-trigger-controller-clusterrolebinding.yaml":     {v3110OpenshiftControllerManagerImageTriggerControllerClusterrolebindingYaml, map[string]*bintree{}},
 			"informer-clusterrole.yaml":                            {v3110OpenshiftControllerManagerInformerClusterroleYaml, map[string]*bintree{}},
