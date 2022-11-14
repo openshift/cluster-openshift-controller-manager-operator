@@ -366,6 +366,7 @@ rules:
     verbs:
       - get
       - list
+      - patch
       - update
       - watch
   - apiGroups:
