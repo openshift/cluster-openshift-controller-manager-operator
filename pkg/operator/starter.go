@@ -187,6 +187,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml",
 			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml",
+			"v3.11.0/openshift-controller-manager/deployer-clusterrole.yaml",
+			"v3.11.0/openshift-controller-manager/deployer-clusterrolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrole.yaml",
 			"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml",
 		},
