@@ -156,8 +156,6 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrole.yaml",
 			"v3.11.0/openshift-controller-manager/ingress-to-route-controller-clusterrolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml",
-			"v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
 			"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
 			"v3.11.0/openshift-controller-manager/leader-role.yaml",
@@ -195,6 +193,19 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		resourceapply.NewKubeClientHolder(kubeClient),
 		opClient,
 		controllerConfig.EventRecorder,
+	).WithConditionalResources(
+		v311_00_assets.Asset,
+		[]string{
+			// TODO: remove all of these ingress-to-route leader-election entries and files in 4.14
+			"v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml",
+			"v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml",
+		},
+		func() bool {
+			return false
+		},
+		func() bool {
+			return true
+		},
 	).AddKubeInformers(kubeInformers)
 
 	ensureDaemonSetCleanup(ctx, kubeClient, controllerConfig.EventRecorder)
