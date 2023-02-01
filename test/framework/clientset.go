@@ -67,7 +67,7 @@ func MustNewClientset(t *testing.T, kubeconfig *restclient.Config) *Clientset {
 // getConfig creates a *rest.Config for talking to a Kubernetes apiserver.
 // Otherwise will assume running in cluster and use the cluster provided kubeconfig.
 //
-// Config precedence
+// # Config precedence
 //
 // * KUBECONFIG environment variable pointing at a file
 //
