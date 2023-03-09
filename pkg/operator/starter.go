@@ -215,6 +215,10 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	configInformers.Start(ctx.Done())
 
 	go staticResourceController.Run(ctx, 1)
+	// Before starting operator make sure target and route controller namespaces are created
+	if err := ensureNamespacesCreated(ctx, kubeClient, controllerConfig.EventRecorder); err != nil {
+		return err
+	}
 	go operator.Run(ctx, 1)
 	go resourceSyncer.Run(ctx, 1)
 	go configObserver.Run(ctx, 1)
@@ -248,6 +252,24 @@ func (v *versionGetter) GetVersions() map[string]string {
 func (v *versionGetter) VersionChangedChannel() <-chan struct{} {
 	// this versionGetter never notifies of a version change, getVersion always returns the new version.
 	return make(chan struct{})
+}
+
+// ensureNamespaceCreated makes sure target namespace exists before running other controllers
+func ensureNamespacesCreated(ctx context.Context, kubeClient *kubernetes.Clientset, eventRecorder events.Recorder) error {
+	nsClient := kubeClient.CoreV1().Namespaces()
+	return wait.PollImmediateUntilWithContext(ctx, time.Minute, func(_ context.Context) (done bool, err error) {
+		_, err = nsClient.Get(ctx, util.TargetNamespace, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			// Wait - target namespace doesn't exist yet
+			return false, nil
+		}
+		_, err = nsClient.Get(ctx, util.RouteControllerTargetNamespace, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			// Wait - route namespace doesn't exist yet
+			return false, nil
+		}
+		return true, nil
+	})
 }
 
 // ensureDaemonSetCleanup continually ensures the removal of the daemonset
