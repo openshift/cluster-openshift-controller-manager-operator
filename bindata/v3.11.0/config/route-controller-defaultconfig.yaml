@@ -1,0 +1,4 @@
+apiVersion: openshiftcontrolplane.config.openshift.io/v1
+kind: OpenShiftControllerManagerConfig
+leaderElection:
+  name: openshift-route-controllers
