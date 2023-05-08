@@ -1079,6 +1079,11 @@ spec:
         ports:
           - containerPort: 8443
         terminationMessagePolicy: FallbackToLogsOnError
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         volumeMounts:
         - mountPath: /var/run/configmaps/config
           name: config
