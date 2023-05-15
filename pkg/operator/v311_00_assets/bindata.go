@@ -1,6 +1,6 @@
 // Code generated for package v311_00_assets by go-bindata DO NOT EDIT. (@generated)
 // sources:
-// bindata/v3.11.0/config/defaultconfig.yaml
+// bindata/v3.11.0/config/openshift-controller-manager-defaultconfig.yaml
 // bindata/v3.11.0/config/route-controller-defaultconfig.yaml
 // bindata/v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml
 // bindata/v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml
@@ -99,21 +99,21 @@ func (fi bindataFileInfo) Sys() interface{} {
 	return nil
 }
 
-var _v3110ConfigDefaultconfigYaml = []byte(`apiVersion: openshiftcontrolplane.config.openshift.io/v1
+var _v3110ConfigOpenshiftControllerManagerDefaultconfigYaml = []byte(`apiVersion: openshiftcontrolplane.config.openshift.io/v1
 kind: OpenShiftControllerManagerConfig
 `)
 
-func v3110ConfigDefaultconfigYamlBytes() ([]byte, error) {
-	return _v3110ConfigDefaultconfigYaml, nil
+func v3110ConfigOpenshiftControllerManagerDefaultconfigYamlBytes() ([]byte, error) {
+	return _v3110ConfigOpenshiftControllerManagerDefaultconfigYaml, nil
 }
 
-func v3110ConfigDefaultconfigYaml() (*asset, error) {
-	bytes, err := v3110ConfigDefaultconfigYamlBytes()
+func v3110ConfigOpenshiftControllerManagerDefaultconfigYaml() (*asset, error) {
+	bytes, err := v3110ConfigOpenshiftControllerManagerDefaultconfigYamlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "v3.11.0/config/defaultconfig.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	info := bindataFileInfo{name: "v3.11.0/config/openshift-controller-manager-defaultconfig.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -1943,7 +1943,7 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
-	"v3.11.0/config/defaultconfig.yaml":                                                         v3110ConfigDefaultconfigYaml,
+	"v3.11.0/config/openshift-controller-manager-defaultconfig.yaml":                            v3110ConfigOpenshiftControllerManagerDefaultconfigYaml,
 	"v3.11.0/config/route-controller-defaultconfig.yaml":                                        v3110ConfigRouteControllerDefaultconfigYaml,
 	"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml":                   v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml,
 	"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml":            v3110OpenshiftControllerManagerBuildconfigstatusClusterrolebindingYaml,
@@ -2036,8 +2036,8 @@ type bintree struct {
 var _bintree = &bintree{nil, map[string]*bintree{
 	"v3.11.0": {nil, map[string]*bintree{
 		"config": {nil, map[string]*bintree{
-			"defaultconfig.yaml":                  {v3110ConfigDefaultconfigYaml, map[string]*bintree{}},
-			"route-controller-defaultconfig.yaml": {v3110ConfigRouteControllerDefaultconfigYaml, map[string]*bintree{}},
+			"openshift-controller-manager-defaultconfig.yaml": {v3110ConfigOpenshiftControllerManagerDefaultconfigYaml, map[string]*bintree{}},
+			"route-controller-defaultconfig.yaml":             {v3110ConfigRouteControllerDefaultconfigYaml, map[string]*bintree{}},
 		}},
 		"openshift-controller-manager": {nil, map[string]*bintree{
 			"buildconfigstatus-clusterrole.yaml":        {v3110OpenshiftControllerManagerBuildconfigstatusClusterroleYaml, map[string]*bintree{}},
