@@ -22,6 +22,7 @@ import (
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
 	"github.com/openshift/library-go/pkg/operator/events"
+	"github.com/openshift/library-go/pkg/operator/loglevel"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
@@ -208,6 +209,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		},
 	).AddKubeInformers(kubeInformers)
 
+	logLevelController := loglevel.NewClusterOperatorLoggingController(opClient, controllerConfig.EventRecorder)
+
 	ensureDaemonSetCleanup(ctx, kubeClient, controllerConfig.EventRecorder)
 
 	operatorConfigInformers.Start(ctx.Done())
@@ -220,6 +223,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	go configObserver.Run(ctx, 1)
 	go userCAObserver.Run(ctx, 1)
 	go clusterOperatorStatus.Run(ctx, 1)
+	go logLevelController.Run(ctx, 1)
 
 	<-ctx.Done()
 	return fmt.Errorf("stopped")
