@@ -284,8 +284,8 @@ func manageRouteControllerManagerClientCA_v311_00_to_latest(client coreclientv1.
 // similar logic for route-controller-manager in manageRouteControllerManagerConfigMap_v311_00_to_latest
 func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
-	ocmDefaultConfig := v311_00_assets.MustAsset("v3.11.0/config/openshift-controller-manager-defaultconfig.yaml")
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, ocmDefaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
+	defaultConfig := v311_00_assets.MustAsset("v3.11.0/config/defaultconfig.yaml")
+	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
 	if err != nil {
 		return nil, false, err
 	}
@@ -311,9 +311,9 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kube
 
 // similar logic for route-controller-manager in manageOpenShiftControllerManagerConfigMap_v311_00_to_latest
 func manageRouteControllerManagerConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/route-controller-manager-cm.yaml"))
-	rcmDefaultConfig := v311_00_assets.MustAsset("v3.11.0/config/route-controller-manager-defaultconfig.yaml")
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, rcmDefaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
+	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/route-controller-cm.yaml"))
+	defaultConfig := v311_00_assets.MustAsset("v3.11.0/config/defaultconfig.yaml")
+	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, defaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
 	if err != nil {
 		return nil, false, err
 	}
@@ -489,7 +489,7 @@ func manageRouteControllerManagerDeployment_v311_00_to_latest(
 	generationStatus []operatorapiv1.GenerationStatus,
 	specAnnotations map[string]string,
 ) (*appsv1.Deployment, bool, error) {
-	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/route-controller-manager-deploy.yaml"))
+	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/route-controller-deploy.yaml"))
 
 	if len(imagePullSpec) > 0 {
 		required.Spec.Template.Spec.Containers[0].Image = imagePullSpec
