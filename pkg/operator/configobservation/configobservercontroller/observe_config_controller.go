@@ -5,6 +5,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
+	configv1 "github.com/openshift/api/config/v1"
 	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/factory"
@@ -26,6 +27,7 @@ func NewConfigObserver(
 	operatorConfigInformers operatorv1informers.SharedInformerFactory,
 	configInformers configinformers.SharedInformerFactory,
 	kubeInformersForOperatorNamespace kubeinformers.SharedInformerFactory,
+	featureGateAccessor featuregates.FeatureGateAccess,
 	eventRecorder events.Recorder,
 ) factory.Controller {
 	c := configobserver.NewConfigObserver(
@@ -51,7 +53,12 @@ func NewConfigObserver(
 		builds.ObserveBuildControllerConfig,
 		network.ObserveExternalIPAutoAssignCIDRs,
 		deployimages.ObserveControllerManagerImagesConfig,
-		featuregates.NewObserveFeatureFlagsFunc(sets.NewString("BuildCSIVolumes"), sets.String{}, []string{"featureGates"}),
+		featuregates.NewObserveFeatureFlagsFunc(
+			sets.New[configv1.FeatureGateName]("BuildCSIVolumes"),
+			nil,
+			[]string{"featureGates"},
+			featureGateAccessor,
+		),
 	)
 
 	return c

@@ -21,6 +21,7 @@ import (
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/loglevel"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -93,6 +94,27 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		client:    operatorClient.OperatorV1(),
 	}
 
+	desiredVersion := status.VersionForOperatorFromEnv()
+	missingVersion := "0.0.1-snapshot"
+
+	// By default, this will exit(0) the process if the featuregates ever change to a different set of values.
+	featureGateAccessor := featuregates.NewFeatureGateAccess(
+		desiredVersion, missingVersion,
+		configInformers.Config().V1().ClusterVersions(), configInformers.Config().V1().FeatureGates(),
+		controllerConfig.EventRecorder,
+	)
+	go featureGateAccessor.Run(ctx)
+	go configInformers.Start(ctx.Done())
+
+	select {
+	case <-featureGateAccessor.InitialFeatureGatesObserved():
+		featureGates, _ := featureGateAccessor.CurrentFeatureGates()
+		klog.Infof("FeatureGates initialized: knownFeatureGates=%v", featureGates.KnownFeatures())
+	case <-time.After(1 * time.Minute):
+		klog.Errorf("timed out waiting for FeatureGate detection")
+		return fmt.Errorf("timed out waiting for FeatureGate detection")
+	}
+
 	// resourceSyncer synchronizes Secrets and ConfigMaps from one namespace to another.
 	// Bug 1826183: this will sync the proxy trustedCA ConfigMap to the
 	// openshift-controller-manager's user-ca ConfigMap.
@@ -111,6 +133,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		operatorConfigInformers,
 		configInformers,
 		kubeInformers.InformersFor(util.OperatorNamespace),
+		featureGateAccessor,
 		controllerConfig.EventRecorder,
 	)
 
