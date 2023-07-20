@@ -3,6 +3,7 @@ kind: ClusterRole
 metadata:
   name: system:openshift:openshift-route-controller-manager
 rules:
+# informers
 - apiGroups:
   - ""
   resources:
@@ -29,6 +30,7 @@ rules:
   - get
   - list
   - watch
+# emitting events
 - apiGroups:
   - ""
   - events.k8s.io
@@ -38,3 +40,12 @@ rules:
   - create
   - patch
   - update
+# used for detection of HA to configure leader election
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - infrastructures
+  verbs:
+  - get
+  - list
+  - watch
