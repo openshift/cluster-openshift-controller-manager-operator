@@ -183,16 +183,6 @@ var (
 		OwningProduct:       ocpSpecific,
 	}
 
-	FeatureGateAWSSecurityTokenService = FeatureGateName("AWSSecurityTokenService")
-	awsSecurityTokenService            = FeatureGateDescription{
-		FeatureGateAttributes: FeatureGateAttributes{
-			Name: FeatureGateAWSSecurityTokenService,
-		},
-		OwningJiraComponent: "cloud-credential-operator",
-		ResponsiblePerson:   "abutcher",
-		OwningProduct:       ocpSpecific,
-	}
-
 	FeatureGateMaxUnavailableStatefulSet = FeatureGateName("MaxUnavailableStatefulSet")
 	maxUnavailableStatefulSet            = FeatureGateDescription{
 		FeatureGateAttributes: FeatureGateAttributes{
@@ -279,6 +269,16 @@ var (
 		},
 		OwningJiraComponent: "router",
 		ResponsiblePerson:   "thejasn",
+		OwningProduct:       ocpSpecific,
+	}
+
+	FeatureGateAdminNetworkPolicy = FeatureGateName("AdminNetworkPolicy")
+	adminNetworkPolicy            = FeatureGateDescription{
+		FeatureGateAttributes: FeatureGateAttributes{
+			Name: FeatureGateAdminNetworkPolicy,
+		},
+		OwningJiraComponent: "Networking/ovn-kubernetes",
+		ResponsiblePerson:   "tssurya",
 		OwningProduct:       ocpSpecific,
 	}
 
