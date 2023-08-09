@@ -2,15 +2,21 @@ package operator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
-	"k8s.io/apimachinery/pkg/runtime"
 	"os"
+	"reflect"
 	"strconv"
 	"testing"
 
+	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	configv1 "github.com/openshift/api/config/v1"
+	v1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
+	configlisterv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"k8s.io/client-go/tools/cache"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -24,6 +30,104 @@ import (
 	"github.com/openshift/library-go/pkg/operator/events"
 	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 )
+
+func TestConfigMapControllerDisabling(t *testing.T) {
+
+	testCases := []struct {
+		name                string
+		versionLister       configlisterv1.ClusterVersionLister
+		knownCapabilities   []configv1.ClusterVersionCapability
+		enabledCapabilities []configv1.ClusterVersionCapability
+		result              map[string][]string
+	}{
+		{
+			name: "ControllersEnabled",
+			knownCapabilities: []v1.ClusterVersionCapability{
+				configv1.ClusterVersionCapabilityBuild,
+				configv1.ClusterVersionCapabilityDeploymentConfig,
+			},
+			enabledCapabilities: []v1.ClusterVersionCapability{
+				configv1.ClusterVersionCapabilityBuild,
+				configv1.ClusterVersionCapabilityDeploymentConfig,
+			},
+			result: map[string][]string{"controllers": {"*"}},
+		},
+		{
+			name: "ControllersDisabled",
+			knownCapabilities: []v1.ClusterVersionCapability{
+				configv1.ClusterVersionCapabilityBuild,
+				configv1.ClusterVersionCapabilityDeploymentConfig,
+			},
+			enabledCapabilities: []v1.ClusterVersionCapability{},
+			result:              map[string][]string{"controllers": {"*", "-openshift.io/build", "-openshift.io/deploymentconfig"}},
+		},
+		{
+			name:                "ControllersDisabledButUnknown",
+			knownCapabilities:   []v1.ClusterVersionCapability{},
+			enabledCapabilities: []v1.ClusterVersionCapability{},
+			result:              map[string][]string{"controllers": {"*"}},
+		},
+	}
+
+	for _, tc := range testCases {
+		objects := []runtime.Object{
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "serving-cert", Namespace: "openshift-controller-manager"}},
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: "kube-system"}},
+			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "client-ca", Namespace: "openshift-kube-apiserver"}},
+		}
+		kubeClient := fake.NewSimpleClientset(objects...)
+		cv := &configv1.ClusterVersion{
+			ObjectMeta: metav1.ObjectMeta{Name: "version"},
+			Status: configv1.ClusterVersionStatus{
+				Capabilities: configv1.ClusterVersionCapabilitiesStatus{
+					EnabledCapabilities: tc.enabledCapabilities,
+					KnownCapabilities:   tc.knownCapabilities,
+				},
+			},
+		}
+
+		indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+		proxyLister := configlistersv1.NewProxyLister(indexer)
+
+		operatorConfig := &operatorv1.OpenShiftControllerManager{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "cluster",
+				Generation: cv.Generation,
+			},
+			Spec: operatorv1.OpenShiftControllerManagerSpec{
+				OperatorSpec: operatorv1.OperatorSpec{},
+			},
+			Status: operatorv1.OpenShiftControllerManagerStatus{
+				OperatorStatus: operatorv1.OperatorStatus{},
+			},
+		}
+		kubeInformers := v1helpers.NewKubeInformersForNamespaces(kubeClient, "", util.TargetNamespace)
+		configMapsGetter := v1helpers.CachedConfigMapGetter(kubeClient.CoreV1(), kubeInformers)
+		controllerManagerOperatorClient := operatorfake.NewSimpleClientset(operatorConfig)
+
+		indexer.Add(cv)
+		clusterVersionLister := configlistersv1.NewClusterVersionLister(indexer)
+		operator := OpenShiftControllerManagerOperator{
+			kubeClient:           kubeClient,
+			configMapsGetter:     kubeClient.CoreV1(),
+			proxyLister:          proxyLister,
+			recorder:             events.NewInMemoryRecorder(""),
+			operatorConfigClient: controllerManagerOperatorClient.OperatorV1(),
+			clusterVersionLister: clusterVersionLister,
+		}
+		resultConfigMap, _, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionLister, kubeClient, configMapsGetter, operator.recorder, operatorConfig)
+		if err != nil {
+			t.Error(err)
+		}
+		result := map[string][]string{}
+		json.Unmarshal([]byte(resultConfigMap.Data["config.yaml"]), &result)
+		resultControllers := map[string][]string{"controllers": result["controllers"]}
+
+		if !reflect.DeepEqual(tc.result, resultControllers) {
+			t.Errorf("test '%s' failed. Results are not deep equal. mismatch (-want +got):\n%s\n%v", tc.name, tc.result, resultControllers)
+		}
+	}
+}
 
 func TestProgressingCondition(t *testing.T) {
 	ocmReplicas := int32(3)
@@ -483,12 +587,15 @@ func TestProgressingCondition(t *testing.T) {
 			}
 			controllerManagerOperatorClient := operatorfake.NewSimpleClientset(operatorConfig)
 
+			cv := &configv1.ClusterVersion{}
+			indexer.Add(cv)
 			operator := OpenShiftControllerManagerOperator{
 				kubeClient:           kubeClient,
 				configMapsGetter:     kubeClient.CoreV1(),
 				proxyLister:          proxyLister,
 				recorder:             events.NewInMemoryRecorder(""),
 				operatorConfigClient: controllerManagerOperatorClient.OperatorV1(),
+				clusterVersionLister: configlistersv1.NewClusterVersionLister(indexer),
 			}
 
 			countNodes := func(nodeSelector map[string]string) (*int32, error) {

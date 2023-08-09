@@ -19,6 +19,7 @@ import (
 
 	configinformerv1 "github.com/openshift/client-go/config/informers/externalversions/config/v1"
 	proxyvclient1 "github.com/openshift/client-go/config/listers/config/v1"
+	v1 "github.com/openshift/client-go/config/listers/config/v1"
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformersv1 "github.com/openshift/client-go/operator/informers/externalversions/operator/v1"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
@@ -58,8 +59,9 @@ type OpenShiftControllerManagerOperator struct {
 	// queue only ever has one item, but it has nice error handling backoff/retry semantics
 	queue workqueue.RateLimitingInterface
 
-	rateLimiter flowcontrol.RateLimiter
-	recorder    events.Recorder
+	rateLimiter          flowcontrol.RateLimiter
+	recorder             events.Recorder
+	clusterVersionLister v1.ClusterVersionLister
 }
 
 func NewOpenShiftControllerManagerOperator(
@@ -73,6 +75,7 @@ func NewOpenShiftControllerManagerOperator(
 	ensureAtMostOnePodPerNode ensureAtMostOnePodPerNodeFunc,
 	kubeClient kubernetes.Interface,
 	recorder events.Recorder,
+	clusterVersionLister v1.ClusterVersionLister,
 ) *OpenShiftControllerManagerOperator {
 	c := &OpenShiftControllerManagerOperator{
 		targetImagePullSpec:                       targetImagePullSpec,
@@ -86,6 +89,7 @@ func NewOpenShiftControllerManagerOperator(
 		queue:                                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "OpenshiftControllerManagerOperator"),
 		rateLimiter:                               flowcontrol.NewTokenBucketRateLimiter(0.05 /*3 per minute*/, 4),
 		recorder:                                  recorder,
+		clusterVersionLister:                      clusterVersionLister,
 	}
 
 	operatorConfigInformer.Informer().AddEventHandler(c.eventHandler())
