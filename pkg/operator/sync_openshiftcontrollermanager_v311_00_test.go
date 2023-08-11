@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -115,15 +116,16 @@ func TestConfigMapControllerDisabling(t *testing.T) {
 			operatorConfigClient: controllerManagerOperatorClient.OperatorV1(),
 			clusterVersionLister: clusterVersionLister,
 		}
+		result := map[string][]string{}
 		resultConfigMap, _, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionLister, kubeClient, configMapsGetter, operator.recorder, operatorConfig)
 		if err != nil {
 			t.Error(err)
+		} else {
+			json.Unmarshal([]byte(resultConfigMap.Data["config.yaml"]), &result)
 		}
-		result := map[string][]string{}
-		json.Unmarshal([]byte(resultConfigMap.Data["config.yaml"]), &result)
+		sort.Strings(result["controllers"])
 		resultControllers := map[string][]string{"controllers": result["controllers"]}
-
-		if !reflect.DeepEqual(tc.result, resultControllers) {
+		if err == nil && !reflect.DeepEqual(tc.result, resultControllers) {
 			t.Errorf("test '%s' failed. Results are not deep equal. mismatch (-want +got):\n%s\n%v", tc.name, tc.result, resultControllers)
 		}
 	}

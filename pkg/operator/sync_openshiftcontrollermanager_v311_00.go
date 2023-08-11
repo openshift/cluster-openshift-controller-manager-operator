@@ -2,12 +2,12 @@ package operator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
-	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -319,9 +319,8 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionL
 	controllers := disableControllers(clusterVersion)
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
 	ocmDefaultConfig := v311_00_assets.MustAsset("v3.11.0/config/openshift-controller-manager-defaultconfig.yaml")
-	openShiftControllerManagerConfig := &controlplanev1.OpenShiftControllerManagerConfig{}
-	openShiftControllerManagerConfig.Controllers = controllers
-	bytes, err := yaml.Marshal(openShiftControllerManagerConfig)
+	controllersBytes, err := json.Marshal(controllers)
+	bytes := []byte(fmt.Sprintf("{\"apiVersion\": \"openshiftcontrolplane.config.openshift.io/v1\", \"kind\": \"OpenShiftControllerManagerConfig\", \"controllers\": %s}", controllersBytes))
 	if err != nil {
 		return nil, false, err
 	}
