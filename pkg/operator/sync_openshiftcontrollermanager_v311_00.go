@@ -2,6 +2,7 @@ package operator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -12,12 +13,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	coreclientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	operatorapiv1 "github.com/openshift/api/operator/v1"
 
+	configv1 "github.com/openshift/api/config/v1"
+	controlplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
+	configlisterv1 "github.com/openshift/client-go/config/listers/config/v1"
 	proxyvclient1 "github.com/openshift/client-go/config/listers/config/v1"
 
 	"github.com/openshift/library-go/pkg/operator/events"
@@ -30,6 +35,13 @@ import (
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
+
+// ControllerCapabilities maps controllers to capabilities, so we can enable/disable controllers
+// based on capabilities.
+var controllerCapabilities = map[controlplanev1.OpenShiftControllerName]configv1.ClusterVersionCapability{
+	controlplanev1.OpenshiftBuildController:            configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenshiftDeploymentConfigController: configv1.ClusterVersionCapabilityDeploymentConfig,
+}
 
 // syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
 // most of the time the sync method will be good for a large span of minor versions
@@ -55,7 +67,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	}
 
 	// OpenShift Controller Manager
-	configMap, _, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
+	configMap, _, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.clusterVersionLister, c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
 	if err != nil {
 		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "config", err))
 	} else {
@@ -281,11 +293,38 @@ func manageRouteControllerManagerClientCA_v311_00_to_latest(client coreclientv1.
 	return resourceapply.SyncConfigMap(context.Background(), client, recorder, util.KubeAPIServerNamespace, apiserverClientCA, util.RouteControllerTargetNamespace, apiserverClientCA, []metav1.OwnerReference{})
 }
 
+// disableControllers disables controllers based on capabilities.
+// By default, all controllers are enabled. To disable specific controllers,
+// '-foo' disables the controller named 'foo'. For example, to disable the
+// OpenShiftServiceAccountController, one would use "-openshift.io/serviceaccount".
+func disableControllers(clusterVersion *configv1.ClusterVersion) []string {
+	controllers := []string{"*"}
+	knownCaps := sets.New[configv1.ClusterVersionCapability](clusterVersion.Status.Capabilities.KnownCapabilities...)
+	capsEnabled := sets.New[configv1.ClusterVersionCapability](clusterVersion.Status.Capabilities.EnabledCapabilities...)
+
+	for cont, cap := range controllerCapabilities {
+		if knownCaps.Has(cap) && !capsEnabled.Has(cap) {
+			controllers = append(controllers, fmt.Sprintf("-%s", cont))
+		}
+	}
+	return controllers
+}
+
 // similar logic for route-controller-manager in manageRouteControllerManagerConfigMap_v311_00_to_latest
-func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
+func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionLister configlisterv1.ClusterVersionLister, kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
+	clusterVersion, err := clusterVersionLister.Get("version")
+	if err != nil {
+		return nil, false, err
+	}
+	controllers := disableControllers(clusterVersion)
 	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
 	ocmDefaultConfig := v311_00_assets.MustAsset("v3.11.0/config/openshift-controller-manager-defaultconfig.yaml")
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, ocmDefaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
+	controllersBytes, err := json.Marshal(controllers)
+	bytes := []byte(fmt.Sprintf("{\"apiVersion\": \"openshiftcontrolplane.config.openshift.io/v1\", \"kind\": \"OpenShiftControllerManagerConfig\", \"controllers\": %s}", controllersBytes))
+	if err != nil {
+		return nil, false, err
+	}
+	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, ocmDefaultConfig, bytes, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
 	if err != nil {
 		return nil, false, err
 	}

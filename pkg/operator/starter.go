@@ -87,6 +87,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		workloadcontroller.EnsureAtMostOnePodPerNode,
 		kubeClient,
 		controllerConfig.EventRecorder,
+		configInformers.Config().V1().ClusterVersions().Lister(),
 	)
 
 	opClient := &genericClient{
