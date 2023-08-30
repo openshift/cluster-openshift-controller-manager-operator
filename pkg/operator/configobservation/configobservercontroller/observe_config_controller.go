@@ -10,15 +10,16 @@ import (
 	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
+	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/builds"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/controllers"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/deployimages"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/images"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/network"
-	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 )
 
 // NewConfigObserver initializes a new configuration observer.
@@ -34,15 +35,19 @@ func NewConfigObserver(
 		operatorClient,
 		eventRecorder,
 		configobservation.Listers{
-			ImageConfigLister:  configInformers.Config().V1().Images().Lister(),
-			BuildConfigLister:  configInformers.Config().V1().Builds().Lister(),
-			NetworkLister:      configInformers.Config().V1().Networks().Lister(),
-			FeatureGateLister_: configInformers.Config().V1().FeatureGates().Lister(),
-			ConfigMapLister:    kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Lister(),
+			ImageConfigLister:     configInformers.Config().V1().Images().Lister(),
+			BuildConfigLister:     configInformers.Config().V1().Builds().Lister(),
+			NetworkLister:         configInformers.Config().V1().Networks().Lister(),
+			FeatureGateLister_:    configInformers.Config().V1().FeatureGates().Lister(),
+			ClusterVersionLister:  configInformers.Config().V1().ClusterVersions().Lister(),
+			ClusterOperatorLister: configInformers.Config().V1().ClusterOperators().Lister(),
+			ConfigMapLister:       kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Lister(),
 			PreRunCachesSynced: []cache.InformerSynced{
 				configInformers.Config().V1().Builds().Informer().HasSynced,
 				configInformers.Config().V1().Images().Informer().HasSynced,
 				configInformers.Config().V1().Networks().Informer().HasSynced,
+				configInformers.Config().V1().ClusterVersions().Informer().HasSynced,
+				configInformers.Config().V1().ClusterOperators().Informer().HasSynced,
 				kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
 				operatorConfigInformers.Operator().V1().OpenShiftControllerManagers().Informer().HasSynced,
 			},
@@ -53,6 +58,7 @@ func NewConfigObserver(
 		builds.ObserveBuildControllerConfig,
 		network.ObserveExternalIPAutoAssignCIDRs,
 		deployimages.ObserveControllerManagerImagesConfig,
+		controllers.ObserveControllers,
 		featuregates.NewObserveFeatureFlagsFunc(
 			sets.New[configv1.FeatureGateName]("BuildCSIVolumes"),
 			nil,
