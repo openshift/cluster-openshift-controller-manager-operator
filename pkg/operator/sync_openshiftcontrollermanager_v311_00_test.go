@@ -62,7 +62,7 @@ func TestExpectedConfigMap(t *testing.T) {
 			APIVersion: "openshiftcontrolplane.config.openshift.io/v1",
 			Kind:       "OpenShiftControllerManagerConfig",
 		},
-		Controllers:        []string{"*", "-openshift.io/build"},
+		Controllers:        []string{"*", "-openshift.io/build", "-openshift.io/build-config-change"},
 		ServiceServingCert: openshiftcontrolplanev1.ServiceServingCert{},
 	}
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
@@ -137,7 +137,7 @@ func TestConfigMapControllerDisabling(t *testing.T) {
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 			},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
-			result:              map[string][]string{"controllers": {"*", "-openshift.io/build", "-openshift.io/deploymentconfig"}},
+			result:              map[string][]string{"controllers": {"*", "-openshift.io/build", "-openshift.io/build-config-change", "-openshift.io/deploymentconfig"}},
 		},
 		{
 			name:                "ControllersDisabledButUnknown",
