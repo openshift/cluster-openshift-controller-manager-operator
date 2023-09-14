@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -307,6 +308,9 @@ func disableControllers(clusterVersion *configv1.ClusterVersion) []string {
 			controllers = append(controllers, fmt.Sprintf("-%s", cont))
 		}
 	}
+	// we need to sort this slice to have always same list
+	// otherwise, change in the order would modify configmap and causes roll out
+	sort.Strings(controllers)
 	return controllers
 }
 
