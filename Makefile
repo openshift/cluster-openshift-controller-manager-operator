@@ -17,7 +17,7 @@ GO_TEST_PACKAGES :=./pkg/... ./cmd/...
 # $2 - Dockerfile path
 # $3 - context directory for image build
 # It will generate target "image-$(1)" for builing the image an binding it as a prerequisite to target "images".
-$(call build-image,ocp-cluster-openshift-controller-manager-operator,$(IMAGE_REGISTRY)/ocp/4.3:cluster-openshift-controller-manager-operator,./Dockerfile.rhel7,.)
+$(call build-image,ocp-cluster-openshift-controller-manager-operator,$(IMAGE_REGISTRY)/ocp/4.3:cluster-openshift-controller-manager-operator,./Dockerfile,.)
 
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: GO_TEST_FLAGS += -v -count=1
