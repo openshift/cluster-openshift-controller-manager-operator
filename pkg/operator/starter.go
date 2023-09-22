@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/openshift/cluster-openshift-controller-manager-operator/bindata"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -32,7 +33,6 @@ import (
 
 	configobservationcontroller "github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/usercaobservation"
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
@@ -175,55 +175,55 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	// TODO: enhance resourceapply to use listers for RBAC APIs.
 	staticResourceController := staticresourcecontroller.NewStaticResourceController(
 		"OpenshiftControllerManagerStaticResources",
-		v311_00_assets.Asset,
+		bindata.Asset,
 		[]string{
-			"v3.11.0/openshift-controller-manager/informer-clusterrole.yaml",
-			"v3.11.0/openshift-controller-manager/informer-clusterrolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/tokenreview-clusterrole.yaml",
-			"v3.11.0/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/leader-role.yaml",
-			"v3.11.0/openshift-controller-manager/leader-rolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/ns.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-clusterrole.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-clusterrolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-leader-role.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-leader-rolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-ns.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-sa.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-separate-sa-role.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-separate-sa-rolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-servicemonitor-role.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-servicemonitor-rolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-svc.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-tokenreview-clusterrole.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-tokenreview-clusterrolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-svc.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-ingress-to-route-controller-clusterrole.yaml",
-			"v3.11.0/openshift-controller-manager/route-controller-manager-ingress-to-route-controller-clusterrolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/old-leader-role.yaml",
-			"v3.11.0/openshift-controller-manager/old-leader-rolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/separate-sa-role.yaml",
-			"v3.11.0/openshift-controller-manager/separate-sa-rolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/sa.yaml",
-			"v3.11.0/openshift-controller-manager/svc.yaml",
-			"v3.11.0/openshift-controller-manager/servicemonitor-role.yaml",
-			"v3.11.0/openshift-controller-manager/servicemonitor-rolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrole.yaml",
-			"v3.11.0/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/deployer-clusterrole.yaml",
-			"v3.11.0/openshift-controller-manager/deployer-clusterrolebinding.yaml",
-			"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrole.yaml",
-			"v3.11.0/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml",
+			"assets/openshift-controller-manager/informer-clusterrole.yaml",
+			"assets/openshift-controller-manager/informer-clusterrolebinding.yaml",
+			"assets/openshift-controller-manager/tokenreview-clusterrole.yaml",
+			"assets/openshift-controller-manager/tokenreview-clusterrolebinding.yaml",
+			"assets/openshift-controller-manager/leader-role.yaml",
+			"assets/openshift-controller-manager/leader-rolebinding.yaml",
+			"assets/openshift-controller-manager/ns.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-clusterrole.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-clusterrolebinding.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-leader-role.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-leader-rolebinding.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-ns.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-sa.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-separate-sa-role.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-separate-sa-rolebinding.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-servicemonitor-role.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-servicemonitor-rolebinding.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-svc.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-tokenreview-clusterrole.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-tokenreview-clusterrolebinding.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-svc.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-ingress-to-route-controller-clusterrole.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-ingress-to-route-controller-clusterrolebinding.yaml",
+			"assets/openshift-controller-manager/old-leader-role.yaml",
+			"assets/openshift-controller-manager/old-leader-rolebinding.yaml",
+			"assets/openshift-controller-manager/separate-sa-role.yaml",
+			"assets/openshift-controller-manager/separate-sa-rolebinding.yaml",
+			"assets/openshift-controller-manager/sa.yaml",
+			"assets/openshift-controller-manager/svc.yaml",
+			"assets/openshift-controller-manager/servicemonitor-role.yaml",
+			"assets/openshift-controller-manager/servicemonitor-rolebinding.yaml",
+			"assets/openshift-controller-manager/buildconfigstatus-clusterrole.yaml",
+			"assets/openshift-controller-manager/buildconfigstatus-clusterrolebinding.yaml",
+			"assets/openshift-controller-manager/deployer-clusterrole.yaml",
+			"assets/openshift-controller-manager/deployer-clusterrolebinding.yaml",
+			"assets/openshift-controller-manager/image-trigger-controller-clusterrole.yaml",
+			"assets/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml",
 		},
 		resourceapply.NewKubeClientHolder(kubeClient),
 		opClient,
 		controllerConfig.EventRecorder,
 	).WithConditionalResources(
-		v311_00_assets.Asset,
+		bindata.Asset,
 		[]string{
 			// TODO: remove all of these ingress-to-route leader-election entries and files in 4.14
-			"v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml",
-			"v3.11.0/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml",
+			"assets/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml",
+			"assets/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml",
 		},
 		func() bool {
 			return false
