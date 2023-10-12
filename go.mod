@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
-	github.com/openshift/api v0.0.0-20230920152731-7d89b46689d4
+	github.com/openshift/api v0.0.0-20231012181603-8f468d7b55a8
 	github.com/openshift/build-machinery-go v0.0.0-20230824093055-6a18da01283c
 	github.com/openshift/client-go v0.0.0-20230915115245-53bd8980dfb7
 	github.com/openshift/library-go v0.0.0-20230915122714-b753831a0dce
