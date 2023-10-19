@@ -5,16 +5,16 @@ go 1.20
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
-	github.com/openshift/api v0.0.0-20231012181603-8f468d7b55a8
+	github.com/openshift/api v0.0.0-20231018090736-41ecc021ff27
 	github.com/openshift/build-machinery-go v0.0.0-20230824093055-6a18da01283c
-	github.com/openshift/client-go v0.0.0-20230915115245-53bd8980dfb7
-	github.com/openshift/library-go v0.0.0-20230915122714-b753831a0dce
+	github.com/openshift/client-go v0.0.0-20231018150822-6e226e2825a6
+	github.com/openshift/library-go v0.0.0-20231017173800-126f85ed0cc7
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0
-	k8s.io/api v0.28.2
-	k8s.io/apimachinery v0.28.2
-	k8s.io/client-go v0.28.2
-	k8s.io/component-base v0.28.2
+	k8s.io/api v0.28.3
+	k8s.io/apimachinery v0.28.3
+	k8s.io/client-go v0.28.3
+	k8s.io/component-base v0.28.3
 	k8s.io/klog/v2 v2.100.1
 )
 
@@ -82,14 +82,14 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.19.0 // indirect
-	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
-	golang.org/x/net v0.13.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/term v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230526161137-0005af68ea54 // indirect
@@ -115,9 +115,9 @@ require (
 )
 
 replace (
-	k8s.io/api => k8s.io/api v0.28.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.28.2
-	k8s.io/client-go => k8s.io/client-go v0.28.2
-	k8s.io/component-base => k8s.io/component-base v0.28.2
+	k8s.io/api => k8s.io/api v0.28.3
+	k8s.io/apimachinery => k8s.io/apimachinery v0.28.3
+	k8s.io/client-go => k8s.io/client-go v0.28.3
+	k8s.io/component-base => k8s.io/component-base v0.28.3
 	vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
 )

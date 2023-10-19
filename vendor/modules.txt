@@ -161,7 +161,7 @@ github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/openshift/api v0.0.0-20231012181603-8f468d7b55a8
+# github.com/openshift/api v0.0.0-20231018090736-41ecc021ff27
 ## explicit; go 1.20
 github.com/openshift/api
 github.com/openshift/api/apiserver
@@ -199,6 +199,7 @@ github.com/openshift/api/monitoring
 github.com/openshift/api/monitoring/v1alpha1
 github.com/openshift/api/network
 github.com/openshift/api/network/v1
+github.com/openshift/api/network/v1alpha1
 github.com/openshift/api/networkoperator
 github.com/openshift/api/networkoperator/v1
 github.com/openshift/api/oauth
@@ -241,7 +242,7 @@ github.com/openshift/build-machinery-go/make/targets/golang
 github.com/openshift/build-machinery-go/make/targets/openshift
 github.com/openshift/build-machinery-go/make/targets/openshift/operator
 github.com/openshift/build-machinery-go/scripts
-# github.com/openshift/client-go v0.0.0-20230915115245-53bd8980dfb7
+# github.com/openshift/client-go v0.0.0-20231018150822-6e226e2825a6
 ## explicit; go 1.20
 github.com/openshift/client-go/config/applyconfigurations/config/v1
 github.com/openshift/client-go/config/applyconfigurations/config/v1alpha1
@@ -277,7 +278,7 @@ github.com/openshift/client-go/operator/informers/externalversions/operator/v1
 github.com/openshift/client-go/operator/informers/externalversions/operator/v1alpha1
 github.com/openshift/client-go/operator/listers/operator/v1
 github.com/openshift/client-go/operator/listers/operator/v1alpha1
-# github.com/openshift/library-go v0.0.0-20230915122714-b753831a0dce
+# github.com/openshift/library-go v0.0.0-20231017173800-126f85ed0cc7
 ## explicit; go 1.20
 github.com/openshift/library-go/pkg/apps/deployment
 github.com/openshift/library-go/pkg/assets
@@ -449,7 +450,7 @@ go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
 go.uber.org/zap/zapgrpc
-# golang.org/x/crypto v0.11.0
+# golang.org/x/crypto v0.14.0
 ## explicit; go 1.17
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
@@ -462,7 +463,7 @@ golang.org/x/crypto/salsa20/salsa
 ## explicit; go 1.18
 golang.org/x/exp/constraints
 golang.org/x/exp/slices
-# golang.org/x/net v0.13.0
+# golang.org/x/net v0.17.0
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
@@ -479,18 +480,17 @@ golang.org/x/oauth2/internal
 # golang.org/x/sync v0.2.0
 ## explicit
 golang.org/x/sync/singleflight
-# golang.org/x/sys v0.10.0
+# golang.org/x/sys v0.13.0
 ## explicit; go 1.17
 golang.org/x/sys/cpu
-golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/term v0.10.0
+# golang.org/x/term v0.13.0
 ## explicit; go 1.17
 golang.org/x/term
-# golang.org/x/text v0.11.0
+# golang.org/x/text v0.13.0
 ## explicit; go 1.17
 golang.org/x/text/feature/plural
 golang.org/x/text/internal
@@ -639,7 +639,7 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# k8s.io/api v0.28.2 => k8s.io/api v0.28.2
+# k8s.io/api v0.28.3 => k8s.io/api v0.28.3
 ## explicit; go 1.20
 k8s.io/api/admission/v1
 k8s.io/api/admission/v1beta1
@@ -707,7 +707,7 @@ k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1
-# k8s.io/apimachinery v0.28.2 => k8s.io/apimachinery v0.28.2
+# k8s.io/apimachinery v0.28.3 => k8s.io/apimachinery v0.28.3
 ## explicit; go 1.20
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
@@ -910,7 +910,7 @@ k8s.io/apiserver/plugin/pkg/audit/truncate
 k8s.io/apiserver/plugin/pkg/audit/webhook
 k8s.io/apiserver/plugin/pkg/authenticator/token/webhook
 k8s.io/apiserver/plugin/pkg/authorizer/webhook
-# k8s.io/client-go v0.28.2 => k8s.io/client-go v0.28.2
+# k8s.io/client-go v0.28.3 => k8s.io/client-go v0.28.3
 ## explicit; go 1.20
 k8s.io/client-go/applyconfigurations/admissionregistration/v1
 k8s.io/client-go/applyconfigurations/admissionregistration/v1alpha1
@@ -1218,7 +1218,7 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
-# k8s.io/component-base v0.28.2 => k8s.io/component-base v0.28.2
+# k8s.io/component-base v0.28.3 => k8s.io/component-base v0.28.3
 ## explicit; go 1.20
 k8s.io/component-base/cli
 k8s.io/component-base/cli/flag
@@ -1325,8 +1325,8 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# k8s.io/api => k8s.io/api v0.28.2
-# k8s.io/apimachinery => k8s.io/apimachinery v0.28.2
-# k8s.io/client-go => k8s.io/client-go v0.28.2
-# k8s.io/component-base => k8s.io/component-base v0.28.2
+# k8s.io/api => k8s.io/api v0.28.3
+# k8s.io/apimachinery => k8s.io/apimachinery v0.28.3
+# k8s.io/client-go => k8s.io/client-go v0.28.3
+# k8s.io/component-base => k8s.io/component-base v0.28.3
 # vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
