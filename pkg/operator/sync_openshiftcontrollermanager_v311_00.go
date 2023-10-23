@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/openshift/cluster-openshift-controller-manager-operator/bindata"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -33,7 +34,6 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
-	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/v311_00_assets"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
@@ -322,8 +322,8 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionL
 		return nil, false, err
 	}
 	controllers := disableControllers(clusterVersion)
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/cm.yaml"))
-	ocmDefaultConfig := v311_00_assets.MustAsset("v3.11.0/config/openshift-controller-manager-defaultconfig.yaml")
+	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/openshift-controller-manager/cm.yaml"))
+	ocmDefaultConfig := bindata.MustAsset("assets/config/openshift-controller-manager-defaultconfig.yaml")
 	controllersBytes, err := json.Marshal(controllers)
 	bytes := []byte(fmt.Sprintf("{\"apiVersion\": \"openshiftcontrolplane.config.openshift.io/v1\", \"kind\": \"OpenShiftControllerManagerConfig\", \"controllers\": %s}", controllersBytes))
 	if err != nil {
@@ -355,8 +355,8 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionL
 
 // similar logic for route-controller-manager in manageOpenShiftControllerManagerConfigMap_v311_00_to_latest
 func manageRouteControllerManagerConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/route-controller-manager-cm.yaml"))
-	rcmDefaultConfig := v311_00_assets.MustAsset("v3.11.0/config/route-controller-manager-defaultconfig.yaml")
+	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/openshift-controller-manager/route-controller-manager-cm.yaml"))
+	rcmDefaultConfig := bindata.MustAsset("assets/config/route-controller-manager-defaultconfig.yaml")
 	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, rcmDefaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
 	if err != nil {
 		return nil, false, err
@@ -380,7 +380,7 @@ func manageRouteControllerManagerConfigMap_v311_00_to_latest(kubeClient kubernet
 }
 
 func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-service-ca-cm.yaml"))
+	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/openshift-controller-manager/openshift-service-ca-cm.yaml"))
 	existing, err := client.ConfigMaps(util.TargetNamespace).Get(context.TODO(), "openshift-service-ca", metav1.GetOptions{})
 	// Ensure we create the ConfigMap for the registry CA, and that it has the right annotations
 	// Lifted from library-go for the most part
@@ -417,7 +417,7 @@ func manageOpenShiftServiceCAConfigMap_v311_00_to_latest(kubeClient kubernetes.I
 // The global trust bundle is needed in the event the service uses a custom PKI certificate, or
 // OpenShift is run behind a proxy that uses a custom PKI certificate.
 func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
-	configMap := resourceread.ReadConfigMapV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/openshift-global-ca-cm.yaml"))
+	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/openshift-controller-manager/openshift-global-ca-cm.yaml"))
 	// ApplyConfigMap now handles the injection of CA certificates.
 	return resourceapply.ApplyConfigMap(context.TODO(), client, recorder, configMap)
 }
@@ -433,7 +433,7 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 	proxyLister proxyvclient1.ProxyLister,
 	specAnnotations map[string]string,
 ) (*appsv1.Deployment, bool, error) {
-	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/deploy.yaml"))
+	required := resourceread.ReadDeploymentV1OrDie(bindata.MustAsset("assets/openshift-controller-manager/deploy.yaml"))
 
 	if len(imagePullSpec) > 0 {
 		required.Spec.Template.Spec.Containers[0].Image = imagePullSpec
@@ -533,7 +533,7 @@ func manageRouteControllerManagerDeployment_v311_00_to_latest(
 	generationStatus []operatorapiv1.GenerationStatus,
 	specAnnotations map[string]string,
 ) (*appsv1.Deployment, bool, error) {
-	required := resourceread.ReadDeploymentV1OrDie(v311_00_assets.MustAsset("v3.11.0/openshift-controller-manager/route-controller-manager-deploy.yaml"))
+	required := resourceread.ReadDeploymentV1OrDie(bindata.MustAsset("assets/openshift-controller-manager/route-controller-manager-deploy.yaml"))
 
 	if len(imagePullSpec) > 0 {
 		required.Spec.Template.Spec.Containers[0].Image = imagePullSpec

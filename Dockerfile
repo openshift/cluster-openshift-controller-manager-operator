@@ -1,7 +1,7 @@
 FROM registry.ci.openshift.org/ocp/builder:rhel-8-golang-1.20-openshift-4.15 AS builder
 WORKDIR /go/src/github.com/openshift/cluster-openshift-controller-manager-operator
 COPY . .
-RUN make
+RUN GO_COMPLIANCE_INFO=0 make
 
 FROM registry.ci.openshift.org/ocp/4.15:base
 COPY --from=builder /go/src/github.com/openshift/cluster-openshift-controller-manager-operator/cluster-openshift-controller-manager-operator /usr/bin/
