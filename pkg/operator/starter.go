@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/openshift/cluster-openshift-controller-manager-operator/bindata"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -20,6 +19,8 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	operatorclientv1 "github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1"
 	operatorinformers "github.com/openshift/client-go/operator/informers/externalversions"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/bindata"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/internalimageregistry"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
@@ -235,6 +236,13 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 
 	logLevelController := loglevel.NewClusterOperatorLoggingController(opClient, controllerConfig.EventRecorder)
 
+	imagePullSecretCleanupController := internalimageregistry.NewImagePullSecretCleanupController(
+		kubeClient,
+		kubeInformers,
+		configInformers,
+		controllerConfig.EventRecorder,
+	)
+
 	ensureDaemonSetCleanup(ctx, kubeClient, controllerConfig.EventRecorder)
 
 	operatorConfigInformers.Start(ctx.Done())
@@ -248,6 +256,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	go userCAObserver.Run(ctx, 1)
 	go clusterOperatorStatus.Run(ctx, 1)
 	go logLevelController.Run(ctx, 1)
+	go imagePullSecretCleanupController.Run(ctx, 1)
 
 	<-ctx.Done()
 	return fmt.Errorf("stopped")
