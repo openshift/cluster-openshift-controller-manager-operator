@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/klog/v2"
@@ -27,6 +28,7 @@ type imagePullSecretCleanupController struct {
 	kubeClient            *kubernetes.Clientset
 	serviceAccountLister  corelistersv1.ServiceAccountLister
 	secretLister          corelistersv1.SecretLister
+	podLister             corelistersv1.PodLister
 	clusterVersionLister  configlistersv1.ClusterVersionLister
 	clusterOperatorLister configlistersv1.ClusterOperatorLister
 }
@@ -35,14 +37,16 @@ func NewImagePullSecretCleanupController(kubeClient *kubernetes.Clientset, infor
 	c := &imagePullSecretCleanupController{
 		kubeClient:            kubeClient,
 		serviceAccountLister:  informers.InformersFor(metav1.NamespaceAll).Core().V1().ServiceAccounts().Lister(),
-		secretLister:          informers.InformersFor("").Core().V1().Secrets().Lister(),
+		secretLister:          informers.InformersFor(metav1.NamespaceAll).Core().V1().Secrets().Lister(),
+		podLister:             informers.InformersFor(metav1.NamespaceAll).Core().V1().Pods().Lister(),
 		clusterVersionLister:  configInformers.Config().V1().ClusterVersions().Lister(),
 		clusterOperatorLister: configInformers.Config().V1().ClusterOperators().Lister(),
 	}
 	c.Controller = factory.New().
 		WithInformers(
 			informers.InformersFor(metav1.NamespaceAll).Core().V1().ServiceAccounts().Informer(),
-			informers.InformersFor("").Core().V1().Secrets().Informer(),
+			informers.InformersFor(metav1.NamespaceAll).Core().V1().Secrets().Informer(),
+			informers.InformersFor(metav1.NamespaceAll).Core().V1().Pods().Informer(),
 			configInformers.Config().V1().ClusterVersions().Informer(),
 			configInformers.Config().V1().ClusterOperators().Informer(),
 		).
@@ -56,10 +60,10 @@ func (c *imagePullSecretCleanupController) sync(ctx context.Context, controllerC
 	if err != nil {
 		return err
 	}
-	if !imageRegistryEnabled {
-		return c.cleanup(ctx)
+	if imageRegistryEnabled {
+		return nil
 	}
-	return nil
+	return c.cleanup(ctx)
 }
 
 func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
@@ -74,34 +78,46 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 			return fmt.Errorf("unable to retrieve the image pull secret for the service account %q (ns=%q): %w", serviceAccount.Name, serviceAccount.Namespace, err)
 		}
 		var tokenSecret *corev1.Secret
+		var imagePullSecretInUse bool
 		if imagePullSecret != nil {
 			tokenSecret, err = c.tokenSecretForImagePullSecret(imagePullSecret)
 			if err != nil {
 				return fmt.Errorf("unable to retrive the service account token secret for the image pull secret %q (ns=%q): %w", imagePullSecret.Name, imagePullSecret.Namespace, err)
 			}
+			imagePullSecretInUse = c.imagePullSecretInUse(imagePullSecret)
 		}
-		if tokenSecret != nil {
+
+		// delete the long-lived token only if the image pull secret is not in use
+		if !imagePullSecretInUse && tokenSecret != nil {
 			err := c.kubeClient.CoreV1().Secrets(tokenSecret.Namespace).Delete(ctx, tokenSecret.Name, metav1.DeleteOptions{})
 			if err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("unable to delete the service account token secret %q (ns=%q): %w", tokenSecret.Name, tokenSecret.Namespace, err)
 			}
 		}
-		if imagePullSecret != nil {
+
+		// the image pull secret should automatically be deleted when the token is deleted, but try anyway, just in case
+		if !imagePullSecretInUse && imagePullSecret != nil {
 			err := c.kubeClient.CoreV1().Secrets(imagePullSecret.Namespace).Delete(ctx, imagePullSecret.Name, metav1.DeleteOptions{})
 			if err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("unable to delete image pull secret %q (ns=%q): %w", imagePullSecret.Name, imagePullSecret.Namespace, err)
 			}
 		}
+
+		// cleanup the refs in the service account
 		if len(imagePullSecretName) != 0 {
-			var secretRefs []corev1.ObjectReference
-			for _, secretRef := range serviceAccount.Secrets {
+			// keep the secret ref around while imagePullSecret is in use, so we can find the secret again later.
+			if !imagePullSecretInUse {
+				var secretRefs []corev1.ObjectReference
+				for _, secretRef := range serviceAccount.Secrets {
 
-				if secretRef.Name != imagePullSecretName {
-					secretRefs = append(secretRefs, secretRef)
+					if secretRef.Name != imagePullSecretName {
+						secretRefs = append(secretRefs, secretRef)
+					}
 				}
+				serviceAccount.Secrets = secretRefs
 			}
-			serviceAccount.Secrets = secretRefs
 
+			// remove these image pull secret refs, even if in use, so new pods do not pick them up
 			var imagePullSecretRefs []corev1.LocalObjectReference = []corev1.LocalObjectReference{}
 			for _, imagePullSecretRef := range serviceAccount.ImagePullSecrets {
 				if imagePullSecretRef.Name != imagePullSecretName {
@@ -125,6 +141,23 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (c *imagePullSecretCleanupController) imagePullSecretInUse(imagePullSecret *corev1.Secret) bool {
+	pods, err := c.podLister.Pods(imagePullSecret.Namespace).List(labels.Everything())
+	if err != nil {
+		runtime.HandleError(err)
+		return true // play it safe
+	}
+	for _, pod := range pods {
+		for _, imagePullSecretRef := range pod.Spec.ImagePullSecrets {
+			if imagePullSecret.Name == imagePullSecretRef.Name {
+				klog.V(2).InfoS("ImagePullSecret in use", "ns", pod.Namespace, "pod", pod.Name, "secret", imagePullSecret.Name)
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (c *imagePullSecretCleanupController) imagePullSecretForServiceAccount(serviceAccount *corev1.ServiceAccount) (string, *corev1.Secret, error) {
