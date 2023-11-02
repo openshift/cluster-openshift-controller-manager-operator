@@ -83,13 +83,13 @@ func TestObserveControllers(t *testing.T) {
 		{
 			name:           "NoClusterOperator",
 			clusterVersion: clusterVersion(withImageRegistryCapability, withBuildCapability, withDeploymentConfigCapability),
-			expectedConfig: defaultConfig(withDisabled("openshift.io/serviceaccount-pull-secrets")),
+			expectedConfig: defaultConfig(),
 		},
 		{
 			name:            "RegistryRemoved",
 			clusterVersion:  clusterVersion(withImageRegistryCapability, withBuildCapability, withDeploymentConfigCapability),
 			clusterOperator: clusterOperator("Removed"),
-			expectedConfig:  defaultConfig(withDisabled("openshift.io/serviceaccount-pull-secrets")),
+			expectedConfig:  defaultConfig(withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController)),
 		},
 		{
 			name:            "RegistryNotRemoved",
@@ -100,13 +100,13 @@ func TestObserveControllers(t *testing.T) {
 		{
 			name:           "NoImageRegistryCapabilityNoRegistryConfig",
 			clusterVersion: clusterVersion(withBuildCapability, withDeploymentConfigCapability),
-			expectedConfig: defaultConfig(withDisabled("openshift.io/serviceaccount-pull-secrets")),
+			expectedConfig: defaultConfig(withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController)),
 		},
 		{
 			name:            "NoImageRegistryCapabilityRegistryRemoved",
 			clusterVersion:  clusterVersion(withBuildCapability, withDeploymentConfigCapability),
 			clusterOperator: clusterOperator("Removed"),
-			expectedConfig:  defaultConfig(withDisabled("openshift.io/serviceaccount-pull-secrets")),
+			expectedConfig:  defaultConfig(withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController)),
 		},
 		{
 			name:            "NoImageRegistryCapabilityRegistryNotRemoved",
