@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -128,6 +129,24 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		controllerConfig.EventRecorder,
 	)
 
+	if !cache.WaitForCacheSync(ctx.Done(), configInformers.Config().V1().ClusterVersions().Informer().HasSynced) {
+		klog.Errorf("timed out waiting for configInformers ClusterVersions")
+		return fmt.Errorf("timed out waiting for configInformers ClusterVersions")
+	}
+
+	buildCapabilityEnabled := false
+	cv, err := configInformers.Config().V1().ClusterVersions().Lister().Get("version")
+	if err != nil {
+		return err
+	}
+
+	for _, capability := range cv.Status.Capabilities.EnabledCapabilities {
+		if capability == configv1.ClusterVersionCapabilityBuild {
+			buildCapabilityEnabled = true
+			break
+		}
+	}
+
 	// ConfigObserver observes the configuration state from cluster config objects and transforms
 	// them into configuration used by openshift-controller-manager
 	configObserver := configobservationcontroller.NewConfigObserver(
@@ -137,6 +156,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		kubeInformers.InformersFor(util.OperatorNamespace),
 		featureGateAccessor,
 		controllerConfig.EventRecorder,
+		buildCapabilityEnabled,
 	)
 
 	// userCAObserver watches the cluster proxy config and updates the resourceSyncer.
@@ -258,8 +278,39 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	go logLevelController.Run(ctx, 1)
 	go imagePullSecretCleanupController.Run(ctx, 1)
 
-	<-ctx.Done()
-	return fmt.Errorf("stopped")
+	capabilityChangedCh := make(chan struct{})
+	if !buildCapabilityEnabled {
+		// check capability periodically and close chan and return
+		go func() {
+			ticker := time.NewTicker(5 * time.Minute)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					cv, err := configInformers.Config().V1().ClusterVersions().Lister().Get("version")
+					if err != nil {
+						klog.Errorf("capability checker error %v", err)
+						continue
+					}
+
+					for _, capability := range cv.Status.Capabilities.EnabledCapabilities {
+						if capability == configv1.ClusterVersionCapabilityBuild {
+							close(capabilityChangedCh)
+							return
+						}
+					}
+				}
+			}
+		}()
+	}
+
+	select {
+	case <-capabilityChangedCh:
+		return fmt.Errorf("capability is enabled, stopping")
+	case <-ctx.Done():
+		return fmt.Errorf("stopped")
+	}
 }
 
 type versionGetter struct {
