@@ -38,21 +38,22 @@ spec:
         controller-manager: "true"
     spec:
       securityContext:
-        runAsNonRoot: true
-        seccompProfile:
-          type: RuntimeDefault
+        runAsUser: 0
       priorityClassName: system-node-critical
       serviceAccountName: openshift-controller-manager-sa
       containers:
       - name: controller-manager
         securityContext:
-          allowPrivilegeEscalation: false
+          privileged: true
+          runAsUser: 0
           capabilities:
             drop:
             - ALL
+            add:
+            - SYS_PTRACE
         image: ${IMAGE}
         imagePullPolicy: IfNotPresent
-        command: ["openshift-controller-manager", "start"]
+        command: ["dlv", "--listen=:40000", "--headless=true", "--api-version=2", "--accept-multiclient=true", "--allow-non-terminal-interactive=true", "--continue", "--log", "exec", "/usr/bin/openshift-controller-manager", "--", "start"]
         args:
         - "--config=/var/run/configmaps/config/config.yaml"
         resources:
