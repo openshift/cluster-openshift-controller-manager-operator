@@ -30,32 +30,34 @@ func NewConfigObserver(
 	kubeInformersForOperatorNamespace kubeinformers.SharedInformerFactory,
 	featureGateAccessor featuregates.FeatureGateAccess,
 	eventRecorder events.Recorder,
+	buildEnabled bool,
 ) factory.Controller {
-	c := configobserver.NewConfigObserver(
-		operatorClient,
-		eventRecorder,
-		configobservation.Listers{
-			ImageConfigLister:     configInformers.Config().V1().Images().Lister(),
-			BuildConfigLister:     configInformers.Config().V1().Builds().Lister(),
-			NetworkLister:         configInformers.Config().V1().Networks().Lister(),
-			FeatureGateLister_:    configInformers.Config().V1().FeatureGates().Lister(),
-			ClusterVersionLister:  configInformers.Config().V1().ClusterVersions().Lister(),
-			ClusterOperatorLister: configInformers.Config().V1().ClusterOperators().Lister(),
-			ConfigMapLister:       kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Lister(),
-			PreRunCachesSynced: []cache.InformerSynced{
-				configInformers.Config().V1().Builds().Informer().HasSynced,
-				configInformers.Config().V1().Images().Informer().HasSynced,
-				configInformers.Config().V1().Networks().Informer().HasSynced,
-				configInformers.Config().V1().ClusterVersions().Informer().HasSynced,
-				configInformers.Config().V1().ClusterOperators().Informer().HasSynced,
-				kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
-				operatorConfigInformers.Operator().V1().OpenShiftControllerManagers().Informer().HasSynced,
-			},
-		},
-		[]factory.Informer{operatorConfigInformers.Operator().V1().OpenShiftControllerManagers().Informer()},
+	informersSynced := []cache.InformerSynced{
+		configInformers.Config().V1().Images().Informer().HasSynced,
+		configInformers.Config().V1().Networks().Informer().HasSynced,
+		configInformers.Config().V1().ClusterVersions().Informer().HasSynced,
+		configInformers.Config().V1().ClusterOperators().Informer().HasSynced,
+		kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Informer().HasSynced,
+		operatorConfigInformers.Operator().V1().OpenShiftControllerManagers().Informer().HasSynced,
+	}
+
+	if buildEnabled {
+		informersSynced = append(informersSynced, configInformers.Config().V1().Builds().Informer().HasSynced)
+	}
+
+	configObservationListers := configobservation.Listers{
+		ImageConfigLister:     configInformers.Config().V1().Images().Lister(),
+		NetworkLister:         configInformers.Config().V1().Networks().Lister(),
+		FeatureGateLister_:    configInformers.Config().V1().FeatureGates().Lister(),
+		ClusterVersionLister:  configInformers.Config().V1().ClusterVersions().Lister(),
+		ClusterOperatorLister: configInformers.Config().V1().ClusterOperators().Lister(),
+		ConfigMapLister:       kubeInformersForOperatorNamespace.Core().V1().ConfigMaps().Lister(),
+		PreRunCachesSynced:    informersSynced,
+	}
+
+	observerFuncs := []configobserver.ObserveConfigFunc{
 		images.ObserveInternalRegistryHostname,
 		images.ObserveExternalRegistryHostnames,
-		builds.ObserveBuildControllerConfig,
 		network.ObserveExternalIPAutoAssignCIDRs,
 		deployimages.ObserveControllerManagerImagesConfig,
 		controllers.ObserveControllers,
@@ -65,6 +67,19 @@ func NewConfigObserver(
 			[]string{"featureGates"},
 			featureGateAccessor,
 		),
+	}
+
+	if buildEnabled {
+		configObservationListers.BuildConfigLister = configInformers.Config().V1().Builds().Lister()
+		observerFuncs = append(observerFuncs, builds.ObserveBuildControllerConfig)
+	}
+
+	c := configobserver.NewConfigObserver(
+		operatorClient,
+		eventRecorder,
+		configObservationListers,
+		[]factory.Informer{operatorConfigInformers.Operator().V1().OpenShiftControllerManagers().Informer()},
+		observerFuncs...,
 	)
 
 	return c
