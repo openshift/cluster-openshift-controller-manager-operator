@@ -5,7 +5,7 @@ reviewers:
   - mfojtik
   - soltysh
   - divyansh42
-  - coreydaley
+  - sayan-biswas
   - ravisantoshgudimetla
 approvers:
   - bparees
@@ -15,5 +15,5 @@ approvers:
   - soltysh
   - ingvagabund
   - damemi
-  - coreydaley
+  - sayan-biswas
 component: openshift-controller-manager
