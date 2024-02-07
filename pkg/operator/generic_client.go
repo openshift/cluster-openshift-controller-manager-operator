@@ -64,7 +64,7 @@ func (p *genericClient) UpdateOperatorSpec(ctx context.Context, resourceVersion 
 	resourceCopy.ResourceVersion = resourceVersion
 	resourceCopy.Spec.OperatorSpec = *spec
 
-	ret, err := p.client.OpenShiftControllerManagers().Update(context.TODO(), resourceCopy, metav1.UpdateOptions{})
+	ret, err := p.client.OpenShiftControllerManagers().Update(ctx, resourceCopy, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -80,7 +80,7 @@ func (p *genericClient) UpdateOperatorStatus(ctx context.Context, resourceVersio
 	resourceCopy.ResourceVersion = resourceVersion
 	resourceCopy.Status.OperatorStatus = *status
 
-	ret, err := p.client.OpenShiftControllerManagers().UpdateStatus(context.TODO(), resourceCopy, metav1.UpdateOptions{})
+	ret, err := p.client.OpenShiftControllerManagers().UpdateStatus(ctx, resourceCopy, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
