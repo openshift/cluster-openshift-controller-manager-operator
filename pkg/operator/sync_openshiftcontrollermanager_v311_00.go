@@ -60,13 +60,9 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	operandName := "openshift-controller-manager"
 	rcOperandName := "route-controller-manager"
 
-	specAnnotations := map[string]string{
-		"openshiftcontrollermanagers.operator.openshift.io/cluster": strconv.FormatInt(operatorConfig.ObjectMeta.Generation, 10),
-	}
+	specAnnotations := map[string]string{}
 
-	rcSpecAnnotations := map[string]string{
-		"openshiftcontrollermanagers.operator.openshift.io/cluster": strconv.FormatInt(operatorConfig.ObjectMeta.Generation, 10),
-	}
+	rcSpecAnnotations := map[string]string{}
 
 	// OpenShift Controller Manager
 	configMap, _, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.clusterVersionLister, c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
