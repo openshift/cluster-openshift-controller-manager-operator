@@ -305,6 +305,15 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		}()
 	}
 
+	go wait.UntilWithContext(ctx, func(ctx context.Context) {
+		c, err := operatorClient.OperatorV1().OpenShiftControllerManagers().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			klog.V(1).ErrorS(err, "getting OpenShiftControllerManager config")
+			return
+		}
+		klog.V(1).InfoS("OpenShiftControllerManager", "name", c.Name, "imageRegistryAuthTokenType", c.Spec.ImageRegistryAuthTokenType)
+	}, time.Minute)
+
 	select {
 	case <-capabilityChangedCh:
 		return fmt.Errorf("capability is enabled, stopping")
