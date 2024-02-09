@@ -112,4 +112,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/openshift/api => github.com/sanchezl/api v0.0.0-20240208184840-e560d293fdcc
+replace github.com/openshift/api => github.com/sanchezl/api v0.0.0-20240209164413-25ecd10c35d4
