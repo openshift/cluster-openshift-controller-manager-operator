@@ -29,6 +29,7 @@ import (
 	"github.com/openshift/library-go/pkg/operator/loglevel"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
+	"github.com/openshift/library-go/pkg/operator/staleconditions"
 	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
 	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -263,6 +264,12 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		controllerConfig.EventRecorder,
 	)
 
+	staleConditionsController := staleconditions.NewRemoveStaleConditionsController(
+		[]string{"ImageRegistryAuthTokenTypeUpgradeable"},
+		opClient,
+		controllerConfig.EventRecorder,
+	)
+
 	ensureDaemonSetCleanup(ctx, kubeClient, controllerConfig.EventRecorder)
 
 	operatorConfigInformers.Start(ctx.Done())
@@ -277,6 +284,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	go clusterOperatorStatus.Run(ctx, 1)
 	go logLevelController.Run(ctx, 1)
 	go imagePullSecretCleanupController.Run(ctx, 1)
+	go staleConditionsController.Run(ctx, 1)
 
 	capabilityChangedCh := make(chan struct{})
 	if !buildCapabilityEnabled {
