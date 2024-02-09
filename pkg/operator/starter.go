@@ -265,6 +265,12 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 
 	ensureDaemonSetCleanup(ctx, kubeClient, controllerConfig.EventRecorder)
 
+	authTokenTypeUpgradeableController := internalimageregistry.NewAuthTokenTypeUpgradeableController(
+		opClient,
+		operatorConfigInformers.Operator().V1().OpenShiftControllerManagers(),
+		controllerConfig.EventRecorder,
+	)
+
 	operatorConfigInformers.Start(ctx.Done())
 	kubeInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
@@ -277,6 +283,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	go clusterOperatorStatus.Run(ctx, 1)
 	go logLevelController.Run(ctx, 1)
 	go imagePullSecretCleanupController.Run(ctx, 1)
+	go authTokenTypeUpgradeableController.Run(ctx, 1)
 
 	capabilityChangedCh := make(chan struct{})
 	if !buildCapabilityEnabled {
