@@ -40,9 +40,11 @@ import (
 // ControllerCapabilities maps controllers to capabilities, so we can enable/disable controllers
 // based on capabilities.
 var controllerCapabilities = map[controlplanev1.OpenShiftControllerName]configv1.ClusterVersionCapability{
-	controlplanev1.OpenShiftBuildController:             configv1.ClusterVersionCapabilityBuild,
-	controlplanev1.OpenShiftDeploymentConfigController:  configv1.ClusterVersionCapabilityDeploymentConfig,
-	controlplanev1.OpenShiftBuildConfigChangeController: configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftBuildController:                configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftDeploymentConfigController:     configv1.ClusterVersionCapabilityDeploymentConfig,
+	controlplanev1.OpenShiftBuildConfigChangeController:    configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftBuilderRoleBindingsController:  configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftDeployerRoleBindingsController: configv1.ClusterVersionCapabilityDeploymentConfig,
 }
 
 // syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
