@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.6.0
-	github.com/openshift/api v0.0.0-20240118221011-59fa376de7cb
+	github.com/openshift/api v0.0.0-20240408161721-1e963d8dc466
 	github.com/openshift/build-machinery-go v0.0.0-20231128094528-1e9b1b0595c8
 	github.com/openshift/client-go v0.0.0-20240115204758-e6bf7d631d5e
 	github.com/openshift/library-go v0.0.0-20240116081341-964bcb3f545c
