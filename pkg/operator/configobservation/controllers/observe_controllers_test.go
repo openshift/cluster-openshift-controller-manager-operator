@@ -131,6 +131,7 @@ func TestObserveControllers(t *testing.T) {
 			expectedConfig: defaultConfig(
 				withDisabled(openshiftcontrolplanev1.OpenShiftDeploymentConfigController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerServiceAccountController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerController),
 			),
 		},
 		{
@@ -143,6 +144,7 @@ func TestObserveControllers(t *testing.T) {
 				withDisabled(openshiftcontrolplanev1.OpenShiftBuildConfigChangeController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftBuilderServiceAccountController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerServiceAccountController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerController),
 			),
 		},
 	}
