@@ -20,7 +20,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	configv1 "github.com/openshift/api/config/v1"
-	v1 "github.com/openshift/api/config/v1"
 	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	configlisterv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -50,8 +49,8 @@ func TestExpectedConfigMap(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "version"},
 		Status: configv1.ClusterVersionStatus{
 			Capabilities: configv1.ClusterVersionCapabilitiesStatus{
-				EnabledCapabilities: []v1.ClusterVersionCapability{},
-				KnownCapabilities: []v1.ClusterVersionCapability{
+				EnabledCapabilities: []configv1.ClusterVersionCapability{},
+				KnownCapabilities: []configv1.ClusterVersionCapability{
 					configv1.ClusterVersionCapabilityBuild,
 				},
 			},
@@ -120,11 +119,11 @@ func TestConfigMapControllerDisabling(t *testing.T) {
 	}{
 		{
 			name: "ControllersEnabled",
-			knownCapabilities: []v1.ClusterVersionCapability{
+			knownCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 			},
-			enabledCapabilities: []v1.ClusterVersionCapability{
+			enabledCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 			},
@@ -132,17 +131,17 @@ func TestConfigMapControllerDisabling(t *testing.T) {
 		},
 		{
 			name: "ControllersDisabled",
-			knownCapabilities: []v1.ClusterVersionCapability{
+			knownCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 			},
-			enabledCapabilities: []v1.ClusterVersionCapability{},
+			enabledCapabilities: []configv1.ClusterVersionCapability{},
 			result:              map[string][]string{"controllers": {"*", "-openshift.io/build", "-openshift.io/build-config-change", "-openshift.io/deploymentconfig"}},
 		},
 		{
 			name:                "ControllersDisabledButUnknown",
-			knownCapabilities:   []v1.ClusterVersionCapability{},
-			enabledCapabilities: []v1.ClusterVersionCapability{},
+			knownCapabilities:   []configv1.ClusterVersionCapability{},
+			enabledCapabilities: []configv1.ClusterVersionCapability{},
 			result:              map[string][]string{"controllers": {"*"}},
 		},
 	}
