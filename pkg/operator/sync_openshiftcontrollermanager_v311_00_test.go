@@ -67,6 +67,7 @@ func TestExpectedConfigMap(t *testing.T) {
 			"-openshift.io/build-config-change",
 			"-openshift.io/builder-rolebindings",
 			"-openshift.io/builder-serviceaccount",
+			"-openshift.io/default-rolebindings",
 		},
 		ServiceServingCert: openshiftcontrolplanev1.ServiceServingCert{},
 	}
@@ -135,7 +136,10 @@ func TestControllerDisabling(t *testing.T) {
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 				configv1.ClusterVersionCapabilityImageRegistry,
 			},
-			result: map[string][]string{"controllers": {"*"}},
+			result: map[string][]string{
+				"controllers": {"*",
+					"-openshift.io/default-rolebindings",
+				}},
 		},
 		{
 			name: "BuildCapDisabled",
@@ -149,6 +153,7 @@ func TestControllerDisabling(t *testing.T) {
 					"-openshift.io/build-config-change",
 					"-openshift.io/builder-rolebindings",
 					"-openshift.io/builder-serviceaccount",
+					"-openshift.io/default-rolebindings",
 				}},
 		},
 		{
@@ -159,6 +164,7 @@ func TestControllerDisabling(t *testing.T) {
 			enabledCapabilities: []v1.ClusterVersionCapability{},
 			result: map[string][]string{
 				"controllers": {"*",
+					"-openshift.io/default-rolebindings",
 					"-openshift.io/deployer",
 					"-openshift.io/deployer-rolebindings",
 					"-openshift.io/deployer-serviceaccount",
@@ -173,6 +179,7 @@ func TestControllerDisabling(t *testing.T) {
 			enabledCapabilities: []v1.ClusterVersionCapability{},
 			result: map[string][]string{
 				"controllers": {"*",
+					"-openshift.io/default-rolebindings",
 					"-openshift.io/image-puller-rolebindings",
 					"-openshift.io/serviceaccount-pull-secrets",
 				}},
@@ -191,6 +198,7 @@ func TestControllerDisabling(t *testing.T) {
 					"-openshift.io/build-config-change",
 					"-openshift.io/builder-rolebindings",
 					"-openshift.io/builder-serviceaccount",
+					"-openshift.io/default-rolebindings",
 					"-openshift.io/deployer",
 					"-openshift.io/deployer-rolebindings",
 					"-openshift.io/deployer-serviceaccount",
@@ -203,7 +211,10 @@ func TestControllerDisabling(t *testing.T) {
 			name:                "CapabilitiesDisabledButUnknown",
 			knownCapabilities:   []v1.ClusterVersionCapability{},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
-			result:              map[string][]string{"controllers": {"*"}},
+			result: map[string][]string{
+				"controllers": {"*",
+					"-openshift.io/default-rolebindings",
+				}},
 		},
 	}
 
