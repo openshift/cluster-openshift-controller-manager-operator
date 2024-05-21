@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/openshift/client-go/config/informers/externalversions"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -75,29 +76,44 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 	for _, serviceAccount := range serviceAccounts {
 		imagePullSecretName, imagePullSecret, err := c.imagePullSecretForServiceAccount(serviceAccount)
 		if err != nil {
-			return fmt.Errorf("unable to retrieve the image pull secret for the service account %q (ns=%q): %w", serviceAccount.Name, serviceAccount.Namespace, err)
+			return fmt.Errorf("unable to retrieve the managed image pull secret for the service account %q (ns=%q): %w", serviceAccount.Name, serviceAccount.Namespace, err)
 		}
+
+		if len(imagePullSecretName) == 0 {
+			// no managed image pull secret reference by current service account
+			continue
+		}
+
+		if imagePullSecret != nil && imagePullSecret.CreationTimestamp.After(time.Now().Add(-10*time.Minute)) {
+			// managed image pull secret was created within the last 10 minutes, skip for now to avoid fighting with OCM
+			continue
+		}
+
+		if imagePullSecret != nil && c.imagePullSecretInUse(imagePullSecret) {
+			// managed image pull secret is referenced by a pod, skip for now
+			continue
+		}
+
 		var tokenSecret *corev1.Secret
-		var imagePullSecretInUse bool
 		if imagePullSecret != nil {
 			tokenSecret, err = c.tokenSecretForImagePullSecret(imagePullSecret)
 			if err != nil {
-				return fmt.Errorf("unable to retrive the service account token secret for the image pull secret %q (ns=%q): %w", imagePullSecret.Name, imagePullSecret.Namespace, err)
+				return fmt.Errorf("unable to retrive the managed legacy service account API token secret for the managed image pull secret %q (ns=%q): %w", imagePullSecret.Name, imagePullSecret.Namespace, err)
 			}
-			imagePullSecretInUse = c.imagePullSecretInUse(imagePullSecret)
 		}
 
-		// delete the long-lived token only if the image pull secret is not in use
-		if !imagePullSecretInUse && tokenSecret != nil {
-			err := c.kubeClient.CoreV1().Secrets(tokenSecret.Namespace).Delete(ctx, tokenSecret.Name, metav1.DeleteOptions{})
+		// if there is a corresponding legacy service account API token, delete it
+		if tokenSecret != nil {
+			err = c.kubeClient.CoreV1().Secrets(tokenSecret.Namespace).Delete(ctx, tokenSecret.Name, metav1.DeleteOptions{})
 			if err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("unable to delete the service account token secret %q (ns=%q): %w", tokenSecret.Name, tokenSecret.Namespace, err)
 			}
 		}
 
-		// the image pull secret should automatically be deleted when the token is deleted, but try anyway, just in case
-		if !imagePullSecretInUse && imagePullSecret != nil {
-			err := c.kubeClient.CoreV1().Secrets(imagePullSecret.Namespace).Delete(ctx, imagePullSecret.Name, metav1.DeleteOptions{})
+		// delete the image pull secret
+		if imagePullSecret != nil {
+			err = c.kubeClient.CoreV1().Secrets(imagePullSecret.Namespace).Delete(ctx, imagePullSecret.Name, metav1.DeleteOptions{})
+			// the image pull secret might of been deleted via cascade if its corresponding API token was deleted, so ignore NotFound error
 			if err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("unable to delete image pull secret %q (ns=%q): %w", imagePullSecret.Name, imagePullSecret.Namespace, err)
 			}
@@ -105,19 +121,14 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 
 		// cleanup the refs in the service account
 		if len(imagePullSecretName) != 0 {
-			// keep the secret ref around while imagePullSecret is in use, so we can find the secret again later.
-			if !imagePullSecretInUse {
-				var secretRefs []corev1.ObjectReference
-				for _, secretRef := range serviceAccount.Secrets {
-
-					if secretRef.Name != imagePullSecretName {
-						secretRefs = append(secretRefs, secretRef)
-					}
+			var secretRefs []corev1.ObjectReference
+			for _, secretRef := range serviceAccount.Secrets {
+				if secretRef.Name != imagePullSecretName {
+					secretRefs = append(secretRefs, secretRef)
 				}
-				serviceAccount.Secrets = secretRefs
 			}
+			serviceAccount.Secrets = secretRefs
 
-			// remove these image pull secret refs, even if in use, so new pods do not pick them up
 			var imagePullSecretRefs []corev1.LocalObjectReference = []corev1.LocalObjectReference{}
 			for _, imagePullSecretRef := range serviceAccount.ImagePullSecrets {
 				if imagePullSecretRef.Name != imagePullSecretName {
@@ -125,7 +136,8 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 				}
 			}
 			serviceAccount.ImagePullSecrets = imagePullSecretRefs
-			_, err := c.kubeClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(ctx, serviceAccount, metav1.UpdateOptions{})
+
+			_, err = c.kubeClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(ctx, serviceAccount, metav1.UpdateOptions{})
 			if err != nil {
 				var statusErr *errors.StatusError
 				if errs.As(err, &statusErr) && statusErr.Status().Code == http.StatusConflict {
@@ -152,7 +164,7 @@ func (c *imagePullSecretCleanupController) imagePullSecretInUse(imagePullSecret 
 	for _, pod := range pods {
 		for _, imagePullSecretRef := range pod.Spec.ImagePullSecrets {
 			if imagePullSecret.Name == imagePullSecretRef.Name {
-				klog.V(2).InfoS("ImagePullSecret in use", "ns", pod.Namespace, "pod", pod.Name, "secret", imagePullSecret.Name)
+				klog.V(4).InfoS("Image pull secret in use", "ns", imagePullSecret.Namespace, "secret", imagePullSecret.Name, "pod ns", pod.Namespace, "pod", pod.Name)
 				return true
 			}
 		}
@@ -161,15 +173,21 @@ func (c *imagePullSecretCleanupController) imagePullSecretInUse(imagePullSecret 
 }
 
 func (c *imagePullSecretCleanupController) imagePullSecretForServiceAccount(serviceAccount *corev1.ServiceAccount) (string, *corev1.Secret, error) {
-	var imagePullSecretName string
+	// look in the annotation added in 4.16
+	imagePullSecretName := serviceAccount.Annotations["openshift.io/internal-registry-pull-secret-ref"]
+
 	imagePullSecretNamePrefix := naming.GetName(serviceAccount.Name, "dockercfg-", 58)
-	for _, imagePullSecretRef := range serviceAccount.ImagePullSecrets {
-		if strings.HasPrefix(imagePullSecretRef.Name, imagePullSecretNamePrefix) {
-			imagePullSecretName = imagePullSecretRef.Name
-			break
+	if len(imagePullSecretName) == 0 {
+		// look in the list of image pull secrets
+		for _, imagePullSecretRef := range serviceAccount.ImagePullSecrets {
+			if strings.HasPrefix(imagePullSecretRef.Name, imagePullSecretNamePrefix) {
+				imagePullSecretName = imagePullSecretRef.Name
+				break
+			}
 		}
 	}
 	if len(imagePullSecretName) == 0 {
+		// look in the list of mountable secrets
 		for _, secretRef := range serviceAccount.Secrets {
 			if strings.HasPrefix(secretRef.Name, imagePullSecretNamePrefix) {
 				imagePullSecretName = secretRef.Name
@@ -182,17 +200,19 @@ func (c *imagePullSecretCleanupController) imagePullSecretForServiceAccount(serv
 	}
 	imagePullSecret, err := c.secretLister.Secrets(serviceAccount.Namespace).Get(imagePullSecretName)
 	if errors.IsNotFound(err) {
-		klog.V(2).InfoS("Referenced imagePullSecret does not exist.", "ns", serviceAccount.Namespace, "sa", serviceAccount.Name, "imagePullSecret", imagePullSecretName)
 		return imagePullSecretName, nil, nil
 	}
 	if err != nil {
 		return "", nil, err
 	}
 	// more confirmation that this was generated by ocm
-	if _, ok := imagePullSecret.Annotations["openshift.io/token-secret.name"]; !ok {
-		return "", nil, nil
+	if _, ok := imagePullSecret.Annotations["openshift.io/internal-registry-auth-token.service-account"]; ok {
+		return imagePullSecretName, imagePullSecret, nil
 	}
-	return imagePullSecretName, imagePullSecret, nil
+	if _, ok := imagePullSecret.Annotations["openshift.io/token-secret.name"]; ok {
+		return imagePullSecretName, imagePullSecret, nil
+	}
+	return "", nil, nil
 }
 
 func (c *imagePullSecretCleanupController) tokenSecretForImagePullSecret(secret *corev1.Secret) (*corev1.Secret, error) {
