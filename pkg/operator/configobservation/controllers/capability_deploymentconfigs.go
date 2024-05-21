@@ -25,6 +25,7 @@ func disabledDeploymentConfigControllers(listers configobservation.Listers) ([]o
 		openshiftcontrolplanev1.OpenShiftDeploymentConfigController,
 		openshiftcontrolplanev1.OpenShiftDeployerServiceAccountController,
 		openshiftcontrolplanev1.OpenShiftDeployerController,
+		openshiftcontrolplanev1.OpenShiftDeployerRoleBindingsController,
 	}, nil
 
 }
