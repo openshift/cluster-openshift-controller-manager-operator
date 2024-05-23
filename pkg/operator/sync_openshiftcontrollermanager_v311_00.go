@@ -311,6 +311,14 @@ func disableControllers(clusterVersion *configv1.ClusterVersion) []string {
 	knownCaps := sets.New[configv1.ClusterVersionCapability](clusterVersion.Status.Capabilities.KnownCapabilities...)
 	capsEnabled := sets.New[configv1.ClusterVersionCapability](clusterVersion.Status.Capabilities.EnabledCapabilities...)
 
+	// OCPBUILD-8: the default pull secrets controller was refactored so each role binding can
+	// be matched with a cluster capability. The original default pull secrets controller was
+	// preserved to facilitate incremental upgrades. Starting in 4.16, the default pull secrets
+	// controller should be always be disabled to prevent race conditions and conflicts.
+
+	// TODO - the default rolebindings controller code should be removed in 4.17+
+	controllers = append(controllers, "-openshift.io/default-rolebindings")
+
 	for cont, cap := range controllerCapabilities {
 		if knownCaps.Has(cap) && !capsEnabled.Has(cap) {
 			controllers = append(controllers, fmt.Sprintf("-%s", cont))

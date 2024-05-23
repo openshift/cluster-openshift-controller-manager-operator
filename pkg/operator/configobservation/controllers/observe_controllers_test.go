@@ -27,6 +27,8 @@ func TestObserveControllers(t *testing.T) {
 		for _, fn := range opts {
 			result = fn(result)
 		}
+		// The default rolebindings controller should always be disabled
+		result = withDisabled(openshiftcontrolplanev1.OpenShiftDefaultRoleBindingsController)(result)
 		controllersSort(result).Sort()
 		return result
 	}
