@@ -2,6 +2,8 @@ module github.com/openshift/cluster-openshift-controller-manager-operator
 
 go 1.22.0
 
+toolchain go1.22.1
+
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.6.0
