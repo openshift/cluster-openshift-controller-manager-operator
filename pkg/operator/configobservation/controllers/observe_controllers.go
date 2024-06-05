@@ -18,12 +18,19 @@ var allControllers = []string{
 	string(openshiftcontrolplanev1.OpenShiftBuildController),
 	string(openshiftcontrolplanev1.OpenShiftBuildConfigChangeController),
 	string(openshiftcontrolplanev1.OpenShiftBuilderServiceAccountController),
+	// OCPBUILD-9: the default rolebindings controller was refactored into separate controllers for
+	// the respective capability (Build, DeploymentConfig, ImageRegistry)
+	string(openshiftcontrolplanev1.OpenShiftBuilderRoleBindingsController),
 	string(openshiftcontrolplanev1.OpenShiftDeployerController),
 	string(openshiftcontrolplanev1.OpenShiftDeployerServiceAccountController),
+	// OCPBUILD-9: add rolebindings controller for deployer service account
+	string(openshiftcontrolplanev1.OpenShiftDeployerRoleBindingsController),
 	string(openshiftcontrolplanev1.OpenShiftDeploymentConfigController),
 	string(openshiftcontrolplanev1.OpenShiftImageTriggerController),
 	string(openshiftcontrolplanev1.OpenShiftImageImportController),
 	string(openshiftcontrolplanev1.OpenShiftImageSignatureImportController),
+	// OCPBUILD-9: add rolebindings controller to pull images from the internal registry
+	string(openshiftcontrolplanev1.OpenShiftImagePullerRoleBindingsController),
 	string(openshiftcontrolplanev1.OpenShiftTemplateInstanceController),
 	string(openshiftcontrolplanev1.OpenShiftTemplateInstanceFinalizerController),
 	string(openshiftcontrolplanev1.OpenShiftUnidlingController),
@@ -35,7 +42,16 @@ var allControllers = []string{
 
 type disabledControllersFunc func(listers configobservation.Listers) ([]openshiftcontrolplanev1.OpenShiftControllerName, error)
 
+// disabledAlwaysControllers are legacy ocm controllers that are always disabled, regardless of
+// which cluster cababilities are enabled or disabled.
+func disabledAlwaysControllers(_ configobservation.Listers) ([]openshiftcontrolplanev1.OpenShiftControllerName, error) {
+	return []openshiftcontrolplanev1.OpenShiftControllerName{
+		openshiftcontrolplanev1.OpenShiftDefaultRoleBindingsController,
+	}, nil
+}
+
 var disabledControllerFuncs = []disabledControllersFunc{
+	disabledAlwaysControllers,
 	disabledImageRegistryControllers,
 	disabledBuildControllers,
 	disabledDeploymentConfigControllers,

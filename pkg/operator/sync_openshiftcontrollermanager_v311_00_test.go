@@ -50,8 +50,8 @@ func TestExpectedConfigMap(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "version"},
 		Status: configv1.ClusterVersionStatus{
 			Capabilities: configv1.ClusterVersionCapabilitiesStatus{
-				EnabledCapabilities: []v1.ClusterVersionCapability{},
-				KnownCapabilities: []v1.ClusterVersionCapability{
+				EnabledCapabilities: []configv1.ClusterVersionCapability{},
+				KnownCapabilities: []configv1.ClusterVersionCapability{
 					configv1.ClusterVersionCapabilityBuild,
 				},
 			},
@@ -62,7 +62,13 @@ func TestExpectedConfigMap(t *testing.T) {
 			APIVersion: "openshiftcontrolplane.config.openshift.io/v1",
 			Kind:       "OpenShiftControllerManagerConfig",
 		},
-		Controllers:        []string{"*", "-openshift.io/build", "-openshift.io/build-config-change"},
+		Controllers: []string{"*",
+			"-openshift.io/build",
+			"-openshift.io/build-config-change",
+			"-openshift.io/builder-rolebindings",
+			"-openshift.io/builder-serviceaccount",
+			"-openshift.io/default-rolebindings",
+		},
 		ServiceServingCert: openshiftcontrolplanev1.ServiceServingCert{},
 	}
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
@@ -109,7 +115,7 @@ func TestExpectedConfigMap(t *testing.T) {
 	}
 }
 
-func TestConfigMapControllerDisabling(t *testing.T) {
+func TestControllerDisabling(t *testing.T) {
 
 	testCases := []struct {
 		name                string
@@ -119,31 +125,96 @@ func TestConfigMapControllerDisabling(t *testing.T) {
 		result              map[string][]string
 	}{
 		{
-			name: "ControllersEnabled",
+			name: "CapabilitiesEnabled",
 			knownCapabilities: []v1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 				configv1.ClusterVersionCapabilityDeploymentConfig,
+				configv1.ClusterVersionCapabilityImageRegistry,
 			},
 			enabledCapabilities: []v1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 				configv1.ClusterVersionCapabilityDeploymentConfig,
+				configv1.ClusterVersionCapabilityImageRegistry,
 			},
-			result: map[string][]string{"controllers": {"*"}},
+			result: map[string][]string{
+				"controllers": {"*",
+					"-openshift.io/default-rolebindings",
+				}},
 		},
 		{
-			name: "ControllersDisabled",
+			name: "BuildCapDisabled",
 			knownCapabilities: []v1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
+			},
+			enabledCapabilities: []v1.ClusterVersionCapability{},
+			result: map[string][]string{
+				"controllers": {"*",
+					"-openshift.io/build",
+					"-openshift.io/build-config-change",
+					"-openshift.io/builder-rolebindings",
+					"-openshift.io/builder-serviceaccount",
+					"-openshift.io/default-rolebindings",
+				}},
+		},
+		{
+			name: "DeploymentConfigCapDisabled",
+			knownCapabilities: []v1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 			},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
-			result:              map[string][]string{"controllers": {"*", "-openshift.io/build", "-openshift.io/build-config-change", "-openshift.io/deploymentconfig"}},
+			result: map[string][]string{
+				"controllers": {"*",
+					"-openshift.io/default-rolebindings",
+					"-openshift.io/deployer",
+					"-openshift.io/deployer-rolebindings",
+					"-openshift.io/deployer-serviceaccount",
+					"-openshift.io/deploymentconfig",
+				}},
 		},
 		{
-			name:                "ControllersDisabledButUnknown",
+			name: "ImageRegistryCapDisabled",
+			knownCapabilities: []v1.ClusterVersionCapability{
+				configv1.ClusterVersionCapabilityImageRegistry,
+			},
+			enabledCapabilities: []v1.ClusterVersionCapability{},
+			result: map[string][]string{
+				"controllers": {"*",
+					"-openshift.io/default-rolebindings",
+					"-openshift.io/image-puller-rolebindings",
+					"-openshift.io/serviceaccount-pull-secrets",
+				}},
+		},
+		{
+			name: "CapabilitiesDisabled",
+			knownCapabilities: []v1.ClusterVersionCapability{
+				configv1.ClusterVersionCapabilityBuild,
+				configv1.ClusterVersionCapabilityDeploymentConfig,
+				configv1.ClusterVersionCapabilityImageRegistry,
+			},
+			enabledCapabilities: []v1.ClusterVersionCapability{},
+			result: map[string][]string{
+				"controllers": {"*",
+					"-openshift.io/build",
+					"-openshift.io/build-config-change",
+					"-openshift.io/builder-rolebindings",
+					"-openshift.io/builder-serviceaccount",
+					"-openshift.io/default-rolebindings",
+					"-openshift.io/deployer",
+					"-openshift.io/deployer-rolebindings",
+					"-openshift.io/deployer-serviceaccount",
+					"-openshift.io/deploymentconfig",
+					"-openshift.io/image-puller-rolebindings",
+					"-openshift.io/serviceaccount-pull-secrets",
+				}},
+		},
+		{
+			name:                "CapabilitiesDisabledButUnknown",
 			knownCapabilities:   []v1.ClusterVersionCapability{},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
-			result:              map[string][]string{"controllers": {"*"}},
+			result: map[string][]string{
+				"controllers": {"*",
+					"-openshift.io/default-rolebindings",
+				}},
 		},
 	}
 

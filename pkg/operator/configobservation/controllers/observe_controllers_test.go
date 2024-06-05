@@ -27,6 +27,8 @@ func TestObserveControllers(t *testing.T) {
 		for _, fn := range opts {
 			result = fn(result)
 		}
+		// The default rolebindings controller should always be disabled
+		result = withDisabled(openshiftcontrolplanev1.OpenShiftDefaultRoleBindingsController)(result)
 		controllersSort(result).Sort()
 		return result
 	}
@@ -89,7 +91,10 @@ func TestObserveControllers(t *testing.T) {
 			name:            "RegistryRemoved",
 			clusterVersion:  clusterVersion(withImageRegistryCapability, withBuildCapability, withDeploymentConfigCapability),
 			clusterOperator: clusterOperator("Removed"),
-			expectedConfig:  defaultConfig(withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController)),
+			expectedConfig: defaultConfig(
+				withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftImagePullerRoleBindingsController),
+			),
 		},
 		{
 			name:            "RegistryNotRemoved",
@@ -100,19 +105,28 @@ func TestObserveControllers(t *testing.T) {
 		{
 			name:           "NoImageRegistryCapabilityNoRegistryConfig",
 			clusterVersion: clusterVersion(withBuildCapability, withDeploymentConfigCapability),
-			expectedConfig: defaultConfig(withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController)),
+			expectedConfig: defaultConfig(
+				withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftImagePullerRoleBindingsController),
+			),
 		},
 		{
 			name:            "NoImageRegistryCapabilityRegistryRemoved",
 			clusterVersion:  clusterVersion(withBuildCapability, withDeploymentConfigCapability),
 			clusterOperator: clusterOperator("Removed"),
-			expectedConfig:  defaultConfig(withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController)),
+			expectedConfig: defaultConfig(
+				withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftImagePullerRoleBindingsController),
+			),
 		},
 		{
 			name:            "NoImageRegistryCapabilityRegistryNotRemoved",
 			clusterVersion:  clusterVersion(withBuildCapability, withDeploymentConfigCapability),
 			clusterOperator: clusterOperator("Managed"),
-			expectedConfig:  defaultConfig(withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController)),
+			expectedConfig: defaultConfig(
+				withDisabled(openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftImagePullerRoleBindingsController),
+			),
 		},
 		{
 			name:            "NoBuildCapability",
@@ -122,6 +136,7 @@ func TestObserveControllers(t *testing.T) {
 				withDisabled(openshiftcontrolplanev1.OpenShiftBuildController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftBuildConfigChangeController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftBuilderServiceAccountController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftBuilderRoleBindingsController),
 			),
 		},
 		{
@@ -132,6 +147,7 @@ func TestObserveControllers(t *testing.T) {
 				withDisabled(openshiftcontrolplanev1.OpenShiftDeploymentConfigController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerServiceAccountController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerRoleBindingsController),
 			),
 		},
 		{
@@ -143,8 +159,10 @@ func TestObserveControllers(t *testing.T) {
 				withDisabled(openshiftcontrolplanev1.OpenShiftBuildController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftBuildConfigChangeController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftBuilderServiceAccountController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftBuilderRoleBindingsController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerServiceAccountController),
 				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerController),
+				withDisabled(openshiftcontrolplanev1.OpenShiftDeployerRoleBindingsController),
 			),
 		},
 	}

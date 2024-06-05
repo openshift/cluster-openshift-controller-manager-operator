@@ -25,6 +25,7 @@ func disabledBuildControllers(listers configobservation.Listers) ([]openshiftcon
 		openshiftcontrolplanev1.OpenShiftBuildController,
 		openshiftcontrolplanev1.OpenShiftBuildConfigChangeController,
 		openshiftcontrolplanev1.OpenShiftBuilderServiceAccountController,
+		openshiftcontrolplanev1.OpenShiftBuilderRoleBindingsController,
 	}, nil
 
 }

@@ -14,6 +14,7 @@ func disabledImageRegistryControllers(listers configobservation.Listers) ([]open
 	if !enabled {
 		return []openshiftcontrolplanev1.OpenShiftControllerName{
 			openshiftcontrolplanev1.OpenShiftServiceAccountPullSecretsController,
+			openshiftcontrolplanev1.OpenShiftImagePullerRoleBindingsController,
 		}, nil
 	}
 	// ImageRegistry capability is enabled, and internal image registry is enabled, nothing to disable.

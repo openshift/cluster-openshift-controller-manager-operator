@@ -40,9 +40,16 @@ import (
 // ControllerCapabilities maps controllers to capabilities, so we can enable/disable controllers
 // based on capabilities.
 var controllerCapabilities = map[controlplanev1.OpenShiftControllerName]configv1.ClusterVersionCapability{
-	controlplanev1.OpenShiftBuildController:             configv1.ClusterVersionCapabilityBuild,
-	controlplanev1.OpenShiftDeploymentConfigController:  configv1.ClusterVersionCapabilityDeploymentConfig,
-	controlplanev1.OpenShiftBuildConfigChangeController: configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftBuildController:                     configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftBuildConfigChangeController:         configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftBuilderServiceAccountController:     configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftBuilderRoleBindingsController:       configv1.ClusterVersionCapabilityBuild,
+	controlplanev1.OpenShiftDeploymentConfigController:          configv1.ClusterVersionCapabilityDeploymentConfig,
+	controlplanev1.OpenShiftDeployerServiceAccountController:    configv1.ClusterVersionCapabilityDeploymentConfig,
+	controlplanev1.OpenShiftDeployerController:                  configv1.ClusterVersionCapabilityDeploymentConfig,
+	controlplanev1.OpenShiftDeployerRoleBindingsController:      configv1.ClusterVersionCapabilityDeploymentConfig,
+	controlplanev1.OpenShiftServiceAccountPullSecretsController: configv1.ClusterVersionCapabilityImageRegistry,
+	controlplanev1.OpenShiftImagePullerRoleBindingsController:   configv1.ClusterVersionCapabilityImageRegistry,
 }
 
 // syncOpenShiftControllerManager_v311_00_to_latest takes care of synchronizing (not upgrading) the thing we're managing.
@@ -303,6 +310,14 @@ func disableControllers(clusterVersion *configv1.ClusterVersion) []string {
 	controllers := []string{"*"}
 	knownCaps := sets.New[configv1.ClusterVersionCapability](clusterVersion.Status.Capabilities.KnownCapabilities...)
 	capsEnabled := sets.New[configv1.ClusterVersionCapability](clusterVersion.Status.Capabilities.EnabledCapabilities...)
+
+	// OCPBUILD-8: the default pull secrets controller was refactored so each role binding can
+	// be matched with a cluster capability. The original default pull secrets controller was
+	// preserved to facilitate incremental upgrades. Starting in 4.16, the default pull secrets
+	// controller should be always be disabled to prevent race conditions and conflicts.
+
+	// TODO - the default rolebindings controller code should be removed in 4.17+
+	controllers = append(controllers, "-openshift.io/default-rolebindings")
 
 	for cont, cap := range controllerCapabilities {
 		if knownCaps.Has(cap) && !capsEnabled.Has(cap) {
