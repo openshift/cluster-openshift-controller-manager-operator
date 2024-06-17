@@ -23,7 +23,13 @@ spec:
       resources:
       - '*'
       verbs:
-      - '*'
+      - get
+      - watch
+      - list
+      - create
+      - update
+      - patch
+      - delete
     subjects:
     - kind: ServiceAccount
       serviceAccount:
