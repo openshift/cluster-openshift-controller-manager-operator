@@ -8,4 +8,10 @@ rules:
   resources:
   - buildconfigs/status
   verbs:
-  - "*"
+  - get
+  - watch
+  - list
+  - create
+  - update
+  - patch
+  - delete
