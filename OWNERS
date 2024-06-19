@@ -1,20 +1,14 @@
 reviewers:
   - bparees
   - deads2k
-  - sttts
-  - mfojtik
   - soltysh
   - divyansh42
   - sayan-biswas
-  - ravisantoshgudimetla
 approvers:
   - bparees
   - deads2k
-  - sttts
-  - mfojtik
   - soltysh
   - ingvagabund
-  - damemi
   - sayan-biswas
   - adambkaplan
 component: openshift-controller-manager
