@@ -131,7 +131,7 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 				if errs.As(err, &statusErr) && statusErr.Status().Code == http.StatusConflict {
 					return factory.SyntheticRequeueError
 				}
-				return fmt.Errorf("unable to clean up references to the image pull secret %q (ns=%q) from the service accout %q: %w", imagePullSecret.Name, imagePullSecret.Namespace, serviceAccount.Name, err)
+				return fmt.Errorf("unable to clean up references to the image pull secret %q (ns=%q) from the service accout %q: %w", imagePullSecretName, serviceAccount.Namespace, serviceAccount.Name, err)
 			}
 		}
 		select {
