@@ -16,4 +16,5 @@ approvers:
   - ingvagabund
   - damemi
   - sayan-biswas
+  - adambkaplan
 component: openshift-controller-manager
