@@ -75,6 +75,7 @@ func NewConfigObserver(
 	}
 
 	c := configobserver.NewConfigObserver(
+		"openshift-controller-manager",
 		operatorClient,
 		eventRecorder,
 		configObservationListers,

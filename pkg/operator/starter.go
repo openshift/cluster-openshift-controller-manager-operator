@@ -122,6 +122,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	// Bug 1826183: this will sync the proxy trustedCA ConfigMap to the
 	// openshift-controller-manager's user-ca ConfigMap.
 	resourceSyncer := resourcesynccontroller.NewResourceSyncController(
+		"openshift-controller-manager",
 		opClient,
 		kubeInformers,
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformers),
