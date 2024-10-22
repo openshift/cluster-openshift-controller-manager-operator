@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -93,6 +94,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	)
 
 	opClient := &genericClient{
+		clock:     clock.RealClock{},
 		informers: operatorConfigInformers,
 		client:    operatorClient.OperatorV1(),
 	}
@@ -122,6 +124,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	// Bug 1826183: this will sync the proxy trustedCA ConfigMap to the
 	// openshift-controller-manager's user-ca ConfigMap.
 	resourceSyncer := resourcesynccontroller.NewResourceSyncController(
+		"openshift-controller-manager",
 		opClient,
 		kubeInformers,
 		v1helpers.CachedSecretGetter(kubeClient.CoreV1(), kubeInformers),
