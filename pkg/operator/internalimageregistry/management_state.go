@@ -3,6 +3,7 @@ package internalimageregistry
 import (
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 )
@@ -24,7 +25,6 @@ func ImageRegistryIsEnabled(clusterVersionLister configlistersv1.ClusterVersionL
 	if !imageRegistryCapabilityEnabled {
 		return false, nil
 	}
-
 	// Given that the capability is enabled, assume the internal image registry is
 	// enabled unless we can explicitly determine otherwise in via the management status.
 
