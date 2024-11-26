@@ -9,6 +9,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -114,7 +115,7 @@ func TestFindProxyCASource(t *testing.T) {
 			controller := NewController(fakeOperatorClient,
 				configInformer,
 				syncer,
-				events.NewInMemoryRecorder("test"))
+				events.NewInMemoryRecorder("test", clock.RealClock{}))
 
 			ctx, ctxCancel := context.WithCancel(context.TODO())
 			defer ctxCancel()

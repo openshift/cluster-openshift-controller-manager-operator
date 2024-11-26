@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -35,7 +36,7 @@ func TestObserveRegistryConfig(t *testing.T) {
 		ImageConfigLister: configlistersv1.NewImageLister(indexer),
 	}
 
-	result, errs := ObserveInternalRegistryHostname(listers, events.NewInMemoryRecorder(""), map[string]interface{}{})
+	result, errs := ObserveInternalRegistryHostname(listers, events.NewInMemoryRecorder("", clock.RealClock{}), map[string]interface{}{})
 	if len(errs) != 0 {
 		t.Errorf("expected no errors: %v", errs)
 	}
@@ -194,7 +195,7 @@ func TestObserveRegistryExternalHostnames(t *testing.T) {
 			}
 
 			result, errs := ObserveExternalRegistryHostnames(
-				listers, events.NewInMemoryRecorder(""), tt.existing,
+				listers, events.NewInMemoryRecorder("", clock.RealClock{}), tt.existing,
 			)
 			if len(errs) > 0 && len(tt.err) == 0 {
 				t.Errorf("unexpected error: %v", errs)
