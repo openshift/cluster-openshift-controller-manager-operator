@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corelistersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
@@ -104,7 +105,7 @@ func TestObserveClusterConfig(t *testing.T) {
 			listers := configobservation.Listers{
 				ConfigMapLister: corelistersv1.NewConfigMapLister(indexer),
 			}
-			result, err := ObserveControllerManagerImagesConfig(listers, events.NewInMemoryRecorder(""), map[string]interface{}{})
+			result, err := ObserveControllerManagerImagesConfig(listers, events.NewInMemoryRecorder("", clock.RealClock{}), map[string]interface{}{})
 			if err != nil {
 				t.Fatalf("unexpected error %v", err)
 			}
