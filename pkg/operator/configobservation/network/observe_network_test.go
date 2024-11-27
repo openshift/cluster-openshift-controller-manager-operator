@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -15,7 +16,7 @@ import (
 
 func TestObserveExternalIPAutoAssignCIDRs(t *testing.T) {
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	recorder := events.NewInMemoryRecorder("")
+	recorder := events.NewInMemoryRecorder("", clock.RealClock{})
 
 	listers := configobservation.Listers{
 		NetworkLister: configlistersv1.NewNetworkLister(indexer),

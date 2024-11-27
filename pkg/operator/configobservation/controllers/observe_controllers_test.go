@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 )
 
 func TestObserveControllers(t *testing.T) {
@@ -186,7 +187,7 @@ func TestObserveControllers(t *testing.T) {
 			if tc.existingConfig != nil {
 				unstructured.SetNestedStringSlice(existingConfig, tc.existingConfig, "controllers")
 			}
-			actualConfig, actualErr := ObserveControllers(listers, events.NewInMemoryRecorder(t.Name()), existingConfig)
+			actualConfig, actualErr := ObserveControllers(listers, events.NewInMemoryRecorder(t.Name(), clock.RealClock{}), existingConfig)
 
 			expectedConfig := map[string]any{}
 			if tc.expectedConfig != nil {
