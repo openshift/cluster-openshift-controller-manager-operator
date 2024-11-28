@@ -20,7 +20,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	configv1 "github.com/openshift/api/config/v1"
-	v1 "github.com/openshift/api/config/v1"
 	openshiftcontrolplanev1 "github.com/openshift/api/openshiftcontrolplane/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	configlisterv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -40,7 +39,6 @@ import (
 )
 
 func TestExpectedConfigMap(t *testing.T) {
-
 	objects := []runtime.Object{
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "serving-cert", Namespace: "openshift-controller-manager"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: "kube-system"}},
@@ -63,7 +61,8 @@ func TestExpectedConfigMap(t *testing.T) {
 			APIVersion: "openshiftcontrolplane.config.openshift.io/v1",
 			Kind:       "OpenShiftControllerManagerConfig",
 		},
-		Controllers: []string{"*",
+		Controllers: []string{
+			"*",
 			"-openshift.io/build",
 			"-openshift.io/build-config-change",
 			"-openshift.io/builder-rolebindings",
@@ -117,7 +116,6 @@ func TestExpectedConfigMap(t *testing.T) {
 }
 
 func TestControllerDisabling(t *testing.T) {
-
 	testCases := []struct {
 		name                string
 		versionLister       configlisterv1.ClusterVersionLister
@@ -127,74 +125,83 @@ func TestControllerDisabling(t *testing.T) {
 	}{
 		{
 			name: "CapabilitiesEnabled",
-			knownCapabilities: []v1.ClusterVersionCapability{
+			knownCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 				configv1.ClusterVersionCapabilityImageRegistry,
 			},
-			enabledCapabilities: []v1.ClusterVersionCapability{
+			enabledCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 				configv1.ClusterVersionCapabilityImageRegistry,
 			},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/default-rolebindings",
-				}},
+				},
+			},
 		},
 		{
 			name: "BuildCapDisabled",
-			knownCapabilities: []v1.ClusterVersionCapability{
+			knownCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 			},
-			enabledCapabilities: []v1.ClusterVersionCapability{},
+			enabledCapabilities: []configv1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/build",
 					"-openshift.io/build-config-change",
 					"-openshift.io/builder-rolebindings",
 					"-openshift.io/builder-serviceaccount",
 					"-openshift.io/default-rolebindings",
-				}},
+				},
+			},
 		},
 		{
 			name: "DeploymentConfigCapDisabled",
-			knownCapabilities: []v1.ClusterVersionCapability{
+			knownCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 			},
-			enabledCapabilities: []v1.ClusterVersionCapability{},
+			enabledCapabilities: []configv1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/default-rolebindings",
 					"-openshift.io/deployer",
 					"-openshift.io/deployer-rolebindings",
 					"-openshift.io/deployer-serviceaccount",
 					"-openshift.io/deploymentconfig",
-				}},
+				},
+			},
 		},
 		{
 			name: "ImageRegistryCapDisabled",
-			knownCapabilities: []v1.ClusterVersionCapability{
+			knownCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityImageRegistry,
 			},
-			enabledCapabilities: []v1.ClusterVersionCapability{},
+			enabledCapabilities: []configv1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/default-rolebindings",
 					"-openshift.io/image-puller-rolebindings",
 					"-openshift.io/serviceaccount-pull-secrets",
-				}},
+				},
+			},
 		},
 		{
 			name: "CapabilitiesDisabled",
-			knownCapabilities: []v1.ClusterVersionCapability{
+			knownCapabilities: []configv1.ClusterVersionCapability{
 				configv1.ClusterVersionCapabilityBuild,
 				configv1.ClusterVersionCapabilityDeploymentConfig,
 				configv1.ClusterVersionCapabilityImageRegistry,
 			},
-			enabledCapabilities: []v1.ClusterVersionCapability{},
+			enabledCapabilities: []configv1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/build",
 					"-openshift.io/build-config-change",
 					"-openshift.io/builder-rolebindings",
@@ -206,16 +213,19 @@ func TestControllerDisabling(t *testing.T) {
 					"-openshift.io/deploymentconfig",
 					"-openshift.io/image-puller-rolebindings",
 					"-openshift.io/serviceaccount-pull-secrets",
-				}},
+				},
+			},
 		},
 		{
 			name:                "CapabilitiesDisabledButUnknown",
-			knownCapabilities:   []v1.ClusterVersionCapability{},
-			enabledCapabilities: []v1.ClusterVersionCapability{},
+			knownCapabilities:   []configv1.ClusterVersionCapability{},
+			enabledCapabilities: []configv1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/default-rolebindings",
-				}},
+				},
+			},
 		},
 	}
 
@@ -698,7 +708,6 @@ func TestProgressingCondition(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			if len(tc.version) > 0 {
 				os.Setenv("RELEASE_VERSION", tc.version)
 			} else {
@@ -771,10 +780,8 @@ func TestProgressingCondition(t *testing.T) {
 			if condition.Message != tc.expectedMessage {
 				t.Errorf("expected message:\n%v\nactual message:\n%v", tc.expectedMessage, condition.Message)
 			}
-
 		})
 	}
-
 }
 
 func TestDeploymentWithProxy(t *testing.T) {
@@ -801,7 +808,8 @@ func TestDeploymentWithProxy(t *testing.T) {
 		Status: configv1.ProxyStatus{
 			NoProxy:    "no-proxy",
 			HTTPProxy:  "http://my-proxy",
-			HTTPSProxy: "https://my-proxy"},
+			HTTPSProxy: "https://my-proxy",
+		},
 	}
 	indexer.Add(proxyConfig)
 	proxyLister := configlistersv1.NewProxyLister(indexer)
@@ -845,7 +853,6 @@ func TestDeploymentWithProxy(t *testing.T) {
 		proxyLister,
 		specAnnotations,
 	)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
