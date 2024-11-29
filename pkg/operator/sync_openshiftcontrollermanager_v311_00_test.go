@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/utils/clock"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
@@ -94,7 +95,7 @@ func TestExpectedConfigMap(t *testing.T) {
 		kubeClient:           kubeClient,
 		configMapsGetter:     kubeClient.CoreV1(),
 		proxyLister:          proxyLister,
-		recorder:             events.NewInMemoryRecorder(""),
+		recorder:             events.NewInMemoryRecorder("", clock.RealClock{}),
 		operatorConfigClient: controllerManagerOperatorClient.OperatorV1(),
 		clusterVersionLister: clusterVersionLister,
 	}
@@ -260,7 +261,7 @@ func TestControllerDisabling(t *testing.T) {
 			kubeClient:           kubeClient,
 			configMapsGetter:     kubeClient.CoreV1(),
 			proxyLister:          proxyLister,
-			recorder:             events.NewInMemoryRecorder(""),
+			recorder:             events.NewInMemoryRecorder("", clock.RealClock{}),
 			operatorConfigClient: controllerManagerOperatorClient.OperatorV1(),
 			clusterVersionLister: clusterVersionLister,
 		}
@@ -743,7 +744,7 @@ func TestProgressingCondition(t *testing.T) {
 				kubeClient:           kubeClient,
 				configMapsGetter:     kubeClient.CoreV1(),
 				proxyLister:          proxyLister,
-				recorder:             events.NewInMemoryRecorder(""),
+				recorder:             events.NewInMemoryRecorder("", clock.RealClock{}),
 				operatorConfigClient: controllerManagerOperatorClient.OperatorV1(),
 				clusterVersionLister: configlistersv1.NewClusterVersionLister(indexer),
 			}
@@ -804,7 +805,7 @@ func TestDeploymentWithProxy(t *testing.T) {
 	}
 	indexer.Add(proxyConfig)
 	proxyLister := configlistersv1.NewProxyLister(indexer)
-	recorder := events.NewInMemoryRecorder("")
+	recorder := events.NewInMemoryRecorder("", clock.RealClock{})
 	operatorConfig := &operatorv1.OpenShiftControllerManager{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "cluster",

@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
@@ -324,7 +325,7 @@ func TestObserveBuildControllerConfig(t *testing.T) {
 				BuildConfigLister: configlistersv1.NewBuildLister(indexer),
 			}
 			config := map[string]interface{}{}
-			observed, err := ObserveBuildControllerConfig(listers, events.NewInMemoryRecorder(""), config)
+			observed, err := ObserveBuildControllerConfig(listers, events.NewInMemoryRecorder("", clock.RealClock{}), config)
 			if err != nil {
 				if !test.expectError {
 					t.Fatalf("unexpected error observing build controller config: %v", err)

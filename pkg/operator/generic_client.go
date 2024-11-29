@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/openshift/library-go/pkg/apiserver/jsonpatch"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/clock"
 
@@ -205,4 +207,13 @@ func (p *genericClient) ApplyOperatorStatus(ctx context.Context, fieldManager st
 	}
 
 	return nil
+}
+
+func (p *genericClient) PatchOperatorStatus(ctx context.Context, jsonPatch *jsonpatch.PatchSet) (err error) {
+	jsonPatchBytes, err := jsonPatch.Marshal()
+	if err != nil {
+		return err
+	}
+	_, err = p.client.OpenShiftControllerManagers().Patch(ctx, "cluster", types.JSONPatchType, jsonPatchBytes, metav1.PatchOptions{}, "/status")
+	return err
 }
