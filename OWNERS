@@ -7,6 +7,8 @@ reviewers:
   - divyansh42
   - sayan-biswas
   - ravisantoshgudimetla
+  - prabhapa
+  - moebasim
 approvers:
   - bparees
   - deads2k
@@ -16,4 +18,6 @@ approvers:
   - ingvagabund
   - damemi
   - sayan-biswas
+  - prabhapa
+  - moebasim
 component: openshift-controller-manager
