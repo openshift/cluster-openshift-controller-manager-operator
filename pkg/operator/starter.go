@@ -192,6 +192,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		opClient,
 		versionGetter,
 		controllerConfig.EventRecorder,
+		controllerConfig.Clock,
 	)
 
 	// StaticResourceController uses library-go's resourceapply package to reconcile a set of YAML
