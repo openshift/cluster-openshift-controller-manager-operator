@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/google/go-cmp/cmp"
 	"github.com/openshift/library-go/pkg/apiserver/jsonpatch"
 
+	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
 
 	operatorapiv1 "github.com/openshift/api/operator/v1"
@@ -158,6 +162,7 @@ func (p *genericClient) ApplyOperatorStatus(ctx context.Context, fieldManager st
 		if err != nil {
 			return fmt.Errorf("unable to extract operator configuration: %w", err)
 		}
+		klog.Infof("ApplyOperatorStatus+, previous: %s", spew.Sdump(previous))
 
 		operatorStatus := &v1.OperatorStatusApplyConfiguration{}
 		if previous.Status != nil {
@@ -169,6 +174,7 @@ func (p *genericClient) ApplyOperatorStatus(ctx context.Context, fieldManager st
 				return fmt.Errorf("unable to deserialize operator configuration: %w", err)
 			}
 		}
+		klog.Infof("ApplyOperatorStatus+, unmarshalled operatorStatus: %s", spew.Sdump(operatorStatus))
 
 		switch {
 		case desiredConfiguration.Conditions != nil && operatorStatus != nil:
@@ -179,6 +185,8 @@ func (p *genericClient) ApplyOperatorStatus(ctx context.Context, fieldManager st
 
 		v1helpers.CanonicalizeOperatorStatus(desiredConfiguration)
 		v1helpers.CanonicalizeOperatorStatus(operatorStatus)
+
+		klog.Infof("ApplyOperatorStatus+, final operatorStatus: %s", spew.Sdump(operatorStatus))
 
 		original := v1.OpenShiftControllerManager("cluster")
 		if operatorStatus != nil {
@@ -196,12 +204,14 @@ func (p *genericClient) ApplyOperatorStatus(ctx context.Context, fieldManager st
 		if equality.Semantic.DeepEqual(original, desired) {
 			return nil
 		}
+		klog.Infof("ApplyOperatorStatus+, diff: %s", cmp.Diff(original, desired))
 	}
 
-	_, err = p.client.OpenShiftControllerManagers().ApplyStatus(ctx, desired, metav1.ApplyOptions{
+	res, err := p.client.OpenShiftControllerManagers().ApplyStatus(ctx, desired, metav1.ApplyOptions{
 		Force:        true,
 		FieldManager: fieldManager,
 	})
+	klog.Infof("ApplyOperatorStatus-, res: %s", spew.Sdump(res))
 	if err != nil {
 		return fmt.Errorf("unable to Apply for operator using fieldManager %q: %w", fieldManager, err)
 	}
