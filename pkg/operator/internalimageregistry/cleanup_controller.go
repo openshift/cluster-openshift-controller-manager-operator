@@ -104,6 +104,22 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 
 		// if there is a corresponding legacy service account API token, delete it
 		if tokenSecret != nil {
+			// the controller that processes the finalizer for the
+			// legacy token is no longer running. we need to remove
+			// the finalizer here before we delete.
+			finalizers := []string{}
+			for _, finalizer := range tokenSecret.Finalizers {
+				if finalizer == "openshift.io/legacy-token" {
+					continue
+				}
+				finalizers = append(finalizers, finalizer)
+			}
+			if len(finalizers) != len(tokenSecret.Finalizers) {
+				tokenSecret.Finalizers = finalizers
+				if _, err = c.kubeClient.CoreV1().Secrets(tokenSecret.Namespace).Update(ctx, tokenSecret, metav1.UpdateOptions{}); err != nil {
+					return fmt.Errorf("unable to remove legacy token secret finalizers for %q (ns=%q): %w", tokenSecret.Name, tokenSecret.Namespace, err)
+				}
+			}
 			err = c.kubeClient.CoreV1().Secrets(tokenSecret.Namespace).Delete(ctx, tokenSecret.Name, metav1.DeleteOptions{})
 			if err != nil && !errors.IsNotFound(err) {
 				return fmt.Errorf("unable to delete the service account token secret %q (ns=%q): %w", tokenSecret.Name, tokenSecret.Namespace, err)
