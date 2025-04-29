@@ -5,6 +5,7 @@ import (
 	errs "errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -64,7 +65,40 @@ func (c *imagePullSecretCleanupController) sync(ctx context.Context, controllerC
 	if imageRegistryEnabled {
 		return nil
 	}
+
+	// once the image registry is disabled we want to wait unil the controller manager
+	// operand is deployed and stable before clean up the image pull secrets. we don't
+	// want to compete with the operand that may be acting on the same resources we are.
+	if progressing, err := ControllerManagerIsProgressing(c.clusterOperatorLister); err != nil {
+		return err
+	} else if progressing {
+		return nil
+	}
+
 	return c.cleanup(ctx)
+}
+
+// removeLegacyFinalizer removes the legacy finalizer from the image pull
+// secret. With the registry removed the controller that was responsible for
+// finalizing the secret isn't running anymore. It is safe thus to remove the
+// finalizer if we also remove the secret pointed by its
+// openshift.io/token-secret.name annotation.
+func (c *imagePullSecretCleanupController) removeLegacyFinalizer(ctx context.Context, secret *corev1.Secret) error {
+	finalizers := slices.DeleteFunc(secret.Finalizers, func(finalizer string) bool {
+		return finalizer == "openshift.io/legacy-token"
+	})
+	if len(finalizers) == len(secret.Finalizers) {
+		return nil
+	}
+	secret.Finalizers = finalizers
+
+	// the image pull secret might of been deleted via cascade if its
+	// corresponding API token was deleted, so ignore NotFound error.
+	_, err := c.kubeClient.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("unable to remove legacy token secret finalizers for %q (ns=%q): %w", secret.Name, secret.Namespace, err)
+	}
+	return nil
 }
 
 func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
@@ -87,6 +121,15 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 		if imagePullSecret != nil && imagePullSecret.CreationTimestamp.After(time.Now().Add(-10*time.Minute)) {
 			// managed image pull secret was created within the last 10 minutes, skip for now to avoid fighting with OCM
 			continue
+		}
+
+		if imagePullSecret != nil {
+			// at this stage the operand responsible for removing the finalizer isn't running
+			// anymore. we need to remove the finalizer if it is present to avoid blocking
+			// the deletion we are about to do.
+			if err := c.removeLegacyFinalizer(ctx, imagePullSecret); err != nil {
+				return err
+			}
 		}
 
 		if imagePullSecret != nil && c.imagePullSecretInUse(imagePullSecret) {

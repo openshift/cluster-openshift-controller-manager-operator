@@ -7,6 +7,53 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// ControllerManagerIsProgressing returns true if the operand for this operator
+// is progressing. This function observes the "progressing", the "available", and
+// the "degraded" conditions of the "openshift-controller-manager".
+func ControllerManagerIsProgressing(clusterOperatorLister configlistersv1.ClusterOperatorLister) (bool, error) {
+	co, err := clusterOperatorLister.Get("openshift-controller-manager")
+	if err != nil {
+		return false, err
+	}
+
+	if len(co.Status.Conditions) == 0 {
+		klog.V(4).InfoS("clusteroperators.config.openshift.io/openshift-controller-manager conditions do not yet exist")
+		return true, nil
+	}
+
+	missingProgressing, missingAvailable, missingDegraded := true, true, true
+	for _, cond := range co.Status.Conditions {
+		if cond.Type == configv1.OperatorProgressing {
+			missingProgressing = false
+			if cond.Status != configv1.ConditionFalse {
+				klog.V(4).InfoS("clusteroperators.config.openshift.io/openshift-controller-manager is progressing")
+				return true, nil
+			}
+		}
+		if cond.Type == configv1.OperatorAvailable {
+			missingAvailable = false
+			if cond.Status != configv1.ConditionTrue {
+				klog.V(4).InfoS("clusteroperators.config.openshift-controller-manager is not available")
+				return true, nil
+			}
+		}
+		if cond.Type == configv1.OperatorDegraded {
+			missingDegraded = false
+			if cond.Status != configv1.ConditionFalse {
+				klog.V(4).InfoS("clusteroperators.config.openshift.io/openshift-controller-manager is degraded")
+				return true, nil
+			}
+		}
+	}
+
+	if missingProgressing || missingAvailable || missingDegraded {
+		klog.V(4).InfoS("clusteroperators.config.openshift.io/openshift-controller-manager conditions available/progressing/degraded not found")
+		return true, nil
+	}
+
+	return false, nil
+}
+
 // ImageRegistryIsEnabled returns true if the ImageRegistry capability
 // is enabled and the internal image registry has not been disabled.
 func ImageRegistryIsEnabled(clusterVersionLister configlistersv1.ClusterVersionLister, clusterOperatorLister configlistersv1.ClusterOperatorLister) (bool, error) {
