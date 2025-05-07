@@ -225,8 +225,6 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"assets/openshift-controller-manager/route-controller-manager-svc.yaml",
 			"assets/openshift-controller-manager/route-controller-manager-ingress-to-route-controller-clusterrole.yaml",
 			"assets/openshift-controller-manager/route-controller-manager-ingress-to-route-controller-clusterrolebinding.yaml",
-			"assets/openshift-controller-manager/old-leader-role.yaml",
-			"assets/openshift-controller-manager/old-leader-rolebinding.yaml",
 			"assets/openshift-controller-manager/separate-sa-role.yaml",
 			"assets/openshift-controller-manager/separate-sa-rolebinding.yaml",
 			"assets/openshift-controller-manager/sa.yaml",
@@ -246,6 +244,9 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	).WithConditionalResources(
 		bindata.Asset,
 		[]string{
+			// TODO: Remove the following lines in 4.21, including the actual files.
+			"assets/openshift-controller-manager/old-leader-role.yaml",
+			"assets/openshift-controller-manager/old-leader-rolebinding.yaml",
 			// TODO: remove all of these ingress-to-route leader-election entries and files in 4.14
 			"assets/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml",
 			"assets/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml",
