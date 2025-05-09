@@ -63,6 +63,11 @@ spec:
         ports:
         - containerPort: 8443
         terminationMessagePolicy: FallbackToLogsOnError
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         livenessProbe:
           initialDelaySeconds: 30
           httpGet:

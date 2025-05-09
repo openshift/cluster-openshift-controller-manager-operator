@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"os"
 	"reflect"
 	"sort"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/diff"
 
 	workloadcontroller "github.com/openshift/library-go/pkg/operator/apiserver/controller/workload"
+	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -34,6 +36,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	"github.com/openshift/cluster-openshift-controller-manager-operator/bindata"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 	"github.com/openshift/library-go/pkg/operator/events"
 	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -778,114 +781,191 @@ func TestProgressingCondition(t *testing.T) {
 }
 
 func TestDeploymentWithProxy(t *testing.T) {
-	kubeClient := fake.NewSimpleClientset(
-		&appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "controller-manager",
-				Namespace:  "openshift-controller-manager",
-				Generation: 2,
+	tests := []struct {
+		name          string
+		mustLoadAsset func(name string) []byte
+		proxyConfig   *configv1.Proxy
+		expectedEnv   []corev1.EnvVar
+	}{
+		{
+			name:          "default deployment template",
+			mustLoadAsset: bindata.MustAsset,
+			proxyConfig: &configv1.Proxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+				Spec: configv1.ProxySpec{
+					NoProxy:    "no-proxy",
+					HTTPProxy:  "http://my-proxy",
+					HTTPSProxy: "https://my-proxy",
+				},
+				Status: configv1.ProxyStatus{
+					NoProxy:    "no-proxy",
+					HTTPProxy:  "http://my-proxy",
+					HTTPSProxy: "https://my-proxy",
+				},
+			},
+			expectedEnv: []corev1.EnvVar{
+				{
+					Name: "POD_NAME",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.name",
+						},
+					},
+				},
+				{
+					Name:  "HTTPS_PROXY",
+					Value: "https://my-proxy",
+				},
+				{
+					Name:  "HTTP_PROXY",
+					Value: "http://my-proxy",
+				},
+				{
+					Name:  "NO_PROXY",
+					Value: "no-proxy",
+				},
 			},
 		},
-	)
-	deployClient := kubeClient.AppsV1()
-	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	proxyConfig := &configv1.Proxy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "cluster",
-		},
-		Spec: configv1.ProxySpec{
-			NoProxy:    "no-proxy",
-			HTTPProxy:  "http://my-proxy",
-			HTTPSProxy: "https://my-proxy",
-		},
-		Status: configv1.ProxyStatus{
-			NoProxy:    "no-proxy",
-			HTTPProxy:  "http://my-proxy",
-			HTTPSProxy: "https://my-proxy"},
-	}
-	indexer.Add(proxyConfig)
-	proxyLister := configlistersv1.NewProxyLister(indexer)
-	recorder := events.NewInMemoryRecorder("", clock.RealClock{})
-	operatorConfig := &operatorv1.OpenShiftControllerManager{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "cluster",
-			Generation: 2,
-		},
-		Spec: operatorv1.OpenShiftControllerManagerSpec{
-			OperatorSpec: operatorv1.OperatorSpec{},
-		},
-		Status: operatorv1.OpenShiftControllerManagerStatus{
-			OperatorStatus: operatorv1.OperatorStatus{
-				ObservedGeneration: 2,
+		{
+			name: "template proxy variables replaced",
+			mustLoadAsset: func(path string) []byte {
+				required := resourceread.ReadDeploymentV1OrDie(bindata.MustAsset(path))
+				for i := range required.Spec.Template.Spec.Containers {
+					required.Spec.Template.Spec.Containers[i].Env = []corev1.EnvVar{
+						{
+							Name:  "NO_PROXY",
+							Value: "1.2.3,4",
+						},
+						{
+							Name:  "HTTP_PROXY",
+							Value: "6.7.8.9",
+						},
+						{
+							Name:  "POD_NAME",
+							Value: "my-pod",
+						},
+					}
+				}
+
+				scheme := runtime.NewScheme()
+				appsv1.AddToScheme(scheme)
+				codecs := serializer.NewCodecFactory(scheme)
+				return []byte(runtime.EncodeOrDie(codecs.LegacyCodec(appsv1.SchemeGroupVersion), required))
+			},
+			proxyConfig: &configv1.Proxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+				Spec: configv1.ProxySpec{
+					HTTPProxy:  "http://my-proxy",
+					HTTPSProxy: "https://my-proxy",
+				},
+				Status: configv1.ProxyStatus{
+					HTTPProxy:  "http://my-proxy",
+					HTTPSProxy: "https://my-proxy",
+				},
+			},
+			expectedEnv: []corev1.EnvVar{
+				// POD_NAME is kept as it was in the template.
+				{
+					Name:  "POD_NAME",
+					Value: "my-pod",
+				},
+				// HTTPS_PROXY is added as it isn't in the template, but it's present in the proxy config.
+				{
+					Name:  "HTTPS_PROXY",
+					Value: "https://my-proxy",
+				},
+				// HTTP_PROXY value is replaced with the proxy config value.
+				{
+					Name:  "HTTP_PROXY",
+					Value: "http://my-proxy",
+				},
+				// NO_PROXY is removed from the env since it's not present in the proxy config.
 			},
 		},
 	}
 
-	specAnnotations := map[string]string{
-		"openshiftcontrollermanagers.operator.openshift.io/cluster": strconv.FormatInt(operatorConfig.ObjectMeta.Generation, 10),
-		"configmaps/config":               "54587",
-		"configmaps/client-ca":            "12515",
-		"configmaps/openshift-service-ca": "45789",
-		"configmaps/openshift-global-ca":  "56784",
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup
+			kubeClient := fake.NewSimpleClientset(
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "controller-manager",
+						Namespace:  "openshift-controller-manager",
+						Generation: 2,
+					},
+				},
+			)
+			deployClient := kubeClient.AppsV1()
 
-	countNodes := func(nodeSelector map[string]string) (*int32, error) {
-		result := int32(3)
-		return &result, nil
-	}
+			indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+			indexer.Add(tt.proxyConfig)
+			proxyLister := configlistersv1.NewProxyLister(indexer)
 
-	ds, rcBool, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
-		deployClient,
-		countNodes,
-		workloadcontroller.EnsureAtMostOnePodPerNode,
-		recorder,
-		operatorConfig,
-		"my.co/repo/img:latest",
-		operatorConfig.Status.Generations,
-		proxyLister,
-		specAnnotations,
-	)
+			recorder := events.NewInMemoryRecorder("", clock.RealClock{})
 
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-	if !rcBool {
-		t.Fatal("apply deployment does not think a changes was made")
-	}
+			operatorConfig := &operatorv1.OpenShiftControllerManager{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "cluster",
+					Generation: 2,
+				},
+				Spec: operatorv1.OpenShiftControllerManagerSpec{
+					OperatorSpec: operatorv1.OperatorSpec{},
+				},
+				Status: operatorv1.OpenShiftControllerManagerStatus{
+					OperatorStatus: operatorv1.OperatorStatus{
+						ObservedGeneration: 2,
+					},
+				},
+			}
 
-	if ds == nil {
-		t.Fatalf("nil deployment returned")
-	}
+			specAnnotations := map[string]string{
+				"openshiftcontrollermanagers.operator.openshift.io/cluster": strconv.FormatInt(operatorConfig.ObjectMeta.Generation, 10),
+				"configmaps/config":               "54587",
+				"configmaps/client-ca":            "12515",
+				"configmaps/openshift-service-ca": "45789",
+				"configmaps/openshift-global-ca":  "56784",
+			}
 
-	foundNoProxy := false
-	foundHTTPProxy := false
-	foundHTTPSProxy := false
-	for _, c := range ds.Spec.Template.Spec.Containers {
-		for _, e := range c.Env {
-			switch e.Name {
-			case "NO_PROXY":
-				if e.Value == proxyConfig.Status.NoProxy {
-					foundNoProxy = true
-				}
-			case "HTTP_PROXY":
-				if e.Value == proxyConfig.Status.HTTPProxy {
-					foundHTTPProxy = true
-				}
-			case "HTTPS_PROXY":
-				if e.Value == proxyConfig.Status.HTTPSProxy {
-					foundHTTPSProxy = true
+			countNodes := func(nodeSelector map[string]string) (*int32, error) {
+				result := int32(3)
+				return &result, nil
+			}
+
+			// Sync
+			ds, rcBool, err := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
+				tt.mustLoadAsset,
+				deployClient,
+				countNodes,
+				workloadcontroller.EnsureAtMostOnePodPerNode,
+				recorder,
+				operatorConfig,
+				"my.co/repo/img:latest",
+				operatorConfig.Status.Generations,
+				proxyLister,
+				specAnnotations,
+			)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err.Error())
+			}
+			if !rcBool {
+				t.Fatal("apply deployment does not think a changes was made")
+			}
+			if ds == nil {
+				t.Fatalf("nil deployment returned")
+			}
+
+			// Check the resulting env
+			for _, c := range ds.Spec.Template.Spec.Containers {
+				if !cmp.Equal(c.Env, tt.expectedEnv) {
+					t.Error("Unexpected container environment definition encountered:\n", cmp.Diff(tt.expectedEnv, c.Env))
 				}
 			}
-		}
-	}
-
-	if !foundNoProxy {
-		t.Fatalf("NO_PROXY not found: %#v", ds.Spec.Template.Spec.Containers)
-	}
-	if !foundHTTPProxy {
-		t.Fatalf("HTTP_PROXY not found: %#v", ds.Spec.Template.Spec.Containers)
-	}
-	if !foundHTTPSProxy {
-		t.Fatalf("HTTPS_PROXY not found: %#v", ds.Spec.Template.Spec.Containers)
+		})
 	}
 }

@@ -131,6 +131,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	// our configmaps and secrets are in order, now it is time to create the Deployment
 	var progressingMessages []string
 	actualDeployment, _, openshiftControllerManagerError := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
+		bindata.MustAsset,
 		c.kubeClient.AppsV1(),
 		countNodes,
 		ensureAtMostOnePodPerNodeFn,
@@ -438,6 +439,7 @@ func manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(kubeClient kubernetes.In
 }
 
 func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
+	mustLoadAsset func(string) []byte,
 	client appsclientv1.DeploymentsGetter,
 	countNodes nodeCountFunc,
 	ensureAtMostOnePodPerNodeFn ensureAtMostOnePodPerNodeFunc,
@@ -448,7 +450,7 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 	proxyLister proxyvclient1.ProxyLister,
 	specAnnotations map[string]string,
 ) (*appsv1.Deployment, bool, error) {
-	required := resourceread.ReadDeploymentV1OrDie(bindata.MustAsset("assets/openshift-controller-manager/deploy.yaml"))
+	required := resourceread.ReadDeploymentV1OrDie(mustLoadAsset("assets/openshift-controller-manager/deploy.yaml"))
 
 	if len(imagePullSpec) > 0 {
 		required.Spec.Template.Spec.Containers[0].Image = imagePullSpec
@@ -493,44 +495,27 @@ func manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 		}
 	} else {
 		for i, c := range required.Spec.Template.Spec.Containers {
-			newEnvs := []corev1.EnvVar{}
-
-			if len(c.Env) == 0 {
-				if len(proxyCfg.Status.NoProxy) > 0 {
-					newEnvs = append(newEnvs, corev1.EnvVar{Name: "NO_PROXY", Value: proxyCfg.Status.NoProxy})
-				}
-				if len(proxyCfg.Status.HTTPProxy) > 0 {
-					newEnvs = append(newEnvs, corev1.EnvVar{Name: "HTTP_PROXY", Value: proxyCfg.Status.HTTPProxy})
-				}
-				if len(proxyCfg.Status.HTTPSProxy) > 0 {
-					newEnvs = append(newEnvs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: proxyCfg.Status.HTTPSProxy})
-				}
-			}
-
+			// Remove the relevant variables from the spec.
+			newEnvs := make([]corev1.EnvVar, 0, len(c.Env))
 			for _, env := range c.Env {
-				name := strings.TrimSpace(env.Name)
-				switch name {
-				case "HTTPS_PROXY":
-					if len(proxyCfg.Status.HTTPSProxy) == 0 {
-						continue
-					}
-					env.Value = proxyCfg.Status.HTTPSProxy
-
-				case "HTTP_PROXY":
-					if len(proxyCfg.Status.HTTPProxy) == 0 {
-						continue
-					}
-					env.Value = proxyCfg.Status.HTTPProxy
-
-				case "NO_PROXY":
-					if len(proxyCfg.Status.NoProxy) == 0 {
-						continue
-					}
-					env.Value = proxyCfg.Status.NoProxy
-
+				switch strings.TrimSpace(env.Name) {
+				case "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY":
+				default:
+					newEnvs = append(newEnvs, env)
 				}
-				newEnvs = append(newEnvs, env)
 			}
+
+			// Add back the values that are available in the proxy config.
+			if len(proxyCfg.Status.HTTPSProxy) > 0 {
+				newEnvs = append(newEnvs, corev1.EnvVar{Name: "HTTPS_PROXY", Value: proxyCfg.Status.HTTPSProxy})
+			}
+			if len(proxyCfg.Status.HTTPProxy) > 0 {
+				newEnvs = append(newEnvs, corev1.EnvVar{Name: "HTTP_PROXY", Value: proxyCfg.Status.HTTPProxy})
+			}
+			if len(proxyCfg.Status.NoProxy) > 0 {
+				newEnvs = append(newEnvs, corev1.EnvVar{Name: "NO_PROXY", Value: proxyCfg.Status.NoProxy})
+			}
+
 			required.Spec.Template.Spec.Containers[i].Env = newEnvs
 		}
 	}
