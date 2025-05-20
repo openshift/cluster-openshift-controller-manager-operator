@@ -63,6 +63,9 @@ func TestExpectedConfigMap(t *testing.T) {
 			APIVersion: "openshiftcontrolplane.config.openshift.io/v1",
 			Kind:       "OpenShiftControllerManagerConfig",
 		},
+		LeaderElection: configv1.LeaderElection{
+			Name: "openshift-master-controllers",
+		},
 		Controllers: []string{"*",
 			"-openshift.io/build",
 			"-openshift.io/build-config-change",
