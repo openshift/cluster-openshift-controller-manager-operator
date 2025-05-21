@@ -247,9 +247,6 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			// TODO: Remove the following lines in 4.21, including the actual files.
 			"assets/openshift-controller-manager/old-leader-role.yaml",
 			"assets/openshift-controller-manager/old-leader-rolebinding.yaml",
-			// TODO: remove all of these ingress-to-route leader-election entries and files in 4.14
-			"assets/openshift-controller-manager/leader-ingress-to-route-controller-role.yaml",
-			"assets/openshift-controller-manager/leader-ingress-to-route-controller-rolebinding.yaml",
 		},
 		func() bool {
 			return false
