@@ -3,6 +3,7 @@ package operator
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"os"
@@ -286,422 +287,340 @@ func TestControllerDisabling(t *testing.T) {
 	}
 }
 
+func TestAvailableCondition(t *testing.T) {
+	prepareTestCases := func(deployNamespace, deployName, operandReadableName string) []conditionTestCase {
+		replicas := int32(3)
+
+		newDeployment := func(availableReplicas int32) *appsv1.Deployment {
+			return &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       deployName,
+					Namespace:  deployNamespace,
+					Generation: 100,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+				},
+				Status: appsv1.DeploymentStatus{
+					AvailableReplicas:  availableReplicas,
+					ReadyReplicas:      3,
+					Replicas:           3,
+					UpdatedReplicas:    3,
+					ObservedGeneration: 100,
+				},
+			}
+		}
+
+		return []conditionTestCase{
+			{
+				name:                     "HappyPath",
+				deployment:               newDeployment(replicas),
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionTrue,
+				version:                  "v1",
+			},
+			{
+				name:                     "DeploymentMissing",
+				deployment:               nil,
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionFalse,
+				expectedReason:           "NoPodsAvailable",
+				expectedMessage:          fmt.Sprintf("no %s deployment pods available on any node", operandReadableName),
+				version:                  "v1",
+			},
+			{
+				name:                     "DeploymentNotAvailable",
+				deployment:               newDeployment(0),
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionFalse,
+				expectedReason:           "NoPodsAvailable",
+				expectedMessage:          fmt.Sprintf("no %s deployment pods available on any node", operandReadableName),
+				version:                  "v1",
+			},
+		}
+	}
+
+	t.Run("OpenShiftControllerManager", func(t *testing.T) {
+		testControllerManagerCondition(t, "Available", prepareTestCases(
+			"openshift-controller-manager", "controller-manager", "openshift controller manager"))
+	})
+
+	t.Run("RouteControllerManager", func(t *testing.T) {
+		testControllerManagerCondition(t, "RouteControllerManagerAvailable", prepareTestCases(
+			"openshift-route-controller-manager", "route-controller-manager", "route controller manager"))
+	})
+}
+
 func TestProgressingCondition(t *testing.T) {
-	ocmReplicas := int32(3)
-	rcmReplicas := int32(3)
+	prepareTestCases := func(deployNamespace, deployName string) []conditionTestCase {
+		replicas := int32(3)
 
-	happyPathOCMDeployment := func() *appsv1.Deployment {
-		return &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "controller-manager",
-				Namespace:  "openshift-controller-manager",
-				Generation: 100,
+		happyPathDeployment := func() *appsv1.Deployment {
+			return &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       deployName,
+					Namespace:  deployNamespace,
+					Generation: 100,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+				},
+				Status: appsv1.DeploymentStatus{
+					AvailableReplicas:  3,
+					ReadyReplicas:      3,
+					Replicas:           3,
+					UpdatedReplicas:    3,
+					ObservedGeneration: 100,
+				},
+			}
+		}
+
+		return []conditionTestCase{
+			{
+				name:                     "HappyPath",
+				deployment:               happyPathDeployment(),
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionFalse,
+				version:                  "v1",
 			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: &ocmReplicas,
+			{
+				name:                     "DeploymentMissing",
+				deployment:               nil,
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "DesiredStateNotYetAchieved",
+				expectedMessage:          fmt.Sprintf("deployment/%s: no available replica found\ndeployment/%s: updated replicas is 0, desired replicas is 3", deployName, deployName),
+				version:                  "v1",
 			},
-			Status: appsv1.DeploymentStatus{
-				AvailableReplicas:  3,
-				ReadyReplicas:      3,
-				Replicas:           3,
-				UpdatedReplicas:    3,
-				ObservedGeneration: 100,
+			{
+				name: "DeploymentObservedAhead",
+				deployment: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       deployName,
+						Namespace:  deployNamespace,
+						Generation: 100,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: &replicas,
+					},
+					Status: appsv1.DeploymentStatus{
+						AvailableReplicas:  3,
+						ReadyReplicas:      3,
+						Replicas:           3,
+						UpdatedReplicas:    3,
+						ObservedGeneration: 101,
+					},
+				},
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "DesiredStateNotYetAchieved",
+				expectedMessage:          fmt.Sprintf("deployment/%s: observed generation is 101, desired generation is 100", deployName),
+				version:                  "v1",
+			},
+			{
+				name: "DeploymentObservedBehind",
+				deployment: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       deployName,
+						Namespace:  deployNamespace,
+						Generation: 101,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: &replicas,
+					},
+					Status: appsv1.DeploymentStatus{
+						AvailableReplicas:  3,
+						ReadyReplicas:      3,
+						Replicas:           3,
+						UpdatedReplicas:    3,
+						ObservedGeneration: 100,
+					},
+				},
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "DesiredStateNotYetAchieved",
+				expectedMessage:          fmt.Sprintf("deployment/%s: observed generation is 100, desired generation is 101", deployName),
+				version:                  "v1",
+			},
+			{
+				name:                     "ConfigObservedAhead",
+				deployment:               happyPathDeployment(),
+				configGeneration:         100,
+				configObservedGeneration: 101,
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "DesiredStateNotYetAchieved",
+				expectedMessage:          "openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is 101, desired generation is 100",
+				version:                  "v1",
+			},
+			{
+				name:                     "ConfigObservedBehind",
+				deployment:               happyPathDeployment(),
+				configGeneration:         101,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "DesiredStateNotYetAchieved",
+				expectedMessage:          "openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is 100, desired generation is 101",
+				version:                  "v1",
+			},
+			{
+				name:                     "ConfigAndDeploymentGenerationMismatch",
+				deployment:               happyPathDeployment(),
+				configGeneration:         101,
+				configObservedGeneration: 101,
+				expectedStatus:           operatorv1.ConditionFalse,
+				version:                  "v1",
+			},
+			{
+				name: "DeploymentNotAvailable",
+				deployment: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       deployName,
+						Namespace:  deployNamespace,
+						Generation: 100,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: &replicas,
+					},
+					Status: appsv1.DeploymentStatus{
+						AvailableReplicas:  0,
+						ReadyReplicas:      3,
+						Replicas:           3,
+						UpdatedReplicas:    3,
+						ObservedGeneration: 100,
+					},
+				},
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "DesiredStateNotYetAchieved",
+				expectedMessage:          fmt.Sprintf("deployment/%s: no available replica found", deployName),
+				version:                  "v1",
+			},
+			{
+				name: "DeploymentUpgradeInProgress",
+				deployment: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       deployName,
+						Namespace:  deployNamespace,
+						Generation: 100,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas: &replicas,
+					},
+					Status: appsv1.DeploymentStatus{
+						AvailableReplicas:  3,
+						ReadyReplicas:      3,
+						Replicas:           3,
+						UpdatedReplicas:    2,
+						ObservedGeneration: 100,
+					},
+				},
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "DesiredStateNotYetAchieved",
+				expectedMessage:          fmt.Sprintf("deployment/%s: updated replicas is 2, desired replicas is 3", deployName),
+				version:                  "v1",
+			},
+			{
+				name:                     "UpgradeInProgressVersionMissing",
+				deployment:               happyPathDeployment(),
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "DesiredStateNotYetAchieved",
+				expectedMessage:          fmt.Sprintf("deployment/%s: version annotation %s missing", deployName, util.VersionAnnotation),
 			},
 		}
 	}
 
-	happyPathRCMDeployment := func() *appsv1.Deployment {
-		return &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "route-controller-manager",
-				Namespace:  "openshift-route-controller-manager",
-				Generation: 100,
+	t.Run("OpenShiftControllerManager", func(t *testing.T) {
+		testControllerManagerCondition(t, "Progressing", prepareTestCases("openshift-controller-manager", "controller-manager"))
+	})
+
+	t.Run("RouteControllerManager", func(t *testing.T) {
+		testControllerManagerCondition(t, "RouteControllerManagerProgressing", prepareTestCases("openshift-route-controller-manager", "route-controller-manager"))
+	})
+}
+
+func TestDegradedCondition(t *testing.T) {
+	prepareTestCases := func(deployNamespace, deployName, operandName string) []conditionTestCase {
+		replicas := int32(3)
+
+		happyPathDeployment := func() *appsv1.Deployment {
+			return &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       deployName,
+					Namespace:  deployNamespace,
+					Generation: 100,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: &replicas,
+				},
+				Status: appsv1.DeploymentStatus{
+					AvailableReplicas:  3,
+					ReadyReplicas:      3,
+					Replicas:           3,
+					UpdatedReplicas:    3,
+					ObservedGeneration: 100,
+				},
+			}
+		}
+
+		return []conditionTestCase{
+			{
+				name:                     "HappyPath",
+				deployment:               happyPathDeployment(),
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				expectedStatus:           operatorv1.ConditionFalse,
+				version:                  "v1",
 			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: &rcmReplicas,
-			},
-			Status: appsv1.DeploymentStatus{
-				AvailableReplicas:  3,
-				ReadyReplicas:      3,
-				Replicas:           3,
-				UpdatedReplicas:    3,
-				ObservedGeneration: 100,
+			{
+				name:                     "NodeCountError",
+				deployment:               happyPathDeployment(),
+				configGeneration:         100,
+				configObservedGeneration: 100,
+				nodeCountError:           errors.New("node count error"),
+				expectedStatus:           operatorv1.ConditionTrue,
+				expectedReason:           "SyncError",
+				expectedMessage:          fmt.Sprintf("%q %q: failed to determine number of master nodes: node count error\n", operandName, "deployment"),
+				version:                  "v1",
 			},
 		}
 	}
 
-	testCases := []struct {
-		name                     string
-		ocmDeployment            *appsv1.Deployment
-		rcmDeployment            *appsv1.Deployment
-		configGeneration         int64
-		configObservedGeneration int64
-		expectedStatus           operatorv1.ConditionStatus
-		expectedMessage          string
-		version                  string
-	}{
-		{
-			name:                     "HappyPath",
-			ocmDeployment:            happyPathOCMDeployment(),
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionFalse,
-			version:                  "v1",
-		},
-		{
-			name:                     "ControllerManagerDeploymentMissing",
-			ocmDeployment:            nil,
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/controller-manager: available replicas is 0, desired available replicas > 1\ndeployment/controller-manager: updated replicas is 0, desired replicas is 3",
-			version:                  "v1",
-		},
+	t.Run("OpenShiftControllerManager", func(t *testing.T) {
+		testControllerManagerCondition(t, "WorkloadDegraded", prepareTestCases(
+			"openshift-controller-manager", "controller-manager", "openshift-controller-manager"))
+	})
 
-		{
-			name:                     "RouteControllerDeploymentMissing",
-			ocmDeployment:            happyPathOCMDeployment(),
-			rcmDeployment:            nil,
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/route-controller-manager: available replicas is 0, desired available replicas > 1\ndeployment/route-controller-manager: updated replicas is 0, desired replicas is 3",
-			version:                  "v1",
-		},
-		{
-			name: "ControllerManagerDeploymentObservedAhead",
-			ocmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "controller-manager",
-					Namespace:  "openshift-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &ocmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    3,
-					ObservedGeneration: 101,
-				},
-			},
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/controller-manager: observed generation is 101, desired generation is 100.",
-			version:                  "v1",
-		},
-		{
-			name:          "RouteControllerDeploymentObservedAhead",
-			ocmDeployment: happyPathOCMDeployment(),
-			rcmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "route-controller-manager",
-					Namespace:  "openshift-route-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &rcmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    3,
-					ObservedGeneration: 101,
-				},
-			},
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/route-controller-manager: observed generation is 101, desired generation is 100.",
-			version:                  "v1",
-		},
-		{
-			name: "ControllerManagerDeploymentObservedBehind",
-			ocmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "controller-manager",
-					Namespace:  "openshift-controller-manager",
-					Generation: 101,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &ocmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    3,
-					ObservedGeneration: 100,
-				},
-			},
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/controller-manager: observed generation is 100, desired generation is 101.",
-			version:                  "v1",
-		},
-		{
-			name:          "RouteControllerDeploymentObservedBehind",
-			ocmDeployment: happyPathOCMDeployment(),
-			rcmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "route-controller-manager",
-					Namespace:  "openshift-route-controller-manager",
-					Generation: 101,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &rcmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    3,
-					ObservedGeneration: 100,
-				},
-			},
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/route-controller-manager: observed generation is 100, desired generation is 101.",
-			version:                  "v1",
-		},
-		{
-			name:                     "ConfigObservedAhead",
-			ocmDeployment:            happyPathOCMDeployment(),
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         100,
-			configObservedGeneration: 101,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is 101, desired generation is 100.",
-			version:                  "v1",
-		},
-		{
-			name:                     "ConfigObservedBehind",
-			ocmDeployment:            happyPathOCMDeployment(),
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         101,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is 100, desired generation is 101.",
-			version:                  "v1",
-		},
-		{
-			name: "MultipleObservedAhead",
-			ocmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "controller-manager",
-					Namespace:  "openshift-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &ocmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    3,
-					ObservedGeneration: 101,
-				},
-			},
-			rcmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "route-controller-manager",
-					Namespace:  "openshift-route-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &rcmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    3,
-					ObservedGeneration: 101,
-				},
-			},
-			configGeneration:         100,
-			configObservedGeneration: 101,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/controller-manager: observed generation is 101, desired generation is 100.\ndeployment/route-controller-manager: observed generation is 101, desired generation is 100.\nopenshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is 101, desired generation is 100.",
-			version:                  "v1",
-		},
-		{
-			name:                     "ConfigAndDeploymentGenerationMismatch",
-			ocmDeployment:            happyPathOCMDeployment(),
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         101,
-			configObservedGeneration: 101,
-			expectedStatus:           operatorv1.ConditionFalse,
-			version:                  "v1",
-		},
-		{
-			name: "ControllerManagerNoneAvailable",
-			ocmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "controller-manager",
-					Namespace:  "openshift-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &ocmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  0,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    3,
-					ObservedGeneration: 100,
-				},
-			},
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/controller-manager: available replicas is 0, desired available replicas > 1",
-			version:                  "v1",
-		},
-		{
-			name:          "RouteControllerDeploymentNoneAvailable",
-			ocmDeployment: happyPathOCMDeployment(),
-			rcmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "route-controller-manager",
-					Namespace:  "openshift-route-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &rcmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  0,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    3,
-					ObservedGeneration: 100,
-				},
-			},
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/route-controller-manager: available replicas is 0, desired available replicas > 1",
-			version:                  "v1",
-		},
-		{
-			name: "UpgradeInProgress",
-			ocmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "controller-manager",
-					Namespace:  "openshift-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &ocmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    2,
-					ObservedGeneration: 100,
-				},
-			},
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/controller-manager: updated replicas is 2, desired replicas is 3",
-			version:                  "v1",
-		},
-		{
-			name:          "RouteControllerDeploymentUpgradeInProgress",
-			ocmDeployment: happyPathOCMDeployment(),
-			rcmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "route-controller-manager",
-					Namespace:  "openshift-route-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &rcmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    2,
-					ObservedGeneration: 100,
-				},
-			},
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/route-controller-manager: updated replicas is 2, desired replicas is 3",
-			version:                  "v1",
-		},
-		{
-			name: "MultipleUpgradeInProgress",
-			ocmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "controller-manager",
-					Namespace:  "openshift-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &ocmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    2,
-					ObservedGeneration: 100,
-				},
-			},
-			rcmDeployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "route-controller-manager",
-					Namespace:  "openshift-route-controller-manager",
-					Generation: 100,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Replicas: &rcmReplicas,
-				},
-				Status: appsv1.DeploymentStatus{
-					AvailableReplicas:  3,
-					ReadyReplicas:      3,
-					Replicas:           3,
-					UpdatedReplicas:    2,
-					ObservedGeneration: 100,
-				},
-			},
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          "deployment/controller-manager: updated replicas is 2, desired replicas is 3\ndeployment/route-controller-manager: updated replicas is 2, desired replicas is 3",
-			version:                  "v1",
-		},
-		{
-			name:                     "UpgradeInProgressVersionMissing",
-			ocmDeployment:            happyPathOCMDeployment(),
-			rcmDeployment:            happyPathRCMDeployment(),
-			configGeneration:         100,
-			configObservedGeneration: 100,
-			expectedStatus:           operatorv1.ConditionTrue,
-			expectedMessage:          fmt.Sprintf("deployment/controller-manager: version annotation %s missing.\ndeployment/route-controller-manager: version annotation release.openshift.io/version missing.", util.VersionAnnotation),
-		},
-	}
+	t.Run("RouteControllerManager", func(t *testing.T) {
+		testControllerManagerCondition(t, "RouteControllerManagerDegraded",
+			prepareTestCases("openshift-route-controller-manager", "route-controller-manager", "route-controller-manager"))
+	})
+}
 
+type conditionTestCase struct {
+	name                     string
+	deployment               *appsv1.Deployment
+	configGeneration         int64
+	configObservedGeneration int64
+	nodeCountError           error
+	expectedStatus           operatorv1.ConditionStatus
+	expectedReason           string
+	expectedMessage          string
+	version                  string
+}
+
+func testControllerManagerCondition(t *testing.T, conditionType string, testCases []conditionTestCase) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
@@ -716,11 +635,8 @@ func TestProgressingCondition(t *testing.T) {
 				&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: "kube-system"}},
 				&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "client-ca", Namespace: "openshift-kube-apiserver"}},
 			}
-			if tc.ocmDeployment != nil {
-				objects = append(objects, tc.ocmDeployment)
-			}
-			if tc.rcmDeployment != nil {
-				objects = append(objects, tc.rcmDeployment)
+			if tc.deployment != nil {
+				objects = append(objects, tc.deployment)
 			}
 
 			kubeClient := fake.NewSimpleClientset(objects...)
@@ -744,7 +660,11 @@ func TestProgressingCondition(t *testing.T) {
 			}
 			controllerManagerOperatorClient := operatorfake.NewSimpleClientset(operatorConfig)
 
-			cv := &configv1.ClusterVersion{}
+			cv := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+			}
 			indexer.Add(cv)
 			operator := OpenShiftControllerManagerOperator{
 				kubeClient:           kubeClient,
@@ -757,7 +677,7 @@ func TestProgressingCondition(t *testing.T) {
 
 			countNodes := func(nodeSelector map[string]string) (*int32, error) {
 				result := int32(3)
-				return &result, nil
+				return &result, tc.nodeCountError
 			}
 
 			_, _ = syncOpenShiftControllerManager_v311_00_to_latest(operator, operatorConfig, countNodes, workloadcontroller.EnsureAtMostOnePodPerNode)
@@ -767,20 +687,22 @@ func TestProgressingCondition(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			condition := operatorv1helpers.FindOperatorCondition(result.Status.Conditions, operatorv1.OperatorStatusTypeProgressing)
+			condition := operatorv1helpers.FindOperatorCondition(
+				result.Status.Conditions, conditionType)
 			if condition == nil {
-				t.Fatalf("No %v condition found.", operatorv1.OperatorStatusTypeProgressing)
+				t.Fatalf("No %v condition found.", conditionType)
 			}
 			if condition.Status != tc.expectedStatus {
 				t.Errorf("expected status == %v, actual status == %v", tc.expectedStatus, condition.Status)
 			}
+			if condition.Reason != tc.expectedReason {
+				t.Errorf("expected reason == %v, actual reason == %v", tc.expectedReason, condition.Reason)
+			}
 			if condition.Message != tc.expectedMessage {
 				t.Errorf("expected message:\n%v\nactual message:\n%v", tc.expectedMessage, condition.Message)
 			}
-
 		})
 	}
-
 }
 
 func TestDeploymentWithProxy(t *testing.T) {

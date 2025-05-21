@@ -37,6 +37,8 @@ import (
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/util"
 )
 
+const rcmConditionTypePrefix = "RouteControllerManager"
+
 // ControllerCapabilities maps controllers to capabilities, so we can enable/disable controllers
 // based on capabilities.
 var controllerCapabilities = map[controlplanev1.OpenShiftControllerName]configv1.ClusterVersionCapability{
@@ -60,8 +62,10 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	countNodes nodeCountFunc,
 	ensureAtMostOnePodPerNodeFn ensureAtMostOnePodPerNodeFunc,
 ) (bool, error) {
-	errors := []error{}
-	var err error
+	var (
+		ocmErrors, rcmErrors []error
+		err                  error
+	)
 	operatorConfig := originalOperatorConfig.DeepCopy()
 
 	operandName := "openshift-controller-manager"
@@ -78,14 +82,14 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	// OpenShift Controller Manager
 	configMap, _, err := manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(c.clusterVersionLister, c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "config", err))
+		ocmErrors = append(ocmErrors, fmt.Errorf("%q %q: %w", operandName, "config", err))
 	} else {
 		specAnnotations["configmaps/config"] = configMap.ObjectMeta.ResourceVersion
 	}
 	// the kube-apiserver is the source of truth for client CA bundles
 	clientCAConfigMap, _, err := manageOpenShiftControllerManagerClientCA_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "client-ca", err))
+		ocmErrors = append(ocmErrors, fmt.Errorf("%q %q: %v", operandName, "client-ca", err))
 	} else {
 		resourceVersion := "0"
 		if clientCAConfigMap != nil { // SyncConfigMap can return nil
@@ -96,14 +100,14 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 
 	serviceCAConfigMap, _, err := manageOpenShiftServiceCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "openshift-service-ca", err))
+		ocmErrors = append(ocmErrors, fmt.Errorf("%q %q: %v", operandName, "openshift-service-ca", err))
 	} else {
 		specAnnotations["configmaps/openshift-service-ca"] = serviceCAConfigMap.ObjectMeta.ResourceVersion
 	}
 
 	globalCAConfigMap, _, err := manageOpenShiftGlobalCAConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q %q: %v", operandName, "openshift-global-ca", err))
+		ocmErrors = append(ocmErrors, fmt.Errorf("%q %q: %v", operandName, "openshift-global-ca", err))
 	} else {
 		specAnnotations["configmaps/openshift-global-ca"] = globalCAConfigMap.ObjectMeta.ResourceVersion
 	}
@@ -111,7 +115,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	// Route Controller Manager
 	rcConfigMap, _, err := manageRouteControllerManagerConfigMap_v311_00_to_latest(c.kubeClient, c.configMapsGetter, c.recorder, operatorConfig)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q %q: %v", rcOperandName, "configmap", err))
+		rcmErrors = append(rcmErrors, fmt.Errorf("%q %q: %v", rcOperandName, "configmap", err))
 	} else {
 		rcSpecAnnotations["configmaps/config"] = rcConfigMap.ObjectMeta.ResourceVersion
 	}
@@ -119,7 +123,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	// the kube-apiserver is the source of truth for client CA bundles
 	rcClientCAConfigMap, _, err := manageRouteControllerManagerClientCA_v311_00_to_latest(c.kubeClient.CoreV1(), c.recorder)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q %q: %v", rcOperandName, "client-ca", err))
+		rcmErrors = append(rcmErrors, fmt.Errorf("%q %q: %v", rcOperandName, "client-ca", err))
 	} else {
 		resourceVersion := "0"
 		if rcClientCAConfigMap != nil { // SyncConfigMap can return nil
@@ -129,7 +133,6 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	}
 
 	// our configmaps and secrets are in order, now it is time to create the Deployment
-	var progressingMessages []string
 	actualDeployment, _, openshiftControllerManagerError := manageOpenShiftControllerManagerDeployment_v311_00_to_latest(
 		bindata.MustAsset,
 		c.kubeClient.AppsV1(),
@@ -143,9 +146,7 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 		specAnnotations,
 	)
 	if openshiftControllerManagerError != nil {
-		msg := fmt.Sprintf("%q %q: %v", operandName, "deployment", openshiftControllerManagerError)
-		progressingMessages = append(progressingMessages, msg)
-		errors = append(errors, fmt.Errorf(msg))
+		ocmErrors = append(ocmErrors, fmt.Errorf("%q %q: %v", operandName, "deployment", openshiftControllerManagerError))
 	}
 
 	actualRCDeployment, _, routerControllerManagerError := manageRouteControllerManagerDeployment_v311_00_to_latest(
@@ -159,96 +160,22 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 		rcSpecAnnotations,
 	)
 	if routerControllerManagerError != nil {
-		msg := fmt.Sprintf("%q %q: %v", rcOperandName, "deployment", routerControllerManagerError)
-		progressingMessages = append(progressingMessages, msg)
-		errors = append(errors, fmt.Errorf(msg))
+		rcmErrors = append(rcmErrors, fmt.Errorf("%q %q: %v", rcOperandName, "deployment", routerControllerManagerError))
 	}
 
 	// library-go func called by manageOpenShiftControllerManagerDeployment_v311_00_to_latest can return nil with errors
 	if openshiftControllerManagerError != nil || routerControllerManagerError != nil {
-		return syncReturn(c, errors, originalOperatorConfig, operatorConfig)
+		return syncReturn(c, ocmErrors, rcmErrors, originalOperatorConfig, operatorConfig)
 	}
-
-	// at this point we know that the actualDeployment and actualRCDeployment are both non-nil and non-empty
-	available := actualDeployment.Status.AvailableReplicas > 0
-	rcAvailable := actualRCDeployment.Status.AvailableReplicas > 0
 
 	// manage status
-	if available && rcAvailable {
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:   operatorapiv1.OperatorStatusTypeAvailable,
-			Status: operatorapiv1.ConditionTrue,
-		})
-	} else {
-		msg := "no pods available on any node."
-		if !available && rcAvailable {
-			msg = fmt.Sprintf("no openshift controller manager daemon pods available on any node.")
-		}
-		if available && !rcAvailable {
-			msg = fmt.Sprintf("no route controller manager deployment pods available on any node.")
-		}
-
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:    operatorapiv1.OperatorStatusTypeAvailable,
-			Status:  operatorapiv1.ConditionFalse,
-			Reason:  "NoPodsAvailable",
-			Message: msg,
-		})
+	// first we need to update operator config status version based on the OCM deployment
+	if d := actualDeployment; d.Status.AvailableReplicas > 0 && d.Status.UpdatedReplicas == d.Status.Replicas && len(d.Annotations[util.VersionAnnotation]) > 0 {
+		operatorConfig.Status.Version = d.Annotations[util.VersionAnnotation]
 	}
 
-	if available && actualDeployment.Status.UpdatedReplicas == actualDeployment.Status.Replicas {
-		if len(actualDeployment.Annotations[util.VersionAnnotation]) > 0 {
-			operatorConfig.Status.Version = actualDeployment.Annotations[util.VersionAnnotation]
-		} else {
-			progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/controller-manager: version annotation %s missing.", util.VersionAnnotation))
-		}
-	}
-
-	if rcAvailable && actualRCDeployment.Status.UpdatedReplicas == actualRCDeployment.Status.Replicas {
-		if len(actualRCDeployment.Annotations[util.VersionAnnotation]) > 0 {
-			// version should be the same as the controller-manager, just do a check the route-controller-manager has the same
-			if len(operatorConfig.Status.Version) != 0 && operatorConfig.Status.Version != actualRCDeployment.Annotations[util.VersionAnnotation] {
-				progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/route-controller-manager: has invalid version annotation %s, desired version %s.", util.VersionAnnotation, operatorConfig.Status.Version))
-			}
-		} else {
-			progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/route-controller-manager: version annotation %s missing.", util.VersionAnnotation))
-		}
-	}
-
-	if actualDeployment != nil && actualDeployment.ObjectMeta.Generation != actualDeployment.Status.ObservedGeneration {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/controller-manager: observed generation is %d, desired generation is %d.", actualDeployment.Status.ObservedGeneration, actualDeployment.ObjectMeta.Generation))
-	}
-	if actualDeployment.Status.AvailableReplicas == 0 {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/controller-manager: available replicas is %d, desired available replicas > %d", actualDeployment.Status.AvailableReplicas, 1))
-	}
-	if actualDeployment.Status.UpdatedReplicas != *actualDeployment.Spec.Replicas {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/controller-manager: updated replicas is %d, desired replicas is %d", actualDeployment.Status.UpdatedReplicas, *actualDeployment.Spec.Replicas))
-	}
-	if actualRCDeployment != nil && actualRCDeployment.ObjectMeta.Generation != actualRCDeployment.Status.ObservedGeneration {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/route-controller-manager: observed generation is %d, desired generation is %d.", actualRCDeployment.Status.ObservedGeneration, actualRCDeployment.ObjectMeta.Generation))
-	}
-	if actualRCDeployment.Status.AvailableReplicas == 0 {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/route-controller-manager: available replicas is %d, desired available replicas > %d", actualRCDeployment.Status.AvailableReplicas, 1))
-	}
-	if actualRCDeployment.Status.UpdatedReplicas != *actualRCDeployment.Spec.Replicas {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/route-controller-manager: updated replicas is %d, desired replicas is %d", actualRCDeployment.Status.UpdatedReplicas, *actualRCDeployment.Spec.Replicas))
-	}
-	if operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is %d, desired generation is %d.", operatorConfig.Status.ObservedGeneration, operatorConfig.ObjectMeta.Generation))
-	}
-	if len(progressingMessages) == 0 {
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:   operatorapiv1.OperatorStatusTypeProgressing,
-			Status: operatorapiv1.ConditionFalse,
-		})
-	} else {
-		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:    operatorapiv1.OperatorStatusTypeProgressing,
-			Status:  operatorapiv1.ConditionTrue,
-			Reason:  "DesiredStateNotYetAchieved",
-			Message: strings.Join(progressingMessages, "\n"),
-		})
-	}
+	setControllerManagerStatusConditions(operatorConfig, actualDeployment, "openshift controller manager", "")
+	setControllerManagerStatusConditions(operatorConfig, actualRCDeployment, "route controller manager", rcmConditionTypePrefix)
 
 	v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
 		Type:   operatorapiv1.OperatorStatusTypeUpgradeable,
@@ -259,38 +186,124 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 	resourcemerge.SetDeploymentGeneration(&operatorConfig.Status.Generations, actualDeployment)
 	resourcemerge.SetDeploymentGeneration(&operatorConfig.Status.Generations, actualRCDeployment)
 
-	return syncReturn(c, errors, originalOperatorConfig, operatorConfig)
+	return syncReturn(c, ocmErrors, rcmErrors, originalOperatorConfig, operatorConfig)
 }
 
-func syncReturn(c OpenShiftControllerManagerOperator, errors []error, originalOperatorConfig, operatorConfig *operatorapiv1.OpenShiftControllerManager) (bool, error) {
-	if len(errors) > 0 {
-		message := ""
-		for _, err := range errors {
-			message = message + err.Error() + "\n"
-		}
+// setControllerManagerStatusConditions sets operator status conditions for an operand.
+// Available and Progressing are being handled here, Degraded is handled in syncReturn.
+//
+// Make sure operatorConfig.Status.Version is set properly before calling this helper function.
+func setControllerManagerStatusConditions(
+	operatorConfig *operatorapiv1.OpenShiftControllerManager,
+	d *appsv1.Deployment,
+	operandReadableName string,
+	conditionTypePrefix string,
+) {
+	available := d.Status.AvailableReplicas > 0
+
+	// Available
+	if available {
 		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:    workloadDegradedCondition,
-			Status:  operatorapiv1.ConditionTrue,
-			Message: message,
-			Reason:  "SyncError",
+			Type:   conditionTypePrefix + operatorapiv1.OperatorStatusTypeAvailable,
+			Status: operatorapiv1.ConditionTrue,
 		})
 	} else {
 		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
-			Type:   workloadDegradedCondition,
-			Status: operatorapiv1.ConditionFalse,
+			Type:    conditionTypePrefix + operatorapiv1.OperatorStatusTypeAvailable,
+			Status:  operatorapiv1.ConditionFalse,
+			Reason:  "NoPodsAvailable",
+			Message: fmt.Sprintf("no %s deployment pods available on any node", operandReadableName),
 		})
 	}
+
+	// Progressing
+	var progressingMessages []string
+	if available && d.Status.UpdatedReplicas == d.Status.Replicas {
+		if len(d.Annotations[util.VersionAnnotation]) > 0 {
+			if len(operatorConfig.Status.Version) != 0 && operatorConfig.Status.Version != d.Annotations[util.VersionAnnotation] {
+				progressingMessages = append(progressingMessages, fmt.Sprintf(
+					"deployment/%s: has invalid version annotation %s, desired version %s",
+					d.Name, util.VersionAnnotation, operatorConfig.Status.Version))
+			}
+		} else {
+			progressingMessages = append(progressingMessages, fmt.Sprintf(
+				"deployment/%s: version annotation %s missing", d.Name, util.VersionAnnotation))
+		}
+	}
+	if d.ObjectMeta.Generation != d.Status.ObservedGeneration {
+		progressingMessages = append(progressingMessages, fmt.Sprintf(
+			"deployment/%s: observed generation is %d, desired generation is %d",
+			d.Name, d.Status.ObservedGeneration, d.ObjectMeta.Generation))
+	}
+	if d.Status.AvailableReplicas == 0 {
+		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/%s: no available replica found", d.Name))
+	}
+	if d.Status.UpdatedReplicas != *d.Spec.Replicas {
+		progressingMessages = append(progressingMessages, fmt.Sprintf(
+			"deployment/%s: updated replicas is %d, desired replicas is %d",
+			d.Name, d.Status.UpdatedReplicas, *d.Spec.Replicas))
+	}
+
+	// This is actually not depending on the deployment object,
+	// but generation mismatch sets all operands to Progressing.
+	if operatorConfig.ObjectMeta.Generation != operatorConfig.Status.ObservedGeneration {
+		progressingMessages = append(progressingMessages, fmt.Sprintf(
+			"openshiftcontrollermanagers.operator.openshift.io/cluster: observed generation is %d, desired generation is %d",
+			operatorConfig.Status.ObservedGeneration, operatorConfig.ObjectMeta.Generation))
+	}
+
+	if len(progressingMessages) == 0 {
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:   conditionTypePrefix + operatorapiv1.OperatorStatusTypeProgressing,
+			Status: operatorapiv1.ConditionFalse,
+		})
+	} else {
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:    conditionTypePrefix + operatorapiv1.OperatorStatusTypeProgressing,
+			Status:  operatorapiv1.ConditionTrue,
+			Reason:  "DesiredStateNotYetAchieved",
+			Message: strings.Join(progressingMessages, "\n"),
+		})
+	}
+}
+
+// syncReturn checks the error slices and sets Degraded conditions in the operator config before returning.
+func syncReturn(
+	c OpenShiftControllerManagerOperator,
+	ocmErrors, rcmErrors []error,
+	originalOperatorConfig, operatorConfig *operatorapiv1.OpenShiftControllerManager,
+) (bool, error) {
+	setDegraded := func(errs []error, conditionType string) {
+		if len(errs) == 0 {
+			v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+				Type:   conditionType,
+				Status: operatorapiv1.ConditionFalse,
+			})
+			return
+		}
+
+		var msg strings.Builder
+		for _, err := range errs {
+			msg.WriteString(err.Error())
+			msg.WriteString("\n")
+		}
+		v1helpers.SetOperatorCondition(&operatorConfig.Status.Conditions, operatorapiv1.OperatorCondition{
+			Type:    conditionType,
+			Status:  operatorapiv1.ConditionTrue,
+			Message: msg.String(),
+			Reason:  "SyncError",
+		})
+	}
+
+	setDegraded(ocmErrors, workloadDegradedCondition)
+	setDegraded(rcmErrors, rcmConditionTypePrefix+"Degraded")
 
 	if !equality.Semantic.DeepEqual(operatorConfig.Status, originalOperatorConfig.Status) {
 		if _, err := c.operatorConfigClient.OpenShiftControllerManagers().UpdateStatus(context.TODO(), operatorConfig, metav1.UpdateOptions{}); err != nil {
 			return false, err
 		}
 	}
-
-	if len(errors) > 0 {
-		return true, nil
-	}
-	return false, nil
+	return len(ocmErrors) > 0 || len(rcmErrors) > 0, nil
 }
 
 func manageOpenShiftControllerManagerClientCA_v311_00_to_latest(client coreclientv1.ConfigMapsGetter, recorder events.Recorder) (*corev1.ConfigMap, bool, error) {
