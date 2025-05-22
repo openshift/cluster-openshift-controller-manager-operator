@@ -47,6 +47,7 @@ spec:
       containers:
       - name: controller-manager
         securityContext:
+          readOnlyRootFilesystem: true
           allowPrivilegeEscalation: false
           capabilities:
             drop:
