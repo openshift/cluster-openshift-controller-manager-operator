@@ -195,11 +195,11 @@ func syncOpenShiftControllerManager_v311_00_to_latest(
 // Make sure operatorConfig.Status.Version is set properly before calling this helper function.
 func setControllerManagerStatusConditions(
 	operatorConfig *operatorapiv1.OpenShiftControllerManager,
-	d *appsv1.Deployment,
+	deployment *appsv1.Deployment,
 	operandReadableName string,
 	conditionTypePrefix string,
 ) {
-	available := d.Status.AvailableReplicas > 0
+	available := deployment.Status.AvailableReplicas > 0
 
 	// Available
 	if available {
@@ -218,30 +218,31 @@ func setControllerManagerStatusConditions(
 
 	// Progressing
 	var progressingMessages []string
-	if available && d.Status.UpdatedReplicas == d.Status.Replicas {
-		if len(d.Annotations[util.VersionAnnotation]) > 0 {
-			if len(operatorConfig.Status.Version) != 0 && operatorConfig.Status.Version != d.Annotations[util.VersionAnnotation] {
+	if available && deployment.Status.UpdatedReplicas == deployment.Status.Replicas {
+		if len(deployment.Annotations[util.VersionAnnotation]) > 0 {
+			if len(operatorConfig.Status.Version) != 0 && operatorConfig.Status.Version != deployment.Annotations[util.VersionAnnotation] {
 				progressingMessages = append(progressingMessages, fmt.Sprintf(
 					"deployment/%s: has invalid version annotation %s, desired version %s",
-					d.Name, util.VersionAnnotation, operatorConfig.Status.Version))
+					deployment.Name, util.VersionAnnotation, operatorConfig.Status.Version))
 			}
 		} else {
 			progressingMessages = append(progressingMessages, fmt.Sprintf(
-				"deployment/%s: version annotation %s missing", d.Name, util.VersionAnnotation))
+				"deployment/%s: version annotation %s missing", deployment.Name, util.VersionAnnotation))
 		}
 	}
-	if d.ObjectMeta.Generation != d.Status.ObservedGeneration {
+	if deployment.ObjectMeta.Generation != deployment.Status.ObservedGeneration {
 		progressingMessages = append(progressingMessages, fmt.Sprintf(
 			"deployment/%s: observed generation is %d, desired generation is %d",
-			d.Name, d.Status.ObservedGeneration, d.ObjectMeta.Generation))
+			deployment.Name, deployment.Status.ObservedGeneration, deployment.ObjectMeta.Generation))
 	}
-	if d.Status.AvailableReplicas == 0 {
-		progressingMessages = append(progressingMessages, fmt.Sprintf("deployment/%s: no available replica found", d.Name))
+	if deployment.Status.AvailableReplicas == 0 {
+		progressingMessages = append(progressingMessages, fmt.Sprintf(
+			"deployment/%s: no available replica found", deployment.Name))
 	}
-	if d.Status.UpdatedReplicas != *d.Spec.Replicas {
+	if deployment.Status.UpdatedReplicas != *deployment.Spec.Replicas {
 		progressingMessages = append(progressingMessages, fmt.Sprintf(
 			"deployment/%s: updated replicas is %d, desired replicas is %d",
-			d.Name, d.Status.UpdatedReplicas, *d.Spec.Replicas))
+			deployment.Name, deployment.Status.UpdatedReplicas, *deployment.Spec.Replicas))
 	}
 
 	// This is actually not depending on the deployment object,
