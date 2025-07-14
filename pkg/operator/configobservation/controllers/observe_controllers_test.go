@@ -194,7 +194,7 @@ func TestObserveControllers(t *testing.T) {
 				unstructured.SetNestedStringSlice(expectedConfig, tc.expectedConfig, "controllers")
 			}
 			if !cmp.Equal(actualConfig, expectedConfig) {
-				t.Errorf(cmp.Diff(actualConfig, expectedConfig))
+				t.Error(cmp.Diff(actualConfig, expectedConfig))
 			}
 			if tc.expectErr == (actualErr == nil) {
 				t.Errorf("expected an error: %v, got an error: %v", tc.expectErr, actualErr)
