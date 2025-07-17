@@ -33,6 +33,7 @@ spec:
       - name: openshift-controller-manager-operator
         securityContext:
           allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
           capabilities:
             drop: ["ALL"]
         image: docker.io/openshift/origin-cluster-openshift-controller-manager-operator:v4.0
@@ -53,6 +54,8 @@ spec:
           name: config
         - mountPath: /var/run/secrets/serving-cert
           name: serving-cert
+        - mountPath: /tmp
+          name: tmp
         env:
         - name: RELEASE_VERSION
           value: "0.0.1-snapshot"
@@ -75,6 +78,8 @@ spec:
       - name: config
         configMap:
           name: openshift-controller-manager-operator-config
+      - emptyDir: {}
+        name: tmp
       nodeSelector:
         node-role.kubernetes.io/master: ""
       priorityClassName: "system-cluster-critical"

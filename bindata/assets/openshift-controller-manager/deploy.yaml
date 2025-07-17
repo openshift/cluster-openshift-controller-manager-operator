@@ -47,6 +47,7 @@ spec:
       containers:
       - name: controller-manager
         securityContext:
+          readOnlyRootFilesystem: true
           allowPrivilegeEscalation: false
           capabilities:
             drop:
@@ -89,6 +90,8 @@ spec:
           name: serving-cert
         - mountPath: /etc/pki/ca-trust/extracted/pem
           name: proxy-ca-bundles
+        - mountPath: /tmp
+          name: tmp
       volumes:
       - name: config
         configMap:
@@ -105,6 +108,8 @@ spec:
           items:
             - key: ca-bundle.crt
               path: tls-ca-bundle.pem
+      - emptyDir: {}
+        name: tmp
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
