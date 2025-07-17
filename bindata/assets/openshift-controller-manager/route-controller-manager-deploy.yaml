@@ -66,6 +66,8 @@ spec:
           name: client-ca
         - mountPath: /var/run/secrets/serving-cert
           name: serving-cert
+        - mountPath: /tmp
+          name: tmp
         livenessProbe:
           initialDelaySeconds: 30
           httpGet:
@@ -88,6 +90,8 @@ spec:
       - name: serving-cert
         secret:
           secretName: serving-cert
+      - emptyDir: {}
+        name: tmp
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
