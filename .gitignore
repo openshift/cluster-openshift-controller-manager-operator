@@ -1,4 +1,7 @@
 /cluster-openshift-controller-manager-operator
+/cluster-openshift-controller-manager-operator-tests-ext
 .idea/
 .vscode/
 _output/
+# OpenShift tests extension generated metadata
+.openshift-tests-extension/
