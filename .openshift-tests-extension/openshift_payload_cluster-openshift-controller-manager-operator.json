@@ -1,0 +1,16 @@
+[
+  {
+    "name": "[Jira:openshift-controller-manager][sig-openshift-controller-manager] sanity test should always pass [Suite:openshift/cluster-openshift-controller-manager-operator/conformance/parallel]",
+    "labels": {},
+    "resources": {
+      "isolation": {}
+    },
+    "source": "openshift:payload:cluster-openshift-controller-manager-operator",
+    "codeLocations": [
+      "/Users/rgangwar/Downloads/backupoffice/cluster-openshift-controller-manager-operator/test/extended/main.go:8",
+      "/Users/rgangwar/Downloads/backupoffice/cluster-openshift-controller-manager-operator/test/extended/main.go:9"
+    ],
+    "lifecycle": "blocking",
+    "environmentSelector": {}
+  }
+]
