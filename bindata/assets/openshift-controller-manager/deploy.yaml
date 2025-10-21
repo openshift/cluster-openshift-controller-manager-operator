@@ -33,13 +33,13 @@ spec:
       name: openshift-controller-manager
       annotations:
         target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
-        openshift.io/required-scc: restricted-v2
+        openshift.io/required-scc: restricted-v3
       labels:
         app: openshift-controller-manager-a
         controller-manager: "true"
     spec:
+      hostUsers: false
       securityContext:
-        runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       priorityClassName: system-node-critical

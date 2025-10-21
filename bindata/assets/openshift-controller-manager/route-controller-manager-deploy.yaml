@@ -23,13 +23,13 @@ spec:
       name: route-controller-manager
       annotations:
         target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
-        openshift.io/required-scc: restricted-v2
+        openshift.io/required-scc: restricted-v3
       labels:
         app: route-controller-manager
         route-controller-manager: "true"
     spec:
+      hostUsers: false
       securityContext:
-        runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       priorityClassName: system-node-critical
