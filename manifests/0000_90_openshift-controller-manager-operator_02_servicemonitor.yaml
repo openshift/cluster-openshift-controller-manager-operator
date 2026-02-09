@@ -27,3 +27,4 @@ spec:
   selector:
     matchLabels:
       app: openshift-controller-manager-operator
+  serviceDiscoveryRole: EndpointSlice
