@@ -1,27 +1,42 @@
+/*
+This command is used to run the Cluster Controller Manager Operator tests extension for OpenShift.
+It registers the Cluster Controller Manager Operator tests with the OpenShift Tests Extension framework
+and provides a command-line interface to execute them.
+For further information, please refer to the documentation at:
+https://github.com/openshift-eng/openshift-tests-extension/blob/main/cmd/example-tests/main.go
+*/
+
 package main
 
 import (
-	"context"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"k8s.io/component-base/cli"
+	"k8s.io/klog/v2"
 
 	otecmd "github.com/openshift-eng/openshift-tests-extension/pkg/cmd"
 	oteextension "github.com/openshift-eng/openshift-tests-extension/pkg/extension"
+	oteginkgo "github.com/openshift-eng/openshift-tests-extension/pkg/ginkgo"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/version"
-
-	"k8s.io/klog/v2"
 )
 
 func main() {
-	command := newOperatorTestCommand(context.Background())
-	code := cli.Run(command)
+	cmd, err := newOperatorTestCommand()
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	code := cli.Run(cmd)
 	os.Exit(code)
 }
 
-func newOperatorTestCommand(ctx context.Context) *cobra.Command {
-	registry := prepareOperatorTestsRegistry()
+func newOperatorTestCommand() (*cobra.Command, error) {
+	registry, err := prepareOperatorTestsRegistry()
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare test registry: %w", err)
+	}
 
 	cmd := &cobra.Command{
 		Use:   "cluster-openshift-controller-manager-operator-tests-ext",
@@ -41,13 +56,29 @@ func newOperatorTestCommand(ctx context.Context) *cobra.Command {
 
 	cmd.AddCommand(otecmd.DefaultExtensionCommands(registry)...)
 
-	return cmd
+	return cmd, nil
 }
 
-func prepareOperatorTestsRegistry() *oteextension.Registry {
+// prepareOperatorTestsRegistry creates the OTE registry for this operator.
+// This method must be called before adding the registry to the OTE framework.
+func prepareOperatorTestsRegistry() (*oteextension.Registry, error) {
 	registry := oteextension.NewRegistry()
 	extension := oteextension.NewExtension("openshift", "payload", "cluster-openshift-controller-manager-operator")
 
+	extension.AddSuite(oteextension.Suite{
+		Name:        "openshift/cluster-openshift-controller-manager-operator/operator/serial",
+		Parallelism: 1,
+		Qualifiers: []string{
+			`name.contains("[Operator]") && name.contains("[Serial]")`,
+		},
+	})
+
+	specs, err := oteginkgo.BuildExtensionTestSpecsFromOpenShiftGinkgoSuite()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't build extension test specs from ginkgo: %w", err)
+	}
+
+	extension.AddSpecs(specs)
 	registry.Register(extension)
-	return registry
+	return registry, nil
 }

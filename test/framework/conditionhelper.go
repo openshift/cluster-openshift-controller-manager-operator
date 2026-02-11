@@ -58,7 +58,8 @@ func ensureClusterOperatorStatusIsSet(logger Logger, client *Clientset) error {
 	return err
 }
 
-func MustEnsureClusterOperatorStatusIsSet(t *testing.T, client *Clientset) {
+func MustEnsureClusterOperatorStatusIsSet(t testing.TB, client *Clientset) {
+	t.Helper()
 	if err := ensureClusterOperatorStatusIsSet(t, client); err != nil {
 		t.Fatal(err)
 	}

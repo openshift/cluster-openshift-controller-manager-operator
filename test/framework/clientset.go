@@ -56,7 +56,8 @@ func NewClientset(kubeconfig *restclient.Config) (clientset *Clientset, err erro
 
 // MustNewClientset is like NewClienset but aborts the test if clienset cannot
 // be constructed.
-func MustNewClientset(t *testing.T, kubeconfig *restclient.Config) *Clientset {
+func MustNewClientset(t testing.TB, kubeconfig *restclient.Config) *Clientset {
+	t.Helper()
 	clientset, err := NewClientset(kubeconfig)
 	if err != nil {
 		t.Fatal(err)
