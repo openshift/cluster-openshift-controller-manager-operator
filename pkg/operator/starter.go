@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/clock"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -77,7 +76,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	operatorConfigInformers := operatorinformers.NewSharedInformerFactory(operatorClient, 10*time.Minute)
 	configInformers := configinformers.NewSharedInformerFactory(configClient, 10*time.Minute)
 
-	// OpenShiftControlllerManagerOperator reconciles the state of the openshift-controller-manager
+	// OpenShiftControllerManagerOperator reconciles the state of the openshift-controller-manager
 	// DaemonSet and associated ConfigMaps.
 	operator := NewOpenShiftControllerManagerOperator(
 		os.Getenv("IMAGE"),
@@ -94,7 +93,7 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	)
 
 	opClient := &genericClient{
-		clock:     clock.RealClock{},
+		clock:     controllerConfig.Clock,
 		informers: operatorConfigInformers,
 		client:    operatorClient.OperatorV1(),
 	}
