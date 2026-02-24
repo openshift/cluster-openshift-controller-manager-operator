@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -74,7 +74,7 @@ func ConvertJSON(o interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	jsonEncoded, err := ioutil.ReadAll(buf)
+	jsonEncoded, err := io.ReadAll(buf)
 	if err != nil {
 		return nil, err
 	}
