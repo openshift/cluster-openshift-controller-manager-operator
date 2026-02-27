@@ -14,6 +14,7 @@ can be viewed in a cluster with:
 $ oc get crd openshiftcontrollermanagers.operator.openshift.io -o yaml
 ```
 
+## Test
 Many OpenShift ClusterOperators share common build, test, deployment, and update methods.    
 For more information about how to build, deploy, test, update, and develop OpenShift ClusterOperators, see      
 [OpenShift ClusterOperator and Operand Developer Document](https://github.com/openshift/enhancements/blob/master/dev-guide/operators.md#how-do-i-buildupdateverifyrun-unit-tests)
