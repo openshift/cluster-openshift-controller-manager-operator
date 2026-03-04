@@ -237,6 +237,13 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"assets/openshift-controller-manager/deployer-clusterrolebinding.yaml",
 			"assets/openshift-controller-manager/image-trigger-controller-clusterrole.yaml",
 			"assets/openshift-controller-manager/image-trigger-controller-clusterrolebinding.yaml",
+			// Network policies
+			// Apply allow rules before default-deny so that traffic is never
+			// blocked during the window between sequential resource applies.
+			"assets/openshift-controller-manager/networkpolicy-allow.yaml",
+			"assets/openshift-controller-manager/networkpolicy-default-deny.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-networkpolicy-allow.yaml",
+			"assets/openshift-controller-manager/route-controller-manager-networkpolicy-default-deny.yaml",
 		},
 		resourceapply.NewKubeClientHolder(kubeClient),
 		opClient,
