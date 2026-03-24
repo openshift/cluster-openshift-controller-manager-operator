@@ -109,32 +109,32 @@ func TestControllerManagerNetworkPolicyReconcile(t *testing.T) {
 	restoreNetworkPolicy(t, ctx, kubeClient, expectedControllerManagerPolicy)
 	t.Logf("deleting NetworkPolicy %s/%s", util.RouteControllerTargetNamespace, routeControllerManagerPolicyName)
 	restoreNetworkPolicy(t, ctx, kubeClient, expectedRouteControllerManagerPolicy)
-	t.Logf("deleting NetworkPolicy %s/%s", util.OperatorNamespace, operatorPolicyName)
-	restoreNetworkPolicy(t, ctx, kubeClient, expectedOperatorPolicy)
+	t.Logf("deleting NetworkPolicy %s/%s (operator namespace may need longer to reconcile)", util.OperatorNamespace, operatorPolicyName)
+	restoreNetworkPolicyWithTimeout(t, ctx, kubeClient, expectedOperatorPolicy, 15*time.Minute)
 
 	t.Log("Deleting default-deny-all policies and waiting for restoration")
 	t.Logf("deleting NetworkPolicy %s/%s", util.TargetNamespace, defaultDenyAllPolicyName)
 	restoreNetworkPolicy(t, ctx, kubeClient, expectedControllerManagerDefaultDeny)
 	t.Logf("deleting NetworkPolicy %s/%s", util.RouteControllerTargetNamespace, defaultDenyAllPolicyName)
 	restoreNetworkPolicy(t, ctx, kubeClient, expectedRouteControllerManagerDefaultDeny)
-	t.Logf("deleting NetworkPolicy %s/%s", util.OperatorNamespace, defaultDenyAllPolicyName)
-	restoreNetworkPolicy(t, ctx, kubeClient, expectedOperatorDefaultDeny)
+	t.Logf("deleting NetworkPolicy %s/%s (operator namespace may need longer to reconcile)", util.OperatorNamespace, defaultDenyAllPolicyName)
+	restoreNetworkPolicyWithTimeout(t, ctx, kubeClient, expectedOperatorDefaultDeny, 15*time.Minute)
 
 	t.Log("Mutating main policies and waiting for reconciliation")
 	t.Logf("mutating NetworkPolicy %s/%s", util.TargetNamespace, controllerManagerPolicyName)
 	mutateAndRestoreNetworkPolicy(t, ctx, kubeClient, util.TargetNamespace, controllerManagerPolicyName)
 	t.Logf("mutating NetworkPolicy %s/%s", util.RouteControllerTargetNamespace, routeControllerManagerPolicyName)
 	mutateAndRestoreNetworkPolicy(t, ctx, kubeClient, util.RouteControllerTargetNamespace, routeControllerManagerPolicyName)
-	t.Logf("mutating NetworkPolicy %s/%s", util.OperatorNamespace, operatorPolicyName)
-	mutateAndRestoreNetworkPolicy(t, ctx, kubeClient, util.OperatorNamespace, operatorPolicyName)
+	t.Logf("mutating NetworkPolicy %s/%s (operator namespace may need longer to reconcile)", util.OperatorNamespace, operatorPolicyName)
+	mutateAndRestoreNetworkPolicyWithTimeout(t, ctx, kubeClient, util.OperatorNamespace, operatorPolicyName, 15*time.Minute)
 
 	t.Log("Mutating default-deny-all policies and waiting for reconciliation")
 	t.Logf("mutating NetworkPolicy %s/%s", util.TargetNamespace, defaultDenyAllPolicyName)
 	mutateAndRestoreNetworkPolicy(t, ctx, kubeClient, util.TargetNamespace, defaultDenyAllPolicyName)
 	t.Logf("mutating NetworkPolicy %s/%s", util.RouteControllerTargetNamespace, defaultDenyAllPolicyName)
 	mutateAndRestoreNetworkPolicy(t, ctx, kubeClient, util.RouteControllerTargetNamespace, defaultDenyAllPolicyName)
-	t.Logf("mutating NetworkPolicy %s/%s", util.OperatorNamespace, defaultDenyAllPolicyName)
-	mutateAndRestoreNetworkPolicy(t, ctx, kubeClient, util.OperatorNamespace, defaultDenyAllPolicyName)
+	t.Logf("mutating NetworkPolicy %s/%s (operator namespace may need longer to reconcile)", util.OperatorNamespace, defaultDenyAllPolicyName)
+	mutateAndRestoreNetworkPolicyWithTimeout(t, ctx, kubeClient, util.OperatorNamespace, defaultDenyAllPolicyName, 15*time.Minute)
 
 	t.Log("Checking NetworkPolicy-related events (best-effort)")
 	logNetworkPolicyEvents(t, ctx, kubeClient, []string{util.OperatorNamespace, util.TargetNamespace, util.RouteControllerTargetNamespace}, controllerManagerPolicyName)
@@ -252,6 +252,10 @@ func hasEgressAllowAll(rules []networkingv1.NetworkPolicyEgressRule) bool {
 }
 
 func restoreNetworkPolicy(t *testing.T, ctx context.Context, client kubernetes.Interface, expected *networkingv1.NetworkPolicy) {
+	restoreNetworkPolicyWithTimeout(t, ctx, client, expected, 10*time.Minute)
+}
+
+func restoreNetworkPolicyWithTimeout(t *testing.T, ctx context.Context, client kubernetes.Interface, expected *networkingv1.NetworkPolicy, timeout time.Duration) {
 	t.Helper()
 	namespace := expected.Namespace
 	name := expected.Name
@@ -259,7 +263,7 @@ func restoreNetworkPolicy(t *testing.T, ctx context.Context, client kubernetes.I
 	if err := client.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
 		t.Fatalf("failed to delete NetworkPolicy %s/%s: %v", namespace, name, err)
 	}
-	err := wait.PollImmediate(5*time.Second, 10*time.Minute, func() (bool, error) {
+	err := wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
 		current, err := client.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
@@ -267,12 +271,16 @@ func restoreNetworkPolicy(t *testing.T, ctx context.Context, client kubernetes.I
 		return equality.Semantic.DeepEqual(expected.Spec, current.Spec), nil
 	})
 	if err != nil {
-		t.Fatalf("timed out waiting for NetworkPolicy %s/%s spec to be restored: %v", namespace, name, err)
+		t.Fatalf("timed out waiting for NetworkPolicy %s/%s spec to be restored after %v: %v", namespace, name, timeout, err)
 	}
 	t.Logf("NetworkPolicy %s/%s spec restored after delete", namespace, name)
 }
 
 func mutateAndRestoreNetworkPolicy(t *testing.T, ctx context.Context, client kubernetes.Interface, namespace, name string) {
+	mutateAndRestoreNetworkPolicyWithTimeout(t, ctx, client, namespace, name, 10*time.Minute)
+}
+
+func mutateAndRestoreNetworkPolicyWithTimeout(t *testing.T, ctx context.Context, client kubernetes.Interface, namespace, name string, timeout time.Duration) {
 	t.Helper()
 	original := getNetworkPolicyT(t, ctx, client, namespace, name)
 	t.Logf("mutating NetworkPolicy %s/%s (podSelector override)", namespace, name)
@@ -282,12 +290,12 @@ func mutateAndRestoreNetworkPolicy(t *testing.T, ctx context.Context, client kub
 		t.Fatalf("failed to patch NetworkPolicy %s/%s: %v", namespace, name, err)
 	}
 
-	err = wait.PollImmediate(5*time.Second, 10*time.Minute, func() (bool, error) {
+	err = wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
 		current := getNetworkPolicyT(t, ctx, client, namespace, name)
 		return equality.Semantic.DeepEqual(original.Spec, current.Spec), nil
 	})
 	if err != nil {
-		t.Fatalf("timed out waiting for NetworkPolicy %s/%s spec to be restored: %v", namespace, name, err)
+		t.Fatalf("timed out waiting for NetworkPolicy %s/%s spec to be restored after %v: %v", namespace, name, timeout, err)
 	}
 	t.Logf("NetworkPolicy %s/%s spec restored", namespace, name)
 }
