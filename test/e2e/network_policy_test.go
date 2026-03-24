@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -196,23 +197,7 @@ func requireIngressPort(t *testing.T, policy *networkingv1.NetworkPolicy, protoc
 	}
 }
 
-func requireEgressPort(t *testing.T, policy *networkingv1.NetworkPolicy, protocol corev1.Protocol, port int32) {
-	t.Helper()
-	if !hasPortInEgress(policy.Spec.Egress, protocol, port) {
-		t.Errorf("%s/%s: expected egress port %s/%d", policy.Namespace, policy.Name, protocol, port)
-	}
-}
-
 func hasPortInIngress(rules []networkingv1.NetworkPolicyIngressRule, protocol corev1.Protocol, port int32) bool {
-	for _, rule := range rules {
-		if hasPort(rule.Ports, protocol, port) {
-			return true
-		}
-	}
-	return false
-}
-
-func hasPortInEgress(rules []networkingv1.NetworkPolicyEgressRule, protocol corev1.Protocol, port int32) bool {
 	for _, rule := range rules {
 		if hasPort(rule.Ports, protocol, port) {
 			return true
@@ -263,7 +248,7 @@ func restoreNetworkPolicyWithTimeout(t *testing.T, ctx context.Context, client k
 	if err := client.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
 		t.Fatalf("failed to delete NetworkPolicy %s/%s: %v", namespace, name, err)
 	}
-	err := wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
 		current, err := client.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return false, nil
@@ -290,7 +275,7 @@ func mutateAndRestoreNetworkPolicyWithTimeout(t *testing.T, ctx context.Context,
 		t.Fatalf("failed to patch NetworkPolicy %s/%s: %v", namespace, name, err)
 	}
 
-	err = wait.PollImmediate(5*time.Second, timeout, func() (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, 5*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
 		current := getNetworkPolicyT(t, ctx, client, namespace, name)
 		return equality.Semantic.DeepEqual(original.Spec, current.Spec), nil
 	})
@@ -303,7 +288,7 @@ func mutateAndRestoreNetworkPolicyWithTimeout(t *testing.T, ctx context.Context,
 func waitForPodsReadyByLabel(t *testing.T, ctx context.Context, client kubernetes.Interface, namespace, labelSelector string) {
 	t.Helper()
 	t.Logf("waiting for pods ready in %s with selector %s", namespace, labelSelector)
-	err := wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 		pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
 		if err != nil {
 			return false, err
@@ -335,7 +320,7 @@ func isPodReady(pod *corev1.Pod) bool {
 func logNetworkPolicyEvents(t *testing.T, ctx context.Context, client kubernetes.Interface, namespaces []string, policyName string) {
 	t.Helper()
 	found := false
-	_ = wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
+	_ = wait.PollUntilContextTimeout(ctx, 5*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 		for _, namespace := range namespaces {
 			events, err := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{})
 			if err != nil {
@@ -343,11 +328,14 @@ func logNetworkPolicyEvents(t *testing.T, ctx context.Context, client kubernetes
 				continue
 			}
 			for _, event := range events.Items {
+				// Check if event is directly on a NetworkPolicy object with matching name
 				if event.InvolvedObject.Kind == "NetworkPolicy" && event.InvolvedObject.Name == policyName {
 					t.Logf("event in %s: %s %s %s", namespace, event.Type, event.Reason, event.Message)
 					found = true
 				}
-				if event.Message != "" && (event.InvolvedObject.Name == policyName || event.InvolvedObject.Kind == "NetworkPolicy") {
+				// Also check if the event message mentions the policy name
+				// (operator emits events on Deployment with policy name in message)
+				if event.Message != "" && strings.Contains(event.Message, policyName) {
 					t.Logf("event in %s: %s %s %s", namespace, event.Type, event.Reason, event.Message)
 					found = true
 				}

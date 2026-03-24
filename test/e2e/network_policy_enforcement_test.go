@@ -329,7 +329,7 @@ func allowEgressPolicy(name, namespace string, podLabels, toLabels map[string]st
 func expectConnectivityForIP(t *testing.T, kubeClient kubernetes.Interface, namespace string, clientLabels map[string]string, serverIP string, port int32, shouldSucceed bool) {
 	t.Helper()
 
-	err := wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(context.TODO(), 5*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 		succeeded, err := runConnectivityCheck(t, kubeClient, namespace, clientLabels, serverIP, port)
 		if err != nil {
 			return false, err
@@ -424,8 +424,8 @@ func runConnectivityCheck(t *testing.T, kubeClient kubernetes.Interface, namespa
 }
 
 func waitForPodReadyT(t *testing.T, kubeClient kubernetes.Interface, namespace, name string) error {
-	return wait.PollImmediate(2*time.Second, 2*time.Minute, func() (bool, error) {
-		pod, err := kubeClient.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	return wait.PollUntilContextTimeout(context.TODO(), 2*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+		pod, err := kubeClient.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -442,8 +442,8 @@ func waitForPodReadyT(t *testing.T, kubeClient kubernetes.Interface, namespace, 
 }
 
 func waitForPodCompletion(kubeClient kubernetes.Interface, namespace, name string) error {
-	return wait.PollImmediate(2*time.Second, 2*time.Minute, func() (bool, error) {
-		pod, err := kubeClient.CoreV1().Pods(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	return wait.PollUntilContextTimeout(context.TODO(), 2*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+		pod, err := kubeClient.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
