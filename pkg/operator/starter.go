@@ -270,6 +270,12 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	kubeInformers.Start(ctx.Done())
 	configInformers.Start(ctx.Done())
 
+	// Ensure that informer caches are synced before we start
+	// making controller decisions based on potentially empty caches.
+	operatorConfigInformers.WaitForCacheSync(ctx.Done())
+	kubeInformers.WaitForCacheSync(ctx.Done())
+	configInformers.WaitForCacheSync(ctx.Done())
+
 	go staticResourceController.Run(ctx, 1)
 	go operator.Run(ctx, 1)
 	go resourceSyncer.Run(ctx, 1)
