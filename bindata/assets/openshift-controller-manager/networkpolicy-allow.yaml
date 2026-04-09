@@ -1,0 +1,27 @@
+# Network policy for the openshift-controller-manager pods.
+#
+# Egress:
+# - Allow all egress to support communication with the Kubernetes API server,
+#   whose IP address and port are not known at manifest time. This implicitly
+#   covers DNS resolution as well.
+#
+# Ingress:
+# - Allow ingress on port 8443 (metrics) for metrics scraping.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-controller-manager
+  namespace: openshift-controller-manager
+spec:
+  podSelector:
+    matchLabels:
+      controller-manager: "true"
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 8443
+  egress:
+  - {}                                          # Allow all egress for API server access
+  policyTypes:
+  - Ingress
+  - Egress
