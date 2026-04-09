@@ -272,9 +272,26 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 
 	// Ensure that informer caches are synced before we start
 	// making controller decisions based on potentially empty caches.
-	operatorConfigInformers.WaitForCacheSync(ctx.Done())
-	kubeInformers.WaitForCacheSync(ctx.Done())
-	configInformers.WaitForCacheSync(ctx.Done())
+	for informerType, synced := range operatorConfigInformers.WaitForCacheSync(ctx.Done()) {
+		if !synced {
+			klog.Errorf("timed out waiting for operatorConfigInformers %v", informerType)
+			return fmt.Errorf("timed out waiting for operatorConfigInformers %v", informerType)
+		}
+	}
+	for namespace, syncedMap := range kubeInformers.WaitForCacheSync(ctx.Done()) {
+		for informerType, synced := range syncedMap {
+			if !synced {
+				klog.Errorf("timed out waiting for kubeInformers namespace=%s %v", namespace, informerType)
+				return fmt.Errorf("timed out waiting for kubeInformers namespace=%s %v", namespace, informerType)
+			}
+		}
+	}
+	for informerType, synced := range configInformers.WaitForCacheSync(ctx.Done()) {
+		if !synced {
+			klog.Errorf("timed out waiting for configInformers %v", informerType)
+			return fmt.Errorf("timed out waiting for configInformers %v", informerType)
+		}
+	}
 
 	go staticResourceController.Run(ctx, 1)
 	go operator.Run(ctx, 1)
