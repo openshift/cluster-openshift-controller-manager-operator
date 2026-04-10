@@ -10,7 +10,7 @@ import (
 	operatorv1informers "github.com/openshift/client-go/operator/informers/externalversions"
 	"github.com/openshift/library-go/pkg/controller/factory"
 	"github.com/openshift/library-go/pkg/operator/configobserver"
-	"github.com/openshift/library-go/pkg/operator/configobserver/apiserver"
+	// "github.com/openshift/library-go/pkg/operator/configobserver/apiserver"
 	"github.com/openshift/library-go/pkg/operator/configobserver/featuregates"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -70,7 +70,9 @@ func NewConfigObserver(
 			[]string{"featureGates"},
 			featureGateAccessor,
 		),
-		apiserver.ObserveTLSSecurityProfile,
+		// Temporarily disabled to test whether this observer contributes to
+		// OCPBUGS-81472 (Available=False during 4.21->4.22 upgrades).
+		// apiserver.ObserveTLSSecurityProfile,
 	}
 
 	if buildEnabled {
