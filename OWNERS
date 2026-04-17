@@ -1,16 +1,11 @@
 reviewers:
-  - bparees
-  - deads2k
-  - soltysh
+  - control-plane-approvers
   - divyansh42
   - sayan-biswas
   - prabhapa
   - moebasim
 approvers:
-  - bparees
-  - deads2k
-  - soltysh
-  - ingvagabund
+  - control-plane-approvers
   - sayan-biswas
   - adambkaplan
   - prabhapa
