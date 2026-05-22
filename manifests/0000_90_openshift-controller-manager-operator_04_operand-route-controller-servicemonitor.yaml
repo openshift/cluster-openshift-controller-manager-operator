@@ -64,3 +64,4 @@ spec:
   selector:
     matchLabels:
       prometheus: route-controller-manager
+  serviceDiscoveryRole: EndpointSlice
