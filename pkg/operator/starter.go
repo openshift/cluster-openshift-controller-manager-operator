@@ -251,6 +251,9 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"assets/openshift-controller-manager/networkpolicy-default-deny.yaml",
 			"assets/openshift-controller-manager/route-controller-manager-networkpolicy-allow.yaml",
 			"assets/openshift-controller-manager/route-controller-manager-networkpolicy-default-deny.yaml",
+
+			"assets/openshift-controller-manager/scc-role.yaml",
+			"assets/openshift-controller-manager/scc-rolebinding.yaml",
 		},
 		resourceapply.NewKubeClientHolder(kubeClient),
 		opClient,
