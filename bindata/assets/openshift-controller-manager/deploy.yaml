@@ -33,7 +33,7 @@ spec:
       name: openshift-controller-manager
       annotations:
         target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
-        openshift.io/required-scc: restricted-v3
+        openshift.io/required-scc: hostaccess
       labels:
         app: openshift-controller-manager-a
         controller-manager: "true"
@@ -92,6 +92,9 @@ spec:
           name: proxy-ca-bundles
         - mountPath: /tmp
           name: tmp
+        - mountPath: /etc/containers
+          name: etc-containers
+          readOnly: true
       volumes:
       - name: config
         configMap:
@@ -110,6 +113,10 @@ spec:
               path: tls-ca-bundle.pem
       - emptyDir: {}
         name: tmp
+      - hostPath:
+          path: /etc/containers
+          type: Directory
+        name: etc-containers
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
