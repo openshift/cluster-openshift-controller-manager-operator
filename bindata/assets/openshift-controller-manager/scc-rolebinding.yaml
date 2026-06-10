@@ -5,6 +5,7 @@ metadata:
   namespace: openshift-controller-manager
   name: system:openshift-controller-manager:hostaccess-rolebinding
 roleRef:
+  apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: system:openshift-controller-manager:hostaccess-role
 subjects:
