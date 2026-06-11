@@ -132,8 +132,8 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 	)
 
 	err = resourceSyncer.SyncSecret(
-		resourcesynccontroller.ResourceLocation{Namespace: "openshift-config", Name: "pull-secret"},
 		resourcesynccontroller.ResourceLocation{Namespace: util.TargetNamespace, Name: "pull-secret"},
+		resourcesynccontroller.ResourceLocation{Namespace: "openshift-config", Name: "pull-secret"},
 	)
 	if err != nil {
 		return fmt.Errorf("configuring global pull-secret syncing: %w", err)
