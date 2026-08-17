@@ -33,15 +33,12 @@ spec:
       name: openshift-controller-manager
       annotations:
         target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
-        openshift.io/required-scc: restricted-v3
+        openshift.io/required-scc: hostaccess
       labels:
         app: openshift-controller-manager-a
         controller-manager: "true"
     spec:
       hostUsers: false
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
       priorityClassName: system-node-critical
       serviceAccountName: openshift-controller-manager-sa
       containers:
@@ -69,6 +66,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: REGISTRY_AUTH_FILE
+          value: /var/run/secrets/image-auth/auth.json
         livenessProbe:
           initialDelaySeconds: 30
           httpGet:
@@ -92,6 +91,11 @@ spec:
           name: proxy-ca-bundles
         - mountPath: /tmp
           name: tmp
+        - mountPath: /etc/containers
+          name: etc-containers
+          readOnly: true
+        - mountPath: /var/run/secrets/image-auth
+          name: image-auth
       volumes:
       - name: config
         configMap:
@@ -110,6 +114,16 @@ spec:
               path: tls-ca-bundle.pem
       - emptyDir: {}
         name: tmp
+      - hostPath:
+          path: /etc/containers
+          type: Directory
+        name: etc-containers
+      - name: image-auth
+        secret:
+          secretName: pull-secret
+          items:
+            - key: .dockerconfigjson
+              path: auth.json
       nodeSelector:
         node-role.kubernetes.io/master: ""
       tolerations:
