@@ -121,6 +121,8 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 
 		// cleanup the refs in the service account
 		if len(imagePullSecretName) != 0 {
+			serviceAccount = serviceAccount.DeepCopy()
+
 			var secretRefs []corev1.ObjectReference
 			for _, secretRef := range serviceAccount.Secrets {
 				if secretRef.Name != imagePullSecretName {
