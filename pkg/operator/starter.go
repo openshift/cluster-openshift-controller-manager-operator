@@ -131,6 +131,14 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 		controllerConfig.EventRecorder,
 	)
 
+	err = resourceSyncer.SyncSecret(
+		resourcesynccontroller.ResourceLocation{Namespace: util.TargetNamespace, Name: "pull-secret"},
+		resourcesynccontroller.ResourceLocation{Namespace: "openshift-config", Name: "pull-secret"},
+	)
+	if err != nil {
+		return fmt.Errorf("configuring global pull-secret syncing: %w", err)
+	}
+
 	if !cache.WaitForCacheSync(ctx.Done(), configInformers.Config().V1().ClusterVersions().Informer().HasSynced) {
 		klog.Errorf("timed out waiting for configInformers ClusterVersions")
 		return fmt.Errorf("timed out waiting for configInformers ClusterVersions")
@@ -243,6 +251,9 @@ func RunOperator(ctx context.Context, controllerConfig *controllercmd.Controller
 			"assets/openshift-controller-manager/networkpolicy-default-deny.yaml",
 			"assets/openshift-controller-manager/route-controller-manager-networkpolicy-allow.yaml",
 			"assets/openshift-controller-manager/route-controller-manager-networkpolicy-default-deny.yaml",
+
+			"assets/openshift-controller-manager/scc-role.yaml",
+			"assets/openshift-controller-manager/scc-rolebinding.yaml",
 		},
 		resourceapply.NewKubeClientHolder(kubeClient),
 		opClient,
