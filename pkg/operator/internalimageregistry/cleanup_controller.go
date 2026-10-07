@@ -121,6 +121,8 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 
 		// cleanup the refs in the service account
 		if len(imagePullSecretName) != 0 {
+			serviceAccount = serviceAccount.DeepCopy()
+
 			var secretRefs []corev1.ObjectReference
 			for _, secretRef := range serviceAccount.Secrets {
 				if secretRef.Name != imagePullSecretName {
@@ -136,6 +138,11 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 				}
 			}
 			serviceAccount.ImagePullSecrets = imagePullSecretRefs
+
+			// Clean up the annotation reference to the image pull secret from service account
+			if annotationValue, ok := serviceAccount.Annotations["openshift.io/internal-registry-pull-secret-ref"]; ok && annotationValue == imagePullSecretName {
+				delete(serviceAccount.Annotations, "openshift.io/internal-registry-pull-secret-ref")
+			}
 
 			_, err = c.kubeClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(ctx, serviceAccount, metav1.UpdateOptions{})
 			if err != nil {
