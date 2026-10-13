@@ -19,6 +19,8 @@ GO_TEST_PACKAGES :=./pkg/... ./cmd/...
 # It will generate target "image-$(1)" for builing the image an binding it as a prerequisite to target "images".
 $(call build-image,ocp-cluster-openshift-controller-manager-operator,$(IMAGE_REGISTRY)/ocp/4.3:cluster-openshift-controller-manager-operator,./Dockerfile,.)
 
+build: GO_BUILD_FLAGS += -tags=no_openssl
+
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
 test-e2e: GO_TEST_FLAGS += -v -count=1
 test-e2e: test-unit
