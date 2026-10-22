@@ -26,7 +26,7 @@ import (
 
 type imagePullSecretCleanupController struct {
 	factory.Controller
-	kubeClient            *kubernetes.Clientset
+	kubeClient            kubernetes.Interface
 	serviceAccountLister  corelistersv1.ServiceAccountLister
 	secretLister          corelistersv1.SecretLister
 	podLister             corelistersv1.PodLister
@@ -34,7 +34,7 @@ type imagePullSecretCleanupController struct {
 	clusterOperatorLister configlistersv1.ClusterOperatorLister
 }
 
-func NewImagePullSecretCleanupController(kubeClient *kubernetes.Clientset, informers v1helpers.KubeInformersForNamespaces, configInformers externalversions.SharedInformerFactory, recorder events.Recorder) *imagePullSecretCleanupController {
+func NewImagePullSecretCleanupController(kubeClient kubernetes.Interface, informers v1helpers.KubeInformersForNamespaces, configInformers externalversions.SharedInformerFactory, recorder events.Recorder) *imagePullSecretCleanupController {
 	c := &imagePullSecretCleanupController{
 		kubeClient:            kubeClient,
 		serviceAccountLister:  informers.InformersFor(metav1.NamespaceAll).Core().V1().ServiceAccounts().Lister(),
