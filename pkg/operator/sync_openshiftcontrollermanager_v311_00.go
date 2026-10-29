@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	appsclientv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
@@ -27,6 +28,7 @@ import (
 	configlisterv1 "github.com/openshift/client-go/config/listers/config/v1"
 	proxyvclient1 "github.com/openshift/client-go/config/listers/config/v1"
 
+	"github.com/openshift/library-go/pkg/crypto"
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcehash"
@@ -345,6 +347,57 @@ func disableControllers(clusterVersion *configv1.ClusterVersion) []string {
 	return controllers
 }
 
+// createCurvePreferencesOverride reads servingInfo.groups from observedConfig and creates
+// a JSON override containing servingInfo.curvePreferences to be passed to MergeConfigMap.
+// This avoids modifying the observedConfig or deserializing the final ConfigMap.
+func createCurvePreferencesOverride(observedConfigRaw []byte) ([]byte, error) {
+	if len(observedConfigRaw) == 0 {
+		return nil, nil
+	}
+
+	var observedConfig map[string]interface{}
+	if err := json.Unmarshal(observedConfigRaw, &observedConfig); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal observedConfig: %w", err)
+	}
+
+	// Check if servingInfo.groups exists
+	groups, groupsFound, err := unstructured.NestedStringSlice(observedConfig, "servingInfo", "groups")
+	if err != nil {
+		return nil, fmt.Errorf("couldn't get servingInfo.groups from observedConfig: %w", err)
+	}
+
+	if !groupsFound || len(groups) == 0 {
+		return nil, nil
+	}
+
+	// Convert groups to curve preferences
+	curvePreferences, unrecognizedGroups := crypto.TLSGroupsToCurvePreferences(groups)
+	if len(unrecognizedGroups) > 0 {
+		return nil, fmt.Errorf("unrecognized groups when reading curve preferences: %v", unrecognizedGroups)
+	}
+
+	// If conversion resulted in empty list, return nil to avoid explicitly resetting the field
+	if len(curvePreferences) == 0 {
+		return nil, nil
+	}
+
+	// Create override with servingInfo.curvePreferences and remove groups
+	// (groups is not part of the upstream Kubernetes ServingInfo type)
+	override := map[string]interface{}{
+		"servingInfo": map[string]interface{}{
+			"curvePreferences": curvePreferences,
+			"groups":           nil, // Remove groups field from final config
+		},
+	}
+
+	overrideJSON, err := json.Marshal(override)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal curvePreferences override: %w", err)
+	}
+
+	return overrideJSON, nil
+}
+
 // similar logic for route-controller-manager in manageRouteControllerManagerConfigMap_v311_00_to_latest
 func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionLister configlisterv1.ClusterVersionLister, kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
 	clusterVersion, err := clusterVersionLister.Get("version")
@@ -359,7 +412,28 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionL
 	if err != nil {
 		return nil, false, err
 	}
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, ocmDefaultConfig, bytes, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
+
+	// Create curve preferences override from servingInfo.groups in observedConfig
+	curvePreferencesOverride, err := createCurvePreferencesOverride(operatorConfig.Spec.ObservedConfig.Raw)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Build the list of config sources to merge
+	configSources := [][]byte{
+		ocmDefaultConfig,
+		bytes,
+		operatorConfig.Spec.ObservedConfig.Raw,
+	}
+
+	// Add curvePreferences override if it exists (after observedConfig so it takes precedence)
+	if curvePreferencesOverride != nil {
+		configSources = append(configSources, curvePreferencesOverride)
+	}
+
+	configSources = append(configSources, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
+
+	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, configSources...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -387,7 +461,27 @@ func manageOpenShiftControllerManagerConfigMap_v311_00_to_latest(clusterVersionL
 func manageRouteControllerManagerConfigMap_v311_00_to_latest(kubeClient kubernetes.Interface, client coreclientv1.ConfigMapsGetter, recorder events.Recorder, operatorConfig *operatorapiv1.OpenShiftControllerManager) (*corev1.ConfigMap, bool, error) {
 	configMap := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/openshift-controller-manager/route-controller-manager-cm.yaml"))
 	rcmDefaultConfig := bindata.MustAsset("assets/config/route-controller-manager-defaultconfig.yaml")
-	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, rcmDefaultConfig, operatorConfig.Spec.ObservedConfig.Raw, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
+
+	// Create curve preferences override from servingInfo.groups in observedConfig
+	curvePreferencesOverride, err := createCurvePreferencesOverride(operatorConfig.Spec.ObservedConfig.Raw)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Build the list of config sources to merge
+	configSources := [][]byte{
+		rcmDefaultConfig,
+		operatorConfig.Spec.ObservedConfig.Raw,
+	}
+
+	// Add curvePreferences override if it exists (after observedConfig so it takes precedence)
+	if curvePreferencesOverride != nil {
+		configSources = append(configSources, curvePreferencesOverride)
+	}
+
+	configSources = append(configSources, operatorConfig.Spec.UnsupportedConfigOverrides.Raw)
+
+	requiredConfigMap, _, err := resourcemerge.MergeConfigMap(configMap, "config.yaml", nil, configSources...)
 	if err != nil {
 		return nil, false, err
 	}
