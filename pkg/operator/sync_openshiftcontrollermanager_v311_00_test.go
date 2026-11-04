@@ -46,7 +46,6 @@ import (
 )
 
 func TestExpectedConfigMap(t *testing.T) {
-
 	objects := []runtime.Object{
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "serving-cert", Namespace: "openshift-controller-manager"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: "kube-system"}},
@@ -72,7 +71,8 @@ func TestExpectedConfigMap(t *testing.T) {
 		LeaderElection: configv1.LeaderElection{
 			Name: "openshift-master-controllers",
 		},
-		Controllers: []string{"*",
+		Controllers: []string{
+			"*",
 			"-openshift.io/build",
 			"-openshift.io/build-config-change",
 			"-openshift.io/builder-rolebindings",
@@ -126,7 +126,6 @@ func TestExpectedConfigMap(t *testing.T) {
 }
 
 func TestControllerDisabling(t *testing.T) {
-
 	testCases := []struct {
 		name                string
 		versionLister       configlisterv1.ClusterVersionLister
@@ -147,9 +146,11 @@ func TestControllerDisabling(t *testing.T) {
 				configv1.ClusterVersionCapabilityImageRegistry,
 			},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/default-rolebindings",
-				}},
+				},
+			},
 		},
 		{
 			name: "BuildCapDisabled",
@@ -158,13 +159,15 @@ func TestControllerDisabling(t *testing.T) {
 			},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/build",
 					"-openshift.io/build-config-change",
 					"-openshift.io/builder-rolebindings",
 					"-openshift.io/builder-serviceaccount",
 					"-openshift.io/default-rolebindings",
-				}},
+				},
+			},
 		},
 		{
 			name: "DeploymentConfigCapDisabled",
@@ -173,13 +176,15 @@ func TestControllerDisabling(t *testing.T) {
 			},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/default-rolebindings",
 					"-openshift.io/deployer",
 					"-openshift.io/deployer-rolebindings",
 					"-openshift.io/deployer-serviceaccount",
 					"-openshift.io/deploymentconfig",
-				}},
+				},
+			},
 		},
 		{
 			name: "ImageRegistryCapDisabled",
@@ -188,11 +193,13 @@ func TestControllerDisabling(t *testing.T) {
 			},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/default-rolebindings",
 					"-openshift.io/image-puller-rolebindings",
 					"-openshift.io/serviceaccount-pull-secrets",
-				}},
+				},
+			},
 		},
 		{
 			name: "CapabilitiesDisabled",
@@ -203,7 +210,8 @@ func TestControllerDisabling(t *testing.T) {
 			},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/build",
 					"-openshift.io/build-config-change",
 					"-openshift.io/builder-rolebindings",
@@ -215,16 +223,19 @@ func TestControllerDisabling(t *testing.T) {
 					"-openshift.io/deploymentconfig",
 					"-openshift.io/image-puller-rolebindings",
 					"-openshift.io/serviceaccount-pull-secrets",
-				}},
+				},
+			},
 		},
 		{
 			name:                "CapabilitiesDisabledButUnknown",
 			knownCapabilities:   []v1.ClusterVersionCapability{},
 			enabledCapabilities: []v1.ClusterVersionCapability{},
 			result: map[string][]string{
-				"controllers": {"*",
+				"controllers": {
+					"*",
 					"-openshift.io/default-rolebindings",
-				}},
+				},
+			},
 		},
 	}
 
@@ -625,7 +636,6 @@ type conditionTestCase struct {
 func testControllerManagerCondition(t *testing.T, conditionType string, testCases []conditionTestCase) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			if len(tc.version) > 0 {
 				os.Setenv("RELEASE_VERSION", tc.version)
 			} else {
@@ -742,6 +752,10 @@ func TestDeploymentWithProxy(t *testing.T) {
 					},
 				},
 				{
+					Name:  "REGISTRY_AUTH_FILE",
+					Value: "/var/run/secrets/image-auth/auth.json",
+				},
+				{
 					Name:  "HTTPS_PROXY",
 					Value: "https://my-proxy",
 				},
@@ -773,6 +787,10 @@ func TestDeploymentWithProxy(t *testing.T) {
 							Name:  "POD_NAME",
 							Value: "my-pod",
 						},
+						{
+							Name:  "REGISTRY_AUTH_FILE",
+							Value: "/var/run/secrets/image-auth/auth.json",
+						},
 					}
 				}
 
@@ -799,6 +817,10 @@ func TestDeploymentWithProxy(t *testing.T) {
 				{
 					Name:  "POD_NAME",
 					Value: "my-pod",
+				},
+				{
+					Name:  "REGISTRY_AUTH_FILE",
+					Value: "/var/run/secrets/image-auth/auth.json",
 				},
 				// HTTPS_PROXY is added as it isn't in the template, but it's present in the proxy config.
 				{
@@ -876,7 +898,6 @@ func TestDeploymentWithProxy(t *testing.T) {
 				proxyLister,
 				specAnnotations,
 			)
-
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err.Error())
 			}

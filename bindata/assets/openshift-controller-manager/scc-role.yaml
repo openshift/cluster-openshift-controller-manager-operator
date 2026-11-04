@@ -1,0 +1,15 @@
+# needed to support host-mounted image registry configurations.
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: system:openshift-controller-manager:hostaccess-role
+  namespace: openshift-controller-manager
+rules:
+  - apiGroups:
+      - security.openshift.io
+    resources:
+      - securitycontextconstraints
+    resourceNames:
+      - hostaccess
+    verbs:
+      - use
