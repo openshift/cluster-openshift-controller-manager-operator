@@ -1,6 +1,9 @@
 package configobservercontroller
 
 import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -22,6 +25,10 @@ import (
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/deployimages"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/images"
 	"github.com/openshift/cluster-openshift-controller-manager-operator/pkg/operator/configobservation/network"
+)
+
+const (
+	tempOCMGroupsField = "tempOCMServingInfoGroupsIgnore"
 )
 
 // NewConfigObserver initializes a new configuration observer.
@@ -77,14 +84,56 @@ func NewConfigObserver(
 				return existingConfig, append(errs, err)
 			}
 			if featureGate.Enabled(features.FeatureGateTLSGroupPreferences) {
-				return apiserver.ObserveTLSSecurityProfileWithGroupPaths(
+				if _, err := configobserver.CurvePreferencesToTLSGroups[int64](existingConfig, []string{"servingInfo", "curvePreferences"}, []string{tempOCMGroupsField}); err != nil {
+					// keep going on read error from existing config
+					errs = append(errs, err)
+				}
+
+				defer func() {
+					unstructured.RemoveNestedField(existingConfig, tempOCMGroupsField)
+					unstructured.RemoveNestedField(observedConfig, tempOCMGroupsField)
+				}()
+
+				var observeErrs []error
+				observedConfig, observeErrs = apiserver.ObserveTLSSecurityProfileWithGroupPaths(
 					listers,
 					recorder,
 					existingConfig,
 					[]string{"servingInfo", "minTLSVersion"},
 					[]string{"servingInfo", "cipherSuites"},
-					[]string{"servingInfo", "groups"},
+					[]string{tempOCMGroupsField},
 				)
+				if len(observeErrs) > 0 {
+					// accumulate errors but keep going - we still need to convert groups to curves
+					errs = append(errs, observeErrs...)
+				}
+
+				// Copy existing curve preferences to observedConfig so TLSGroupsToCurvePreferences can compare against them
+				existingCurvePreferences, found, err := unstructured.NestedSlice(existingConfig, "servingInfo", "curvePreferences")
+				if err != nil {
+					// keep going on read error from existing config
+					errs = append(errs, err)
+				} else if found {
+					unstructured.SetNestedSlice(observedConfig, existingCurvePreferences, "servingInfo", "curvePreferences")
+				}
+
+				// Check if we need to set curvePreferences to empty
+				groups, found, err := unstructured.NestedStringSlice(observedConfig, tempOCMGroupsField)
+				if err == nil && found {
+					if len(groups) == 0 {
+						// Empty groups list - set curvePreferences to empty
+						unstructured.SetNestedSlice(observedConfig, []interface{}{}, "servingInfo", "curvePreferences")
+					} else if unrecognizedGroups, err := configobserver.TLSGroupsToCurvePreferences[int64](observedConfig, []string{tempOCMGroupsField}, []string{"servingInfo", "curvePreferences"}); err != nil {
+						errs = append(errs, err)
+					} else if len(unrecognizedGroups) > 0 {
+						// If all groups are unrecognized, set curvePreferences to empty
+						if len(groups) == len(unrecognizedGroups) {
+							unstructured.SetNestedSlice(observedConfig, []interface{}{}, "servingInfo", "curvePreferences")
+						}
+						errs = append(errs, fmt.Errorf("unrecognized TLS groups: %v", unrecognizedGroups))
+					}
+				}
+				return observedConfig, errs
 			} else {
 				return apiserver.ObserveTLSSecurityProfile(
 					listers,
