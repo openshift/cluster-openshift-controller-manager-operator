@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/openshift/library-go/pkg/controller/factory"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,7 +65,7 @@ func TestCleanupRemovesImagePullSecretReferences(t *testing.T) {
 	if _, ok := updated.Annotations[internalRegistryPullRef]; ok {
 		t.Errorf("expected annotation %q to be removed, but it is still present", internalRegistryPullRef)
 	}
-	if name := serviceAccountReferencesSecret(updated, testImagePullSecretName); name {
+	if serviceAccountReferencesSecret(updated, testImagePullSecretName) {
 		t.Errorf("expected service account to no longer reference pull secret %q", testImagePullSecretName)
 	}
 
@@ -74,7 +75,7 @@ func TestCleanupRemovesImagePullSecretReferences(t *testing.T) {
 	}
 
 	// The shared lister cache must not have been mutated in place.
-	assertServiceAccountHasInternalRegistryPullSecret(t, serviceAccountIndexer, expectedCachedServiceAccount)
+	assertServiceAccountUnchanged(t, serviceAccountIndexer, expectedCachedServiceAccount)
 }
 
 // TestCleanupIsIdempotent verifies that once the references have been cleaned up, a subsequent sync
@@ -130,7 +131,7 @@ func TestCleanupIsIdempotent(t *testing.T) {
 }
 
 // TestCleanupServiceAccountUpdateConflictDoesNotMutateListerCache verifies that a conflict on the
-// service account update is surfaced as a requeue and never mutates the shared lister cache.
+// service account update is surfaced as an error and never mutates the shared lister cache.
 func TestCleanupServiceAccountUpdateConflictDoesNotMutateListerCache(t *testing.T) {
 	cachedServiceAccount := newServiceAccountWithInternalRegistryPullSecret(
 		testNamespace,
@@ -160,12 +161,11 @@ func TestCleanupServiceAccountUpdateConflictDoesNotMutateListerCache(t *testing.
 		corelistersv1.NewPodLister(newEmptyIndexer()),
 	)
 
-	err := controller.cleanup(context.Background())
-	if !errors.Is(err, factory.SyntheticRequeueError) {
-		t.Fatalf("expected SyntheticRequeueError, got %v", err)
+	if err := controller.cleanup(context.Background()); err == nil {
+		t.Fatal("expected cleanup to fail on the service account update conflict")
 	}
 
-	assertServiceAccountHasInternalRegistryPullSecret(t, serviceAccountIndexer, expectedServiceAccount)
+	assertServiceAccountUnchanged(t, serviceAccountIndexer, expectedServiceAccount)
 }
 
 func newServiceAccountWithInternalRegistryPullSecret(namespace, name, secretName string) *corev1.ServiceAccount {
@@ -259,7 +259,9 @@ func newCleanupControllerForTest(
 	}
 }
 
-func assertServiceAccountHasInternalRegistryPullSecret(t *testing.T, indexer cache.Indexer, expected *corev1.ServiceAccount) {
+// assertServiceAccountUnchanged verifies that the service account held by the shared lister cache
+// is still byte-for-byte identical to expected, i.e. that cleanup never mutated it in place.
+func assertServiceAccountUnchanged(t *testing.T, indexer cache.Indexer, expected *corev1.ServiceAccount) {
 	t.Helper()
 
 	cached, exists, err := indexer.GetByKey(expected.Namespace + "/" + expected.Name)
@@ -270,32 +272,7 @@ func assertServiceAccountHasInternalRegistryPullSecret(t *testing.T, indexer cac
 		t.Fatal("expected cached service account to exist")
 	}
 
-	cachedServiceAccount := cached.(*corev1.ServiceAccount)
-
-	if got := cachedServiceAccount.Annotations[internalRegistryPullRef]; got != expected.Annotations[internalRegistryPullRef] {
-		t.Fatalf(
-			"expected cached annotation %q to remain %q, got %q",
-			internalRegistryPullRef,
-			expected.Annotations[internalRegistryPullRef],
-			got,
-		)
-	}
-
-	if len(cachedServiceAccount.ImagePullSecrets) != len(expected.ImagePullSecrets) {
-		t.Fatalf("expected %d image pull secret references, got %d", len(expected.ImagePullSecrets), len(cachedServiceAccount.ImagePullSecrets))
-	}
-	for i, expectedRef := range expected.ImagePullSecrets {
-		if cachedServiceAccount.ImagePullSecrets[i].Name != expectedRef.Name {
-			t.Fatalf("expected image pull secret reference %q, got %q", expectedRef.Name, cachedServiceAccount.ImagePullSecrets[i].Name)
-		}
-	}
-
-	if len(cachedServiceAccount.Secrets) != len(expected.Secrets) {
-		t.Fatalf("expected %d secret references, got %d", len(expected.Secrets), len(cachedServiceAccount.Secrets))
-	}
-	for i, expectedRef := range expected.Secrets {
-		if cachedServiceAccount.Secrets[i].Name != expectedRef.Name {
-			t.Fatalf("expected secret reference %q, got %q", expectedRef.Name, cachedServiceAccount.Secrets[i].Name)
-		}
+	if cachedServiceAccount := cached.(*corev1.ServiceAccount); !equality.Semantic.DeepEqual(expected, cachedServiceAccount) {
+		t.Fatalf("cached service account was mutated:\n%s", cmp.Diff(expected, cachedServiceAccount))
 	}
 }
