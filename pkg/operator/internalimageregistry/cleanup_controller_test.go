@@ -25,6 +25,8 @@ const (
 	testImagePullSecretName  = "builder-dockercfg-abc12"
 	internalRegistryPullRef  = "openshift.io/internal-registry-pull-secret-ref"
 	internalRegistryAuthAnno = "openshift.io/internal-registry-auth-token.service-account"
+	unrelatedAnno            = "example.com/unrelated"
+	unrelatedAnnoValue       = "keep-me"
 )
 
 // TestCleanupRemovesImagePullSecretReferences verifies the happy path: a successful sync removes
@@ -76,6 +78,68 @@ func TestCleanupRemovesImagePullSecretReferences(t *testing.T) {
 
 	// The shared lister cache must not have been mutated in place.
 	assertServiceAccountUnchanged(t, serviceAccountIndexer, expectedCachedServiceAccount)
+}
+
+// TestCleanupRemovesStaleAnnotationWhenImagePullSecretIsGone verifies that when the managed image
+// pull secret and every reference to it are already gone, cleanup strips the leftover internal
+// registry annotation and a subsequent sync issues no further updates.
+func TestCleanupRemovesStaleAnnotationWhenImagePullSecretIsGone(t *testing.T) {
+	cachedServiceAccount := newServiceAccountWithStaleInternalRegistryPullSecretAnnotation(
+		testNamespace,
+		testServiceAccountName,
+		testImagePullSecretName,
+	)
+
+	// Keep a pristine copy to prove the lister cache is never mutated in place.
+	expectedCachedServiceAccount := cachedServiceAccount.DeepCopy()
+
+	// Neither the fake API server nor the secret cache holds the pull secret: it is already deleted.
+	kubeClient := fake.NewSimpleClientset(cachedServiceAccount.DeepCopy())
+
+	serviceAccountIndexer := newServiceAccountIndexer(t, cachedServiceAccount)
+
+	controller := newCleanupControllerForTest(
+		kubeClient,
+		corelistersv1.NewServiceAccountLister(serviceAccountIndexer),
+		corelistersv1.NewSecretLister(newEmptyIndexer()),
+		corelistersv1.NewPodLister(newEmptyIndexer()),
+	)
+
+	if err := controller.cleanup(context.Background()); err != nil {
+		t.Fatalf("expected cleanup to succeed, got %v", err)
+	}
+
+	updated, err := kubeClient.CoreV1().ServiceAccounts(testNamespace).Get(context.Background(), testServiceAccountName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("failed to get updated service account: %v", err)
+	}
+	if _, ok := updated.Annotations[internalRegistryPullRef]; ok {
+		t.Errorf("expected annotation %q to be removed, but it is still present", internalRegistryPullRef)
+	}
+	// Only the controller's own annotation may be removed.
+	if got := updated.Annotations[unrelatedAnno]; got != unrelatedAnnoValue {
+		t.Errorf("expected unrelated annotation %q to remain %q, got %q", unrelatedAnno, unrelatedAnnoValue, got)
+	}
+
+	// The shared lister cache must not have been mutated in place.
+	assertServiceAccountUnchanged(t, serviceAccountIndexer, expectedCachedServiceAccount)
+
+	// Once the cache observes the stripped annotation, the loop must stop: no further writes.
+	if err := serviceAccountIndexer.Update(updated); err != nil {
+		t.Fatalf("failed to update service account in indexer: %v", err)
+	}
+
+	kubeClient.ClearActions()
+
+	if err := controller.cleanup(context.Background()); err != nil {
+		t.Fatalf("expected second cleanup to succeed, got %v", err)
+	}
+
+	for _, action := range kubeClient.Actions() {
+		if action.Matches("update", "serviceaccounts") {
+			t.Errorf("expected no further service account updates once the annotation is gone, got %s %s", action.GetVerb(), action.GetResource().Resource)
+		}
+	}
 }
 
 // TestCleanupIsIdempotent verifies that once the references have been cleaned up, a subsequent sync
@@ -182,6 +246,23 @@ func newServiceAccountWithInternalRegistryPullSecret(namespace, name, secretName
 		},
 		Secrets: []corev1.ObjectReference{
 			{Name: secretName},
+		},
+	}
+}
+
+// newServiceAccountWithStaleInternalRegistryPullSecretAnnotation returns a service account whose
+// only trace of the managed image pull secret is the internal registry annotation: both reference
+// lists are already empty. The unrelated annotation guards against cleanup removing more than its
+// own key.
+func newServiceAccountWithStaleInternalRegistryPullSecretAnnotation(namespace, name, secretName string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Annotations: map[string]string{
+				internalRegistryPullRef: secretName,
+				unrelatedAnno:           unrelatedAnnoValue,
+			},
 		},
 	}
 }
