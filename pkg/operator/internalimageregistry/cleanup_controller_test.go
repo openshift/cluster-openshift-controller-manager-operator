@@ -20,13 +20,13 @@ import (
 )
 
 const (
-	testNamespace            = "test"
-	testServiceAccountName   = "builder"
-	testImagePullSecretName  = "builder-dockercfg-abc12"
-	internalRegistryPullRef  = "openshift.io/internal-registry-pull-secret-ref"
-	internalRegistryAuthAnno = "openshift.io/internal-registry-auth-token.service-account"
-	unrelatedAnno            = "example.com/unrelated"
-	unrelatedAnnoValue       = "keep-me"
+	testNamespace                  = "test"
+	testServiceAccountName         = "builder"
+	testImagePullSecretName        = "builder-dockercfg-abc12"
+	internalRegistryPullRef        = "openshift.io/internal-registry-pull-secret-ref"
+	internalRegistryAuthAnnotation = "openshift.io/internal-registry-auth-token.service-account"
+	unrelatedAnnotation            = "example.com/unrelated"
+	unrelatedAnnotationValue       = "keep-me"
 )
 
 // TestCleanupRemovesImagePullSecretReferences verifies the happy path: a successful sync removes
@@ -117,8 +117,8 @@ func TestCleanupRemovesStaleAnnotationWhenImagePullSecretIsGone(t *testing.T) {
 		t.Errorf("expected annotation %q to be removed, but it is still present", internalRegistryPullRef)
 	}
 	// Only the controller's own annotation may be removed.
-	if got := updated.Annotations[unrelatedAnno]; got != unrelatedAnnoValue {
-		t.Errorf("expected unrelated annotation %q to remain %q, got %q", unrelatedAnno, unrelatedAnnoValue, got)
+	if got := updated.Annotations[unrelatedAnnotation]; got != unrelatedAnnotationValue {
+		t.Errorf("expected unrelated annotation %q to remain %q, got %q", unrelatedAnnotation, unrelatedAnnotationValue, got)
 	}
 
 	// The shared lister cache must not have been mutated in place.
@@ -261,7 +261,7 @@ func newServiceAccountWithStaleInternalRegistryPullSecretAnnotation(namespace, n
 			Namespace: namespace,
 			Annotations: map[string]string{
 				internalRegistryPullRef: secretName,
-				unrelatedAnno:           unrelatedAnnoValue,
+				unrelatedAnnotation:     unrelatedAnnotationValue,
 			},
 		},
 	}
@@ -276,7 +276,7 @@ func newManagedImagePullSecret(namespace, name, serviceAccountName string) *core
 			Name:      name,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				internalRegistryAuthAnno: serviceAccountName,
+				internalRegistryAuthAnnotation: serviceAccountName,
 			},
 			CreationTimestamp: metav1.NewTime(time.Now().Add(-time.Hour)),
 		},
