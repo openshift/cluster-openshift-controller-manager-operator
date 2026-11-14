@@ -121,22 +121,31 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 
 		// cleanup the refs in the service account
 		if len(imagePullSecretName) != 0 {
+			changed := false
+
 			var secretRefs []corev1.ObjectReference
 			for _, secretRef := range serviceAccount.Secrets {
-				if secretRef.Name != imagePullSecretName {
+				if secretRef.Name == imagePullSecretName {
+					changed = true
+				} else {
 					secretRefs = append(secretRefs, secretRef)
 				}
 			}
 			serviceAccount.Secrets = secretRefs
 
-			var imagePullSecretRefs []corev1.LocalObjectReference = []corev1.LocalObjectReference{}
+			var imagePullSecretRefs []corev1.LocalObjectReference
 			for _, imagePullSecretRef := range serviceAccount.ImagePullSecrets {
-				if imagePullSecretRef.Name != imagePullSecretName {
+				if imagePullSecretRef.Name == imagePullSecretName {
+					changed = true
+				} else {
 					imagePullSecretRefs = append(imagePullSecretRefs, imagePullSecretRef)
 				}
 			}
 			serviceAccount.ImagePullSecrets = imagePullSecretRefs
 
+			if !changed {
+				continue
+			}
 			_, err = c.kubeClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(ctx, serviceAccount, metav1.UpdateOptions{})
 			if err != nil {
 				var statusErr *errors.StatusError
