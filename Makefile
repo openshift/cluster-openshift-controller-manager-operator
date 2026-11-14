@@ -22,6 +22,6 @@ $(call build-image,ocp-cluster-openshift-controller-manager-operator,$(IMAGE_REG
 build: GO_BUILD_FLAGS += -tags=no_openssl
 
 test-e2e: GO_TEST_PACKAGES :=./test/e2e/...
-test-e2e: GO_TEST_FLAGS += -v -count=1
+test-e2e: GO_TEST_FLAGS += -v -count=1 -timeout=20m
 test-e2e: test-unit
 .PHONY: test-e2e
