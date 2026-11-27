@@ -64,3 +64,4 @@ spec:
   selector:
     matchLabels:
       prometheus: openshift-controller-manager
+  serviceDiscoveryRole: EndpointSlice
