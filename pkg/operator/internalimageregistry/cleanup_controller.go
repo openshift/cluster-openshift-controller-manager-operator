@@ -26,7 +26,7 @@ import (
 
 type imagePullSecretCleanupController struct {
 	factory.Controller
-	kubeClient            *kubernetes.Clientset
+	kubeClient            kubernetes.Interface
 	serviceAccountLister  corelistersv1.ServiceAccountLister
 	secretLister          corelistersv1.SecretLister
 	podLister             corelistersv1.PodLister
@@ -34,7 +34,7 @@ type imagePullSecretCleanupController struct {
 	clusterOperatorLister configlistersv1.ClusterOperatorLister
 }
 
-func NewImagePullSecretCleanupController(kubeClient *kubernetes.Clientset, informers v1helpers.KubeInformersForNamespaces, configInformers externalversions.SharedInformerFactory, recorder events.Recorder) *imagePullSecretCleanupController {
+func NewImagePullSecretCleanupController(kubeClient kubernetes.Interface, informers v1helpers.KubeInformersForNamespaces, configInformers externalversions.SharedInformerFactory, recorder events.Recorder) *imagePullSecretCleanupController {
 	c := &imagePullSecretCleanupController{
 		kubeClient:            kubeClient,
 		serviceAccountLister:  informers.InformersFor(metav1.NamespaceAll).Core().V1().ServiceAccounts().Lister(),
@@ -121,6 +121,8 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 
 		// cleanup the refs in the service account
 		if len(imagePullSecretName) != 0 {
+			serviceAccount = serviceAccount.DeepCopy()
+
 			var secretRefs []corev1.ObjectReference
 			for _, secretRef := range serviceAccount.Secrets {
 				if secretRef.Name != imagePullSecretName {
@@ -136,6 +138,11 @@ func (c *imagePullSecretCleanupController) cleanup(ctx context.Context) error {
 				}
 			}
 			serviceAccount.ImagePullSecrets = imagePullSecretRefs
+
+			// Clean up the annotation reference to the image pull secret from service account
+			if annotationValue, ok := serviceAccount.Annotations["openshift.io/internal-registry-pull-secret-ref"]; ok && annotationValue == imagePullSecretName {
+				delete(serviceAccount.Annotations, "openshift.io/internal-registry-pull-secret-ref")
+			}
 
 			_, err = c.kubeClient.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(ctx, serviceAccount, metav1.UpdateOptions{})
 			if err != nil {
